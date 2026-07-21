@@ -51,7 +51,7 @@ JSON por causa de uma restrição de segurança do navegador.
 Todo o texto que não é um episódio nem um artigo — nome do site, itens de
 menu, textos do rodapé, título/introdução de cada página, os 3 cartões da
 página Sobre, o email de contato, etc. — vem de `data/site.json`, editável
-pela aba **Textos** do painel (ou direto no JSON).
+pelo painel (seções "Marca & navegação" e "Páginas" — ver abaixo).
 
 O mecanismo é genérico: qualquer elemento HTML com
 `data-text="secao.chave"` é preenchido com `site.secao.chave` assim que a
@@ -67,13 +67,29 @@ tanto rodando localmente quanto no site já publicado. Não existe link para
 `/admin` em nenhuma página pública; para acessar, digite a URL diretamente
 (ex: `http://localhost:8000/admin/` ou `https://seu-dominio/admin/`).
 
-**Como funciona**: o painel não tem servidor próprio. Ele lê e grava
-`data/episodes.json`, `data/articles.json`, `data/site.json` e
-`data/auth.json` fazendo chamadas diretas à API do GitHub — cada "Salvar",
-"Excluir" ou mudança de acesso vira um commit de verdade no repositório
-`myceliumBrain/astrobotanica-site`, branch `main`. A aba **Textos** reúne
-todo o texto fixo do site (ver seção acima) num formulário só, com um único
-botão "Salvar textos".
+**Layout**: barra lateral com o conteúdo agrupado —
+
+- **Conteúdo**: Artigos, Episódios (listas com card por item, expansível)
+- **Geral**: Marca & navegação (nome do site, menu, rodapé, textos de
+  "em breve" das plataformas)
+- **Páginas**: um item por página (Home, Podcast, Episódio, Artigos, Artigo,
+  Sobre, Contato) com os textos fixos daquela página
+- **Sistema**: Acessos
+
+**Como funciona**: o painel não tem servidor próprio, e edita em memória —
+`data/episodes.json`, `data/articles.json` e `data/site.json` só são
+gravados no GitHub quando você clica em **"Salvar no GitHub"**, no topo da
+tela (reordenar com as setas ▲▼, adicionar, remover e editar campos mudam
+só o que está na tela; o botão fica habilitado enquanto houver alteração
+pendente, e o status ao lado mostra "alterações pendentes" / "salvando…" /
+"salvo ✓"). Um clique salva de uma vez todos os arquivos que você mexeu,
+cada um como um commit no repositório `myceliumBrain/astrobotanica-site`,
+branch `main`. **Acessos** é a exceção: adicionar/revogar ali já commita na
+hora, sem esperar o botão de salvar.
+
+A ordem dos artigos e episódios nas listas (setas ▲▼) é a mesma ordem em que
+eles aparecem no site público — não há mais reordenação automática por data.
+Um item novo entra no topo da lista por padrão.
 
 Cada pessoa usa **seu próprio token de acesso pessoal do GitHub** — nunca um
 token compartilhado, e nunca em texto puro. O token é criptografado no
@@ -200,8 +216,8 @@ abrir o arquivo direto) é obrigatório, pois o conteúdo é carregado via
   acima — é preciso configurar pelo menos um acesso (token + senha) antes de
   editar qualquer conteúdo pelo painel.
 - **Contato**: `data/site.json` (`contato.email`) tem um valor de exemplo
-  (`seu-email@substituir.com`) — troque pelo seu email real na aba Textos do
-  painel, ou direto no JSON.
+  (`seu-email@substituir.com`) — troque pelo seu email real em Páginas →
+  Contato, no painel, ou direto no JSON.
 - **Assinatura do podcast**: os textos de Spotify/Apple Podcasts/RSS em
   `data/site.json` (`platforms.*`) estão como "em breve" até existirem links
   reais. Trocar o texto ali já atualiza rodapé, Podcast e Contato ao mesmo

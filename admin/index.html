@@ -5,155 +5,147 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="robots" content="noindex, nofollow" />
 <title>Admin — Astrobotânica</title>
-<link rel="stylesheet" href="../css/style.css" />
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="admin.css" />
 </head>
 <body>
 
-<header class="site-header">
-  <nav class="nav wrap">
-    <span class="nav-brand">astrobotânica · admin</span>
-    <div id="header-actions" class="header-actions"></div>
-  </nav>
-</header>
-
-<main class="wrap admin-main">
-
-  <!-- Tela 1: primeiro acesso (só aparece se data/auth.json ainda não tem nenhum acesso cadastrado) -->
-  <section id="setup-screen" class="admin-screen" hidden>
-    <div class="admin-card">
-      <h1>Primeiro acesso</h1>
-      <p class="admin-hint">
-        Ainda não existe nenhum acesso cadastrado. Cole um token de acesso
-        pessoal do GitHub (fine-grained, restrito ao repositório
-        <code>astrobotanica-site</code>, com permissão
-        <code>Contents: Read and write</code> — crie em
-        <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>)
-        e escolha uma senha. O token fica <strong>criptografado</strong> (AES-GCM,
-        chave derivada da sua senha via PBKDF2) e salvo em
-        <code>data/auth.json</code>, no próprio repositório — nunca em texto puro.
-      </p>
-      <div class="field">
-        <label for="setup-label">Seu nome</label>
-        <input class="input" id="setup-label" type="text" placeholder="ex: Pedro" />
-      </div>
-      <div class="field">
-        <label for="setup-token">Token de acesso pessoal do GitHub</label>
-        <input class="input" id="setup-token" type="password" autocomplete="off" placeholder="github_pat_..." />
-      </div>
-      <div class="field">
-        <label for="setup-password">Escolha uma senha</label>
-        <input class="input" id="setup-password" type="password" autocomplete="off" />
-      </div>
-      <button type="button" id="setup-submit" class="btn btn-primary btn-block">Configurar acesso</button>
-      <p id="setup-error" class="admin-error" role="alert"></p>
+<!-- Tela 1: primeiro acesso (só aparece se data/auth.json ainda não tem nenhum acesso cadastrado) -->
+<div id="setup-screen" class="admin-screen">
+  <div class="admin-card">
+    <h1>Primeiro acesso</h1>
+    <p class="admin-hint">
+      Ainda não existe nenhum acesso cadastrado. Cole um token de acesso
+      pessoal do GitHub (fine-grained, restrito ao repositório
+      <code>astrobotanica-site</code>, com permissão
+      <code>Contents: Read and write</code> — crie em
+      <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">github.com/settings/personal-access-tokens/new</a>)
+      e escolha uma senha. O token fica <strong>criptografado</strong> (AES-GCM,
+      chave derivada da sua senha via PBKDF2) e salvo em
+      <code>data/auth.json</code>, no próprio repositório — nunca em texto puro.
+    </p>
+    <div class="field">
+      <label for="setup-label">Seu nome</label>
+      <input class="input" id="setup-label" type="text" placeholder="ex: Pedro" />
     </div>
-  </section>
-
-  <!-- Tela 2: login (senha apenas — testada contra todos os acessos cadastrados) -->
-  <section id="login-screen" class="admin-screen" hidden>
-    <div class="admin-card">
-      <h1>Painel de administração</h1>
-      <p class="admin-hint">Digite sua senha para continuar.</p>
-      <div class="field">
-        <label for="login-password">Senha</label>
-        <input class="input" id="login-password" type="password" autocomplete="off" />
-      </div>
-      <button type="button" id="login-submit" class="btn btn-primary btn-block">Entrar</button>
-      <p id="login-error" class="admin-error" role="alert"></p>
-      <p class="admin-fineprint">
-        O token do GitHub associado à sua senha é decifrado só neste
-        navegador e fica só na memória desta aba — não é salvo em nenhum
-        lugar. Feche a aba ou recarregue a página para sair.
-      </p>
+    <div class="field">
+      <label for="setup-token">Token de acesso pessoal do GitHub</label>
+      <input class="input" id="setup-token" type="password" autocomplete="off" placeholder="github_pat_..." />
     </div>
-  </section>
-
-  <!-- Tela 3: app -->
-  <section id="app-screen" class="admin-screen" hidden>
-    <div class="admin-tabs">
-      <button type="button" class="admin-tab is-active" data-tab="articles">Artigos</button>
-      <button type="button" class="admin-tab" data-tab="episodes">Episódios</button>
-      <button type="button" class="admin-tab" data-tab="texts">Textos</button>
-      <button type="button" class="admin-tab" data-tab="access">Acessos</button>
+    <div class="field">
+      <label for="setup-password">Escolha uma senha</label>
+      <input class="input" id="setup-password" type="password" autocomplete="off" />
     </div>
+    <button type="button" id="setup-submit" class="btn btn-primary btn-block">Configurar acesso</button>
+    <p id="setup-error" class="admin-error" role="alert"></p>
+  </div>
+</div>
 
-    <p id="app-status" class="admin-status" role="status"></p>
-
-    <div id="tab-articles" class="admin-tab-panel">
-      <div class="admin-panel-head">
-        <h2>Artigos</h2>
-        <button type="button" class="btn btn-primary" data-action="new-article">+ Novo artigo</button>
-      </div>
-      <div id="articles-list" class="admin-item-list"></div>
+<!-- Tela 2: login (senha apenas — testada contra todos os acessos cadastrados) -->
+<div id="login-screen" class="admin-screen" hidden>
+  <div class="admin-card">
+    <h1>astrobotânica / admin</h1>
+    <p class="admin-hint">Digite sua senha para continuar.</p>
+    <div class="field">
+      <label for="login-password">Senha</label>
+      <input class="input" id="login-password" type="password" autocomplete="off" />
     </div>
+    <button type="button" id="login-submit" class="btn btn-primary btn-block">Entrar</button>
+    <p id="login-error" class="admin-error" role="alert"></p>
+    <p class="admin-fineprint">
+      O token do GitHub associado à sua senha é decifrado só neste
+      navegador e fica só na memória desta aba — não é salvo em nenhum
+      lugar. Feche a aba ou recarregue a página para sair.
+    </p>
+  </div>
+</div>
 
-    <div id="tab-episodes" class="admin-tab-panel" hidden>
-      <div class="admin-panel-head">
-        <h2>Episódios</h2>
-        <button type="button" class="btn btn-primary" data-action="new-episode">+ Novo episódio</button>
-      </div>
-      <div id="episodes-list" class="admin-item-list"></div>
+<!-- Tela 3: app -->
+<div id="app-screen" hidden>
+  <div class="adm-topbar">
+    <span class="adm-topbar-logo">astrobotânica / admin</span>
+    <div class="adm-topbar-right">
+      <span id="save-status" class="adm-save-status">carregando…</span>
+      <button type="button" class="btn btn-primary" id="save-btn" disabled>Salvar no GitHub</button>
+      <button type="button" class="btn btn-secondary btn-small" id="logout-btn">Sair</button>
     </div>
+  </div>
 
-    <div id="tab-texts" class="admin-tab-panel" hidden>
-      <div class="admin-panel-head">
-        <h2>Textos do site</h2>
-        <button type="button" class="btn btn-primary" data-action="save-texts">Salvar textos</button>
-      </div>
-      <p class="admin-hint">
-        Todo o texto fixo do site (nav, rodapé, títulos, textos de cada
-        página) vem daqui. Um único "Salvar" grava tudo de uma vez em
-        <code>data/site.json</code>.
-      </p>
-      <div id="texts-form"></div>
-      <div class="admin-form-actions" style="border-top: none;">
-        <button type="button" class="btn btn-primary" data-action="save-texts">Salvar textos</button>
-      </div>
-    </div>
+  <div class="adm-layout">
+    <aside class="adm-sidebar">
+      <span class="sidebar-section">Conteúdo</span>
+      <button type="button" class="nav-btn active" data-panel="articles">Artigos <span class="nav-count" id="nav-count-articles"></span></button>
+      <button type="button" class="nav-btn" data-panel="episodes">Episódios <span class="nav-count" id="nav-count-episodes"></span></button>
+      <span class="sidebar-section">Geral</span>
+      <button type="button" class="nav-btn" data-panel="general">Marca &amp; navegação</button>
+      <span class="sidebar-section">Páginas</span>
+      <div id="sidebar-pages"></div>
+      <span class="sidebar-section">Sistema</span>
+      <button type="button" class="nav-btn" data-panel="access">Acessos</button>
+    </aside>
 
-    <div id="tab-access" class="admin-tab-panel" hidden>
-      <div class="admin-panel-head">
-        <h2>Acessos</h2>
+    <main class="adm-content">
+      <div class="section-panel active" id="panel-articles">
+        <div class="panel-header">
+          <span class="panel-title">Artigos</span>
+          <span class="panel-count" id="count-articles"></span>
+        </div>
+        <div id="articles-list"></div>
+        <button type="button" class="add-btn" id="add-article-btn">+ adicionar artigo</button>
       </div>
-      <p class="admin-hint">
-        Cada acesso é um token do GitHub próprio, criptografado com a senha
-        de quem vai usá-lo. Revogar aqui remove o registro do
-        <code>data/auth.json</code> — se o token vazou de verdade, revogue
-        também no GitHub (Settings → Developer settings → tokens).
-      </p>
-      <div id="access-list" class="admin-item-list"></div>
 
-      <div class="admin-form-panel" style="margin-top: var(--space-4); max-width: none;">
-        <h2>Adicionar novo acesso</h2>
-        <div class="admin-form-grid">
-          <div class="field">
-            <label for="access-label">Nome da pessoa</label>
-            <input class="input" id="access-label" type="text" placeholder="ex: Ana" />
+      <div class="section-panel" id="panel-episodes">
+        <div class="panel-header">
+          <span class="panel-title">Episódios</span>
+          <span class="panel-count" id="count-episodes"></span>
+        </div>
+        <div id="episodes-list"></div>
+        <button type="button" class="add-btn" id="add-episode-btn">+ adicionar episódio</button>
+      </div>
+
+      <div class="section-panel" id="panel-general">
+        <div class="panel-header"><span class="panel-title">Marca &amp; navegação</span></div>
+        <div id="general-form"></div>
+      </div>
+
+      <div id="page-panels"></div>
+
+      <div class="section-panel" id="panel-access">
+        <div class="panel-header"><span class="panel-title">Acessos</span></div>
+        <p class="admin-hint">
+          Cada acesso é um token do GitHub próprio, criptografado com a senha
+          de quem vai usá-lo. Revogar aqui remove o registro do
+          <code>data/auth.json</code> — se o token vazou de verdade, revogue
+          também no GitHub (Settings → Developer settings → tokens).
+        </p>
+        <div id="access-list" class="admin-item-list"></div>
+
+        <div class="admin-subform">
+          <h3>Adicionar novo acesso</h3>
+          <div class="fields-grid">
+            <div class="field">
+              <label for="access-label">Nome da pessoa</label>
+              <input class="input" id="access-label" type="text" placeholder="ex: Ana" />
+            </div>
+            <div class="field">
+              <label for="access-token">Token de acesso pessoal do GitHub dela</label>
+              <input class="input" id="access-token" type="password" autocomplete="off" placeholder="github_pat_..." />
+            </div>
+            <div class="field full">
+              <label for="access-password">Senha que essa pessoa vai usar</label>
+              <input class="input" id="access-password" type="password" autocomplete="off" />
+            </div>
           </div>
-          <div class="field">
-            <label for="access-token">Token de acesso pessoal do GitHub dela</label>
-            <input class="input" id="access-token" type="password" autocomplete="off" placeholder="github_pat_..." />
-          </div>
-          <div class="field">
-            <label for="access-password">Senha que essa pessoa vai usar</label>
-            <input class="input" id="access-password" type="password" autocomplete="off" />
+          <div class="card-actions" style="justify-content:flex-start">
+            <button type="button" id="access-submit" class="btn btn-primary btn-small">+ adicionar acesso</button>
           </div>
         </div>
-        <div class="admin-form-actions" style="justify-content: flex-start; border-top: none; padding-top: 0;">
-          <button type="button" id="access-submit" class="btn btn-primary">+ Adicionar acesso</button>
-        </div>
       </div>
-    </div>
+    </main>
+  </div>
+</div>
 
-    <div id="form-overlay" class="admin-form-overlay" hidden>
-      <div class="admin-form-panel">
-        <div id="form-container"></div>
-      </div>
-    </div>
-  </section>
-
-</main>
+<div id="toast"></div>
 
 <script type="module" src="admin.js"></script>
 </body>

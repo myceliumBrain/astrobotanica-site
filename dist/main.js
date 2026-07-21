@@ -87,8 +87,7 @@ function renderEpisodeList(episodes) {
         list.appendChild(el("p", "empty-state", "Nenhum episódio publicado ainda. Volte em breve."));
         return;
     }
-    const sorted = [...episodes.items].sort((a, b) => b.number - a.number);
-    for (const episode of sorted) {
+    for (const episode of episodes.items) {
         const row = document.createElement("a");
         row.className = "episode-row";
         row.href = `episodio.html?id=${episode.id}`;
@@ -172,8 +171,7 @@ function renderArticleList(articles) {
         list.appendChild(el("p", "empty-state", "Nenhum artigo publicado ainda. Volte em breve."));
         return;
     }
-    const sorted = [...articles.items].sort((a, b) => (a.date < b.date ? 1 : -1));
-    for (const article of sorted) {
+    for (const article of articles.items) {
         const card = document.createElement("a");
         card.className = "card";
         card.href = `artigo.html?id=${article.id}`;
@@ -243,7 +241,7 @@ function renderHomeHighlights(episodes, articles) {
             epRoot.appendChild(el("p", "empty-state", "Não foi possível carregar os episódios agora."));
         }
         else {
-            const latest = [...episodes.items].sort((a, b) => b.number - a.number)[0];
+            const latest = episodes.items[0];
             if (latest) {
                 const row = document.createElement("a");
                 row.className = "episode-row";

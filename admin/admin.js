@@ -1,15 +1,17 @@
 // ============================================================================
 // admin.js — painel de administração de conteúdo.
 //
+// Modelo: ao entrar, episodes.json/articles.json/site.json são carregados
+// uma vez para a memória (contentData). Reordenar, adicionar, remover e
+// editar campos só mudam essa cópia em memória e marcam a seção como suja
+// (dirty) — nada é gravado no GitHub até clicar em "Salvar no GitHub", que
+// faz o commit de cada arquivo sujo de uma vez. Os acessos (data/auth.json)
+// são a exceção: cada ação ali já commita na hora, como antes.
+//
 // Autenticação: cada pessoa usa seu próprio token de acesso pessoal do
 // GitHub, criptografado (AES-GCM, chave derivada via PBKDF2 a partir da
-// senha escolhida) e guardado em data/auth.json, no próprio repositório —
-// nunca em texto puro. O token decifrado vive só na memória da aba durante
-// a sessão; não é salvo em localStorage/sessionStorage. Fechar ou recarregar
-// a página desconecta.
-//
-// Conteúdo (episódios/artigos) é lido e gravado via commits diretos na API
-// do GitHub, uma vez autenticado.
+// senha escolhida) e guardado em data/auth.json. O token decifrado vive só
+// na memória da aba durante a sessão.
 // ============================================================================
 
 const CONFIG = {
@@ -22,12 +24,26 @@ const CONFIG = {
   sitePath: "data/site.json",
 };
 
-// Descreve todos os campos de texto do site (ver data/site.json e os
-// atributos data-text="..." no HTML de cada página). Editar aqui só muda
-// o formulário do painel — os valores em si vêm sempre do arquivo.
-const SITE_TEXT_SCHEMA = [
+const PATHS = {
+  articles: CONFIG.articlesPath,
+  episodes: CONFIG.episodesPath,
+  site: CONFIG.sitePath,
+};
+
+const LOCKOUT = {
+  storageKey: "astrobotanica-admin-attempts",
+  maxAttempts: 5,
+  lockoutMs: 15 * 60 * 1000,
+};
+
+let TOKEN = ""; // token decifrado, só em memória — nunca persistido
+
+// Textos do site: cada campo é uma chave "a.b.c" dentro de data/site.json.
+// GENERAL_SCHEMA vira o painel "Marca & navegação"; cada item de
+// PAGE_SCHEMA vira seu próprio item de menu + painel em "Páginas".
+const GENERAL_SCHEMA = [
   {
-    heading: "Marca (aparece em todas as páginas)",
+    heading: "Marca",
     fields: [
       { key: "brand.name", label: "Nome (logo no menu e rodapé)", type: "text" },
       { key: "brand.footerTagline", label: "Frase do rodapé", type: "textarea" },
@@ -60,8 +76,12 @@ const SITE_TEXT_SCHEMA = [
       { key: "platforms.instagram", label: "Instagram", type: "text" },
     ],
   },
+];
+
+const PAGE_SCHEMA = [
   {
-    heading: "Home",
+    key: "home",
+    label: "Home",
     fields: [
       { key: "home.metaTitle", label: "Título da aba do navegador", type: "text" },
       { key: "home.metaDescription", label: "Descrição (SEO)", type: "textarea" },
@@ -80,7 +100,8 @@ const SITE_TEXT_SCHEMA = [
     ],
   },
   {
-    heading: "Podcast (lista de episódios)",
+    key: "podcast",
+    label: "Podcast",
     fields: [
       { key: "podcast.metaDescription", label: "Descrição (SEO)", type: "textarea" },
       { key: "podcast.tag", label: "Selo", type: "text" },
@@ -89,14 +110,16 @@ const SITE_TEXT_SCHEMA = [
     ],
   },
   {
-    heading: "Episódio (página de detalhe)",
+    key: "episodio",
+    label: "Episódio",
     fields: [
       { key: "episodio.backLink", label: "Link \"voltar\"", type: "text" },
       { key: "episodio.relatedHeading", label: "Título \"outros episódios\"", type: "text" },
     ],
   },
   {
-    heading: "Artigos (lista)",
+    key: "artigos",
+    label: "Artigos",
     fields: [
       { key: "artigos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
       { key: "artigos.tag", label: "Selo", type: "text" },
@@ -105,14 +128,16 @@ const SITE_TEXT_SCHEMA = [
     ],
   },
   {
-    heading: "Artigo (página de detalhe)",
+    key: "artigo",
+    label: "Artigo",
     fields: [
       { key: "artigo.backLink", label: "Link \"voltar\"", type: "text" },
       { key: "artigo.relatedHeading", label: "Título \"continue lendo\"", type: "text" },
     ],
   },
   {
-    heading: "Sobre",
+    key: "sobre",
+    label: "Sobre",
     fields: [
       { key: "sobre.metaDescription", label: "Descrição (SEO)", type: "textarea" },
       { key: "sobre.tag", label: "Selo", type: "text" },
@@ -130,7 +155,8 @@ const SITE_TEXT_SCHEMA = [
     ],
   },
   {
-    heading: "Contato",
+    key: "contato",
+    label: "Contato",
     fields: [
       { key: "contato.metaDescription", label: "Descrição (SEO)", type: "textarea" },
       { key: "contato.tag", label: "Selo", type: "text" },
@@ -142,14 +168,6 @@ const SITE_TEXT_SCHEMA = [
     ],
   },
 ];
-
-const LOCKOUT = {
-  storageKey: "astrobotanica-admin-attempts",
-  maxAttempts: 5,
-  lockoutMs: 15 * 60 * 1000,
-};
-
-let TOKEN = ""; // token decifrado, só em memória — nunca persistido
 
 // ----------------------------------------------------------------------------
 // Utilitários gerais
@@ -179,12 +197,31 @@ function linesToParagraphs(text) {
     .filter((line) => line.length > 0);
 }
 
-function setStatus(message, kind) {
-  const status = document.getElementById("app-status");
-  if (!status) return;
-  status.textContent = message;
-  if (kind) status.setAttribute("data-kind", kind);
-  else status.removeAttribute("data-kind");
+function uniqueSlug(existingIds, base) {
+  let candidate = slugify(base) || "item";
+  let n = 2;
+  while (existingIds.includes(candidate)) {
+    candidate = `${slugify(base)}-${n}`;
+    n += 1;
+  }
+  return candidate;
+}
+
+function getByPath(obj, path) {
+  return path.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+}
+
+function setByPath(obj, path, value) {
+  const keys = path.split(".");
+  let cur = obj;
+  keys.forEach((key, i) => {
+    if (i === keys.length - 1) {
+      cur[key] = value;
+    } else {
+      if (typeof cur[key] !== "object" || cur[key] === null) cur[key] = {};
+      cur = cur[key];
+    }
+  });
 }
 
 // ----------------------------------------------------------------------------
@@ -298,7 +335,7 @@ async function ghRequest(path, { auth = true, ...options } = {}) {
     ...(options.headers || {}),
   };
   if (auth) headers.Authorization = `Bearer ${TOKEN}`;
-  const res = await fetch(`https://api.github.com${path}`, { ...options, headers });
+  const res = await fetch(`https://api.github.com${path}`, { ...options, headers, cache: "no-store" });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     const err = new Error(body.message || `GitHub API: HTTP ${res.status}`);
@@ -316,14 +353,9 @@ function base64ToUtf8(b64) {
   return textDecoder.decode(b64ToBytes(b64.replace(/\n/g, "")));
 }
 
-async function whoAmI() {
-  return ghRequest("/user");
-}
-
-// path lido sem autenticação (repositório é público — leitura não exige token)
 async function getFileAnon(path) {
   const data = await ghRequest(
-    `/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}?ref=${CONFIG.branch}`,
+    `/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}?ref=${CONFIG.branch}&_=${Date.now()}`,
     { auth: false }
   );
   return { content: JSON.parse(base64ToUtf8(data.content)), sha: data.sha };
@@ -331,7 +363,7 @@ async function getFileAnon(path) {
 
 async function getFile(path) {
   const data = await ghRequest(
-    `/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}?ref=${CONFIG.branch}`
+    `/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}?ref=${CONFIG.branch}&_=${Date.now()}`
   );
   return { content: JSON.parse(base64ToUtf8(data.content)), sha: data.sha };
 }
@@ -350,7 +382,7 @@ async function putFile(path, contentObj, sha, message) {
 }
 
 // ----------------------------------------------------------------------------
-// Telas
+// Telas de acesso
 // ----------------------------------------------------------------------------
 
 function showScreen(id) {
@@ -466,450 +498,501 @@ function setupLoginScreen() {
   });
 }
 
-async function enterApp() {
-  renderHeaderActions();
-  whoAmI()
-    .then((user) => {
-      const nameEl = document.getElementById("header-actions").querySelector("[data-user]");
-      if (nameEl) nameEl.textContent = `Conectado como ${user.login}`;
-    })
-    .catch(() => {}); // cosmético — se falhar, só não mostra o nome
-  showScreen("app-screen");
-  setupTabs();
-  await Promise.all([loadArticles(), loadEpisodes(), loadAccess(), loadTexts()]);
+// ----------------------------------------------------------------------------
+// App: navegação por abas laterais
+// ----------------------------------------------------------------------------
+
+function setupNav() {
+  document.querySelector(".adm-sidebar").addEventListener("click", (e) => {
+    const btn = e.target.closest(".nav-btn");
+    if (!btn) return;
+    showPanel(btn.dataset.panel);
+  });
 }
 
-function renderHeaderActions() {
-  const container = document.getElementById("header-actions");
-  container.innerHTML = "";
-  const nameEl = el("span", "", "Conectado");
-  nameEl.setAttribute("data-user", "");
-  container.appendChild(nameEl);
-  const logout = el("button", "btn btn-secondary", "Sair");
-  logout.type = "button";
-  logout.addEventListener("click", () => {
+function showPanel(name) {
+  document.querySelectorAll(".section-panel").forEach((p) => p.classList.remove("active"));
+  document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
+  const panel = document.getElementById("panel-" + name);
+  if (panel) panel.classList.add("active");
+  const btn = document.querySelector(`.nav-btn[data-panel="${name}"]`);
+  if (btn) btn.classList.add("active");
+}
+
+function setupPagePanels() {
+  const sidebarContainer = document.getElementById("sidebar-pages");
+  const panelsContainer = document.getElementById("page-panels");
+  sidebarContainer.innerHTML = "";
+  panelsContainer.innerHTML = "";
+
+  for (const page of PAGE_SCHEMA) {
+    const navBtn = el("button", "nav-btn", page.label);
+    navBtn.type = "button";
+    navBtn.dataset.panel = `page-${page.key}`;
+    sidebarContainer.appendChild(navBtn);
+
+    const panel = el("div", "section-panel");
+    panel.id = `panel-page-${page.key}`;
+    const header = el("div", "panel-header");
+    header.appendChild(el("span", "panel-title", page.label));
+    panel.appendChild(header);
+    const formContainer = el("div");
+    formContainer.id = `page-form-${page.key}`;
+    panel.appendChild(formContainer);
+    panelsContainer.appendChild(panel);
+  }
+}
+
+async function enterApp() {
+  showScreen("app-screen");
+  setupPagePanels();
+  setupNav();
+  document.getElementById("logout-btn").addEventListener("click", () => {
     TOKEN = "";
     location.reload();
   });
-  container.appendChild(logout);
-}
-
-// ----------------------------------------------------------------------------
-// Abas
-// ----------------------------------------------------------------------------
-
-function setupTabs() {
-  document.querySelectorAll(".admin-tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".admin-tab").forEach((t) => t.classList.remove("is-active"));
-      tab.classList.add("is-active");
-      const target = tab.dataset.tab;
-      document.getElementById("tab-articles").hidden = target !== "articles";
-      document.getElementById("tab-episodes").hidden = target !== "episodes";
-      document.getElementById("tab-texts").hidden = target !== "texts";
-      document.getElementById("tab-access").hidden = target !== "access";
-    });
-  });
-
-  document.querySelector('[data-action="new-article"]').addEventListener("click", () => openArticleForm(null));
-  document.querySelector('[data-action="new-episode"]').addEventListener("click", () => openEpisodeForm(null));
+  document.getElementById("save-btn").addEventListener("click", saveAll);
+  document.getElementById("add-article-btn").addEventListener("click", addArticle);
+  document.getElementById("add-episode-btn").addEventListener("click", addEpisode);
   document.getElementById("access-submit").addEventListener("click", addAccess);
-  document
-    .querySelectorAll('[data-action="save-texts"]')
-    .forEach((btn) => btn.addEventListener("click", saveTexts));
+
+  await loadContent();
+  renderPageForms();
+  await loadAccess();
 }
 
 // ----------------------------------------------------------------------------
-// Artigos: listagem
+// Conteúdo: carregar, salvar, marcar sujo
 // ----------------------------------------------------------------------------
 
-let articlesCache = null; // { content: Article[], sha }
-let episodesCache = null;
+let contentData = { articles: null, episodes: null, site: null };
+const dirty = new Set();
 
-async function loadArticles() {
-  const list = document.getElementById("articles-list");
-  list.innerHTML = "";
-  list.appendChild(el("p", "empty-state", "Carregando…"));
+function setSaveStatus(message, kind) {
+  const status = document.getElementById("save-status");
+  status.textContent = message;
+  if (kind) status.setAttribute("data-kind", kind);
+  else status.removeAttribute("data-kind");
+}
+
+let toastTimer = null;
+function toast(message, kind) {
+  const node = document.getElementById("toast");
+  node.textContent = message;
+  if (kind) node.setAttribute("data-kind", kind);
+  else node.removeAttribute("data-kind");
+  node.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => node.classList.remove("show"), 3200);
+}
+
+function markDirty(section) {
+  dirty.add(section);
+  document.getElementById("save-btn").disabled = false;
+  setSaveStatus("alterações pendentes", "pending");
+}
+
+async function loadContent() {
+  setSaveStatus("carregando…");
   try {
-    articlesCache = await getFile(CONFIG.articlesPath);
+    const [articles, episodes, site] = await Promise.all([
+      getFile(CONFIG.articlesPath),
+      getFile(CONFIG.episodesPath),
+      getFile(CONFIG.sitePath),
+    ]);
+    contentData.articles = articles.content;
+    contentData.episodes = episodes.content;
+    contentData.site = site.content;
+    dirty.clear();
     renderArticlesList();
+    renderEpisodesList();
+    renderGeneralForm();
+    setSaveStatus("dados carregados ✓", "ok");
+    document.getElementById("save-btn").disabled = true;
   } catch (err) {
-    list.innerHTML = "";
-    list.appendChild(el("p", "empty-state", `Não foi possível carregar: ${err.message}`));
+    setSaveStatus("erro ao carregar ✗", "err");
+    toast(`Não foi possível carregar: ${err.message}`, "error");
   }
 }
+
+function collectAll() {
+  document.querySelectorAll("[data-article]").forEach((input) => {
+    const i = Number(input.dataset.article);
+    const key = input.dataset.key;
+    const record = contentData.articles[i];
+    if (!record) return;
+    const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
+    if ((key === "subtitle") && !value) delete record[key];
+    else record[key] = value;
+  });
+  document.querySelectorAll("[data-episode]").forEach((input) => {
+    const i = Number(input.dataset.episode);
+    const key = input.dataset.key;
+    const record = contentData.episodes[i];
+    if (!record) return;
+    if (key === "number") {
+      record.number = Number(input.value);
+      return;
+    }
+    if (input.dataset.multiline === "paragraphs") {
+      const paragraphs = linesToParagraphs(input.value);
+      if (paragraphs.length === 0) delete record.transcript;
+      else record.transcript = paragraphs;
+      return;
+    }
+    record[key] = input.value;
+  });
+  document.querySelectorAll("[data-site]").forEach((input) => {
+    setByPath(contentData.site, input.dataset.site, input.value);
+  });
+}
+
+async function saveAll() {
+  collectAll();
+  if (dirty.size === 0) return;
+  const saveBtn = document.getElementById("save-btn");
+  saveBtn.disabled = true;
+  setSaveStatus("salvando…", "pending");
+  try {
+    for (const section of dirty) {
+      const fresh = await getFile(PATHS[section]);
+      await putFile(PATHS[section], contentData[section], fresh.sha, `admin: atualiza ${section}`);
+    }
+    dirty.clear();
+    setSaveStatus("salvo ✓", "ok");
+    toast("Salvo no GitHub!", "ok");
+  } catch (err) {
+    setSaveStatus("erro ao salvar ✗", "err");
+    toast(`Erro: ${err.message}`, "error");
+    saveBtn.disabled = false;
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Helpers de campo/reordenação (compartilhados)
+// ----------------------------------------------------------------------------
+
+function buildField(labelText, inputEl) {
+  const field = el("div", "field");
+  const labelId = `f-${Math.random().toString(36).slice(2, 9)}`;
+  const label = el("label", "", labelText);
+  label.htmlFor = labelId;
+  inputEl.id = labelId;
+  field.appendChild(label);
+  field.appendChild(inputEl);
+  return field;
+}
+
+function buildInput(labelText, type, value, dataset, placeholder) {
+  const input = document.createElement("input");
+  input.className = "input";
+  input.type = type;
+  input.value = value ?? "";
+  if (placeholder) input.placeholder = placeholder;
+  Object.entries(dataset).forEach(([k, v]) => { input.dataset[k] = v; });
+  return buildField(labelText, input);
+}
+
+function buildTextarea(labelText, value, dataset, multilineParagraphs) {
+  const textarea = document.createElement("textarea");
+  textarea.className = "input";
+  textarea.value = value ?? "";
+  textarea.rows = 4;
+  Object.entries(dataset).forEach(([k, v]) => { textarea.dataset[k] = v; });
+  if (multilineParagraphs) textarea.dataset.multiline = "paragraphs";
+  return buildField(labelText, textarea);
+}
+
+function buildReorderButtons(idx, total, onUp, onDown) {
+  const wrap = el("div", "reorder-btns");
+  const up = el("button", "reorder-btn", "▲");
+  up.type = "button";
+  up.title = "Mover para cima";
+  up.disabled = idx === 0;
+  up.addEventListener("click", (e) => { e.stopPropagation(); onUp(); });
+  const down = el("button", "reorder-btn", "▼");
+  down.type = "button";
+  down.title = "Mover para baixo";
+  down.disabled = idx === total - 1;
+  down.addEventListener("click", (e) => { e.stopPropagation(); onDown(); });
+  wrap.appendChild(up);
+  wrap.appendChild(down);
+  return wrap;
+}
+
+// ----------------------------------------------------------------------------
+// Artigos
+// ----------------------------------------------------------------------------
 
 function renderArticlesList() {
-  const list = document.getElementById("articles-list");
-  list.innerHTML = "";
-  const items = [...articlesCache.content].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const container = document.getElementById("articles-list");
+  container.innerHTML = "";
+  const items = contentData.articles;
+  document.getElementById("nav-count-articles").textContent = items.length || "";
+  document.getElementById("count-articles").textContent = `${items.length} ${items.length === 1 ? "artigo" : "artigos"}`;
 
   if (items.length === 0) {
-    list.appendChild(el("p", "empty-state", "Nenhum artigo cadastrado ainda."));
+    container.appendChild(el("p", "empty-state", "Nenhum artigo cadastrado ainda."));
     return;
   }
 
-  for (const article of items) {
-    const row = el("div", "admin-item-row");
-    const main = el("div", "admin-item-main");
-    main.appendChild(el("div", "admin-item-title", article.title));
-    main.appendChild(el("div", "admin-item-meta", `${article.category} · ${article.date}`));
-    row.appendChild(main);
-
-    const actions = el("div", "admin-item-actions");
-    const editBtn = el("button", "btn btn-secondary", "Editar");
-    editBtn.type = "button";
-    editBtn.addEventListener("click", () => openArticleForm(article));
-    const delBtn = el("button", "btn btn-danger", "Excluir");
-    delBtn.type = "button";
-    delBtn.addEventListener("click", () => deleteArticle(article));
-    actions.appendChild(editBtn);
-    actions.appendChild(delBtn);
-    row.appendChild(actions);
-
-    list.appendChild(row);
-  }
+  items.forEach((article, i) => container.appendChild(buildArticleCard(article, i, items.length)));
 }
 
-async function deleteArticle(article) {
-  if (!confirm(`Excluir o artigo "${article.title}"? Isso faz um commit imediatamente.`)) return;
-  setStatus(`Excluindo "${article.title}"…`);
-  try {
-    const fresh = await getFile(CONFIG.articlesPath);
-    const updated = fresh.content.filter((a) => a.id !== article.id);
-    await putFile(CONFIG.articlesPath, updated, fresh.sha, `admin: remove artigo "${article.title}"`);
-    setStatus(`Artigo "${article.title}" excluído.`, "ok");
-    await loadArticles();
-  } catch (err) {
-    setStatus(`Erro ao excluir: ${err.message}`, "error");
-  }
+function buildArticleCard(article, i, total) {
+  const card = el("div", "card");
+  card.id = `article-card-${i}`;
+
+  const header = el("div", "card-header");
+  const left = el("div", "card-header-left");
+  left.appendChild(buildReorderButtons(i, total, () => moveArticle(i, i - 1), () => moveArticle(i, i + 1)));
+  left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
+  left.appendChild(el("span", "card-name", article.title || "(sem título)"));
+  left.appendChild(el("span", "card-meta", `${article.category || ""} · ${article.date || ""}`));
+  header.appendChild(left);
+  header.appendChild(el("span", "card-chevron", "▼"));
+  header.addEventListener("click", () => card.classList.toggle("open"));
+  card.appendChild(header);
+
+  const body = el("div", "card-body");
+  const grid = el("div", "fields-grid");
+
+  grid.appendChild(buildInput("Identificador (id)", "text", article.id, { article: i, key: "id" }));
+  grid.appendChild(buildInput("Categoria", "text", article.category, { article: i, key: "category" }, "Fisiologia vegetal"));
+  grid.appendChild(buildInput("Título", "text", article.title, { article: i, key: "title" }));
+  grid.appendChild(buildInput("Subtítulo (opcional)", "text", article.subtitle, { article: i, key: "subtitle" }));
+
+  const excerpt = buildTextarea("Resumo (cartão de listagem)", article.excerpt, { article: i, key: "excerpt" });
+  excerpt.classList.add("full");
+  grid.appendChild(excerpt);
+
+  grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
+  grid.appendChild(buildInput("Tempo de leitura", "text", article.readingTime, { article: i, key: "readingTime" }, "6 min"));
+
+  const bodyField = buildTextarea("Corpo — um parágrafo por linha", (article.body || []).join("\n"), { article: i, key: "body" }, true);
+  bodyField.classList.add("full");
+  bodyField.querySelector("textarea").rows = 8;
+  grid.appendChild(bodyField);
+
+  body.appendChild(grid);
+
+  const actions = el("div", "card-actions");
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover artigo");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => removeArticle(i));
+  actions.appendChild(removeBtn);
+  body.appendChild(actions);
+
+  card.appendChild(body);
+  card.addEventListener("input", () => markDirty("articles"));
+  card.addEventListener("change", () => markDirty("articles"));
+
+  return card;
 }
 
-// ----------------------------------------------------------------------------
-// Artigos: formulário
-// ----------------------------------------------------------------------------
+function moveArticle(from, to) {
+  if (to < 0 || to >= contentData.articles.length) return;
+  collectAll();
+  const [item] = contentData.articles.splice(from, 1);
+  contentData.articles.splice(to, 0, item);
+  renderArticlesList();
+  markDirty("articles");
+  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
 
-function openArticleForm(existing) {
-  const overlay = document.getElementById("form-overlay");
-  const container = document.getElementById("form-container");
-  container.innerHTML = "";
+function removeArticle(i) {
+  const article = contentData.articles[i];
+  if (!confirm(`Remover o artigo "${article.title || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  collectAll();
+  contentData.articles.splice(i, 1);
+  renderArticlesList();
+  markDirty("articles");
+  toast('Artigo removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
 
-  container.appendChild(el("h2", "", existing ? "Editar artigo" : "Novo artigo"));
-
-  const form = el("div", "admin-form-grid");
-  const fCategory = formField("Categoria", "text", existing?.category ?? "", "Fisiologia vegetal");
-  const fTitle = formField("Título", "text", existing?.title ?? "");
-  const fSubtitle = formField("Subtítulo (opcional)", "text", existing?.subtitle ?? "");
-  const fExcerpt = formField("Resumo (para o cartão de listagem)", "textarea", existing?.excerpt ?? "");
-  const fDate = formField("Data", "date", existing?.date ?? new Date().toISOString().slice(0, 10));
-  const fReadingTime = formField("Tempo de leitura", "text", existing?.readingTime ?? "", "6 min");
-  const fBody = formField("Corpo do artigo — um parágrafo por linha", "textarea", (existing?.body ?? []).join("\n"));
-  fBody.querySelector("textarea").rows = 10;
-
-  [fCategory, fTitle, fSubtitle, fExcerpt, fDate, fReadingTime, fBody].forEach((f) => form.appendChild(f));
-  container.appendChild(form);
-  container.appendChild(el("p", "admin-form-note", "O id é gerado automaticamente a partir do título."));
-
-  const actions = el("div", "admin-form-actions");
-  const cancelBtn = el("button", "btn btn-secondary", "Cancelar");
-  cancelBtn.type = "button";
-  cancelBtn.addEventListener("click", closeForm);
-  const saveBtn = el("button", "btn btn-primary", "Salvar");
-  saveBtn.type = "button";
-  saveBtn.addEventListener("click", async () => {
-    saveBtn.disabled = true;
-    try {
-      await saveArticle(existing, {
-        category: inputValue(fCategory),
-        title: inputValue(fTitle),
-        subtitle: inputValue(fSubtitle),
-        excerpt: inputValue(fExcerpt),
-        date: inputValue(fDate),
-        readingTime: inputValue(fReadingTime),
-        body: linesToParagraphs(inputValue(fBody)),
-      });
-    } finally {
-      saveBtn.disabled = false;
-    }
+function addArticle() {
+  collectAll();
+  const id = uniqueSlug(contentData.articles.map((a) => a.id), "novo-artigo");
+  // Insere no início: a home e a lista pública mostram os artigos na ordem
+  // do array, então um artigo novo já aparece em primeiro sem precisar
+  // reordenar manualmente.
+  contentData.articles.unshift({
+    id,
+    category: "",
+    title: "",
+    excerpt: "",
+    date: new Date().toISOString().slice(0, 10),
+    readingTime: "",
+    body: [],
   });
-  actions.appendChild(cancelBtn);
-  actions.appendChild(saveBtn);
-  container.appendChild(actions);
-
-  overlay.hidden = false;
-}
-
-async function saveArticle(existing, values) {
-  if (!values.title.trim()) {
-    setStatus("O título é obrigatório.", "error");
-    return;
-  }
-  setStatus("Salvando artigo…");
-  try {
-    const fresh = await getFile(CONFIG.articlesPath);
-    const id = existing ? existing.id : uniqueSlug(fresh.content.map((a) => a.id), values.title);
-    const record = {
-      id,
-      category: values.category,
-      title: values.title,
-      ...(values.subtitle ? { subtitle: values.subtitle } : {}),
-      excerpt: values.excerpt,
-      date: values.date,
-      readingTime: values.readingTime,
-      body: values.body,
-    };
-    const updated = existing
-      ? fresh.content.map((a) => (a.id === existing.id ? record : a))
-      : [...fresh.content, record];
-    const action = existing ? "atualiza" : "adiciona";
-    await putFile(CONFIG.articlesPath, updated, fresh.sha, `admin: ${action} artigo "${values.title}"`);
-    setStatus(`Artigo "${values.title}" salvo.`, "ok");
-    closeForm();
-    await loadArticles();
-  } catch (err) {
-    setStatus(`Erro ao salvar: ${err.message}`, "error");
-  }
+  renderArticlesList();
+  markDirty("articles");
+  const card = document.getElementById("article-card-0");
+  if (card) card.classList.add("open");
 }
 
 // ----------------------------------------------------------------------------
-// Episódios: listagem
+// Episódios
 // ----------------------------------------------------------------------------
-
-async function loadEpisodes() {
-  const list = document.getElementById("episodes-list");
-  list.innerHTML = "";
-  list.appendChild(el("p", "empty-state", "Carregando…"));
-  try {
-    episodesCache = await getFile(CONFIG.episodesPath);
-    renderEpisodesList();
-  } catch (err) {
-    list.innerHTML = "";
-    list.appendChild(el("p", "empty-state", `Não foi possível carregar: ${err.message}`));
-  }
-}
 
 function renderEpisodesList() {
-  const list = document.getElementById("episodes-list");
-  list.innerHTML = "";
-  const items = [...episodesCache.content].sort((a, b) => b.number - a.number);
+  const container = document.getElementById("episodes-list");
+  container.innerHTML = "";
+  const items = contentData.episodes;
+  document.getElementById("nav-count-episodes").textContent = items.length || "";
+  document.getElementById("count-episodes").textContent = `${items.length} ${items.length === 1 ? "episódio" : "episódios"}`;
 
   if (items.length === 0) {
-    list.appendChild(el("p", "empty-state", "Nenhum episódio cadastrado ainda."));
+    container.appendChild(el("p", "empty-state", "Nenhum episódio cadastrado ainda."));
     return;
   }
 
-  for (const episode of items) {
-    const row = el("div", "admin-item-row");
-    const main = el("div", "admin-item-main");
-    main.appendChild(el("div", "admin-item-title", `${episode.number}. ${episode.title}`));
-    main.appendChild(el("div", "admin-item-meta", `${episode.date} · ${episode.duration}`));
-    row.appendChild(main);
-
-    const actions = el("div", "admin-item-actions");
-    const editBtn = el("button", "btn btn-secondary", "Editar");
-    editBtn.type = "button";
-    editBtn.addEventListener("click", () => openEpisodeForm(episode));
-    const delBtn = el("button", "btn btn-danger", "Excluir");
-    delBtn.type = "button";
-    delBtn.addEventListener("click", () => deleteEpisode(episode));
-    actions.appendChild(editBtn);
-    actions.appendChild(delBtn);
-    row.appendChild(actions);
-
-    list.appendChild(row);
-  }
+  items.forEach((episode, i) => container.appendChild(buildEpisodeCard(episode, i, items.length)));
 }
 
-async function deleteEpisode(episode) {
-  if (!confirm(`Excluir o episódio "${episode.title}"? Isso faz um commit imediatamente.`)) return;
-  setStatus(`Excluindo "${episode.title}"…`);
-  try {
-    const fresh = await getFile(CONFIG.episodesPath);
-    const updated = fresh.content.filter((e) => e.id !== episode.id);
-    await putFile(CONFIG.episodesPath, updated, fresh.sha, `admin: remove episódio "${episode.title}"`);
-    setStatus(`Episódio "${episode.title}" excluído.`, "ok");
-    await loadEpisodes();
-  } catch (err) {
-    setStatus(`Erro ao excluir: ${err.message}`, "error");
-  }
-}
+function buildEpisodeCard(episode, i, total) {
+  const card = el("div", "card");
+  card.id = `episode-card-${i}`;
 
-// ----------------------------------------------------------------------------
-// Episódios: formulário
-// ----------------------------------------------------------------------------
+  const header = el("div", "card-header");
+  const left = el("div", "card-header-left");
+  left.appendChild(buildReorderButtons(i, total, () => moveEpisode(i, i - 1), () => moveEpisode(i, i + 1)));
+  left.appendChild(el("span", "card-num", String(episode.number ?? i + 1).padStart(2, "0")));
+  left.appendChild(el("span", "card-name", episode.title || "(sem título)"));
+  left.appendChild(el("span", "card-meta", `${episode.date || ""} · ${episode.duration || ""}`));
+  header.appendChild(left);
+  header.appendChild(el("span", "card-chevron", "▼"));
+  header.addEventListener("click", () => card.classList.toggle("open"));
+  card.appendChild(header);
 
-function openEpisodeForm(existing) {
-  const overlay = document.getElementById("form-overlay");
-  const container = document.getElementById("form-container");
-  container.innerHTML = "";
+  const body = el("div", "card-body");
+  const grid = el("div", "fields-grid");
 
-  container.appendChild(el("h2", "", existing ? "Editar episódio" : "Novo episódio"));
+  grid.appendChild(buildInput("Identificador (id)", "text", episode.id, { episode: i, key: "id" }));
+  grid.appendChild(buildInput("Número", "number", episode.number, { episode: i, key: "number" }));
+  grid.appendChild(buildInput("Título", "text", episode.title, { episode: i, key: "title" }));
+  grid.appendChild(buildInput("Duração", "text", episode.duration, { episode: i, key: "duration" }, "38:00 ou —"));
 
-  const form = el("div", "admin-form-grid");
-  const nextNumber = existing
-    ? existing.number
-    : Math.max(0, ...(episodesCache?.content ?? []).map((e) => e.number)) + 1;
+  const description = buildTextarea("Descrição curta", episode.description, { episode: i, key: "description" });
+  description.classList.add("full");
+  grid.appendChild(description);
 
-  const fNumber = formField("Número", "number", String(nextNumber));
-  const fTitle = formField("Título", "text", existing?.title ?? "");
-  const fDescription = formField("Descrição curta", "textarea", existing?.description ?? "");
-  const fDate = formField("Data", "date", existing?.date ?? new Date().toISOString().slice(0, 10));
-  const fDuration = formField("Duração", "text", existing?.duration ?? "", "38:00 ou —");
-  const fAudioSrc = formField(
-    "Caminho do áudio (o .mp3 é enviado por fora, via git)",
-    "text",
-    existing?.audioSrc ?? "",
-    "audio/episodio-02.mp3"
-  );
-  const fTranscript = formField(
+  grid.appendChild(buildInput("Data", "date", episode.date, { episode: i, key: "date" }));
+  grid.appendChild(buildInput("Caminho do áudio", "text", episode.audioSrc, { episode: i, key: "audioSrc" }, "audio/episodio-02.mp3"));
+
+  const transcript = buildTextarea(
     "Transcrição (opcional) — um parágrafo por linha",
-    "textarea",
-    (existing?.transcript ?? []).join("\n")
+    (episode.transcript || []).join("\n"),
+    { episode: i, key: "transcript" },
+    true
   );
-  fTranscript.querySelector("textarea").rows = 10;
+  transcript.classList.add("full");
+  transcript.querySelector("textarea").rows = 8;
+  grid.appendChild(transcript);
 
-  [fNumber, fTitle, fDescription, fDate, fDuration, fAudioSrc, fTranscript].forEach((f) => form.appendChild(f));
-  container.appendChild(form);
-  container.appendChild(el("p", "admin-form-note", "O id é gerado automaticamente a partir do título."));
+  body.appendChild(grid);
 
-  const actions = el("div", "admin-form-actions");
-  const cancelBtn = el("button", "btn btn-secondary", "Cancelar");
-  cancelBtn.type = "button";
-  cancelBtn.addEventListener("click", closeForm);
-  const saveBtn = el("button", "btn btn-primary", "Salvar");
-  saveBtn.type = "button";
-  saveBtn.addEventListener("click", async () => {
-    saveBtn.disabled = true;
-    try {
-      await saveEpisode(existing, {
-        number: parseInt(inputValue(fNumber), 10),
-        title: inputValue(fTitle),
-        description: inputValue(fDescription),
-        date: inputValue(fDate),
-        duration: inputValue(fDuration),
-        audioSrc: inputValue(fAudioSrc),
-        transcript: linesToParagraphs(inputValue(fTranscript)),
-      });
-    } finally {
-      saveBtn.disabled = false;
-    }
-  });
-  actions.appendChild(cancelBtn);
-  actions.appendChild(saveBtn);
-  container.appendChild(actions);
+  const actions = el("div", "card-actions");
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover episódio");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => removeEpisode(i));
+  actions.appendChild(removeBtn);
+  body.appendChild(actions);
 
-  overlay.hidden = false;
+  card.appendChild(body);
+  card.addEventListener("input", () => markDirty("episodes"));
+  card.addEventListener("change", () => markDirty("episodes"));
+
+  return card;
 }
 
-async function saveEpisode(existing, values) {
-  if (!values.title.trim()) {
-    setStatus("O título é obrigatório.", "error");
-    return;
-  }
-  if (!Number.isFinite(values.number)) {
-    setStatus("O número do episódio é obrigatório.", "error");
-    return;
-  }
-  setStatus("Salvando episódio…");
-  try {
-    const fresh = await getFile(CONFIG.episodesPath);
-    const id = existing ? existing.id : uniqueSlug(fresh.content.map((e) => e.id), values.title, "ep");
-    const record = {
-      id,
-      number: values.number,
-      title: values.title,
-      description: values.description,
-      date: values.date,
-      duration: values.duration,
-      audioSrc: values.audioSrc,
-      ...(values.transcript.length > 0 ? { transcript: values.transcript } : {}),
-    };
-    const updated = existing
-      ? fresh.content.map((e) => (e.id === existing.id ? record : e))
-      : [...fresh.content, record];
-    const action = existing ? "atualiza" : "adiciona";
-    await putFile(CONFIG.episodesPath, updated, fresh.sha, `admin: ${action} episódio "${values.title}"`);
-    setStatus(`Episódio "${values.title}" salvo.`, "ok");
-    closeForm();
-    await loadEpisodes();
-  } catch (err) {
-    setStatus(`Erro ao salvar: ${err.message}`, "error");
-  }
+function moveEpisode(from, to) {
+  if (to < 0 || to >= contentData.episodes.length) return;
+  collectAll();
+  const [item] = contentData.episodes.splice(from, 1);
+  contentData.episodes.splice(to, 0, item);
+  renderEpisodesList();
+  markDirty("episodes");
+  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
+
+function removeEpisode(i) {
+  const episode = contentData.episodes[i];
+  if (!confirm(`Remover o episódio "${episode.title || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  collectAll();
+  contentData.episodes.splice(i, 1);
+  renderEpisodesList();
+  markDirty("episodes");
+  toast('Episódio removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
+
+function addEpisode() {
+  collectAll();
+  const nextNumber = Math.max(0, ...contentData.episodes.map((e) => e.number || 0)) + 1;
+  const id = uniqueSlug(contentData.episodes.map((e) => e.id), `ep-${nextNumber}`);
+  // Insere no início: a home e a lista pública mostram os episódios na
+  // ordem do array, então um episódio novo já aparece em primeiro sem
+  // precisar reordenar manualmente.
+  contentData.episodes.unshift({
+    id,
+    number: nextNumber,
+    title: "",
+    description: "",
+    date: new Date().toISOString().slice(0, 10),
+    duration: "",
+    audioSrc: "",
+  });
+  renderEpisodesList();
+  markDirty("episodes");
+  const card = document.getElementById("episode-card-0");
+  if (card) card.classList.add("open");
 }
 
 // ----------------------------------------------------------------------------
-// Textos do site: formulário único, gerado a partir de SITE_TEXT_SCHEMA
+// Textos do site: Marca & navegação + Páginas
 // ----------------------------------------------------------------------------
 
-let siteTextCache = null; // { content: {...}, sha }
-const siteTextInputs = new Map(); // key ("a.b.c") -> <input>/<textarea>
-
-function getByPath(obj, path) {
-  return path.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+function buildSiteField(fieldDef) {
+  const value = getByPath(contentData.site, fieldDef.key) ?? "";
+  const field =
+    fieldDef.type === "textarea"
+      ? buildTextarea(fieldDef.label, value, { site: fieldDef.key })
+      : buildInput(fieldDef.label, "text", value, { site: fieldDef.key });
+  if (fieldDef.type === "textarea") field.classList.add("full");
+  return field;
 }
 
-function setByPath(obj, path, value) {
-  const keys = path.split(".");
-  let cur = obj;
-  keys.forEach((key, i) => {
-    if (i === keys.length - 1) {
-      cur[key] = value;
-    } else {
-      if (typeof cur[key] !== "object" || cur[key] === null) cur[key] = {};
-      cur = cur[key];
-    }
-  });
-}
-
-async function loadTexts() {
-  const container = document.getElementById("texts-form");
+function renderGeneralForm() {
+  const container = document.getElementById("general-form");
   container.innerHTML = "";
-  container.appendChild(el("p", "empty-state", "Carregando…"));
-  try {
-    siteTextCache = await getFile(CONFIG.sitePath);
-    renderTextsForm();
-  } catch (err) {
-    container.innerHTML = "";
-    container.appendChild(el("p", "empty-state", `Não foi possível carregar: ${err.message}`));
-  }
-}
-
-function renderTextsForm() {
-  const container = document.getElementById("texts-form");
-  container.innerHTML = "";
-  siteTextInputs.clear();
-
-  for (const section of SITE_TEXT_SCHEMA) {
-    container.appendChild(el("h3", "", section.heading));
-    const grid = el("div", "admin-form-grid");
+  for (const section of GENERAL_SCHEMA) {
+    container.appendChild(el("h3", "section-heading", section.heading));
+    const grid = el("div", "fields-grid");
     for (const fieldDef of section.fields) {
-      const currentValue = getByPath(siteTextCache.content, fieldDef.key) ?? "";
-      const field = formField(fieldDef.label, fieldDef.type, currentValue);
-      grid.appendChild(field);
-      siteTextInputs.set(fieldDef.key, field.querySelector("input, textarea"));
+      grid.appendChild(buildSiteField(fieldDef));
     }
     container.appendChild(grid);
   }
+  container.addEventListener("input", () => markDirty("site"));
+  container.addEventListener("change", () => markDirty("site"));
 }
 
-async function saveTexts() {
-  setStatus("Salvando textos…");
-  try {
-    const fresh = await getFile(CONFIG.sitePath);
-    const updated = JSON.parse(JSON.stringify(fresh.content));
-    siteTextInputs.forEach((input, key) => {
-      setByPath(updated, key, input.value);
-    });
-    await putFile(CONFIG.sitePath, updated, fresh.sha, "admin: atualiza textos do site");
-    setStatus("Textos salvos.", "ok");
-    await loadTexts();
-  } catch (err) {
-    setStatus(`Erro ao salvar: ${err.message}`, "error");
+function renderPageForms() {
+  for (const page of PAGE_SCHEMA) {
+    const container = document.getElementById(`page-form-${page.key}`);
+    container.innerHTML = "";
+    const grid = el("div", "fields-grid");
+    for (const fieldDef of page.fields) {
+      grid.appendChild(buildSiteField(fieldDef));
+    }
+    container.appendChild(grid);
+    container.addEventListener("input", () => markDirty("site"));
+    container.addEventListener("change", () => markDirty("site"));
   }
 }
 
 // ----------------------------------------------------------------------------
-// Acessos: listagem e gestão
+// Acessos: listagem e gestão (cada ação já commita — sem "sujo"/save global)
 // ----------------------------------------------------------------------------
 
 let accessCache = null; // { content: { tokens: [...] }, sha }
@@ -944,7 +1027,7 @@ function renderAccessList() {
     row.appendChild(main);
 
     const actions = el("div", "admin-item-actions");
-    const delBtn = el("button", "btn btn-danger", "Revogar");
+    const delBtn = el("button", "btn btn-danger btn-small", "Revogar");
     delBtn.type = "button";
     delBtn.addEventListener("click", () => revokeAccess(index, entry.label));
     actions.appendChild(delBtn);
@@ -965,24 +1048,23 @@ async function addAccess() {
   const password = passwordInput.value;
 
   if (!label || !token || !password) {
-    setStatus("Preencha nome, token e senha para adicionar um acesso.", "error");
+    toast("Preencha nome, token e senha para adicionar um acesso.", "error");
     return;
   }
 
   submit.disabled = true;
-  setStatus(`Adicionando acesso para "${label}"…`);
   try {
     const fresh = await getFile(CONFIG.authPath);
     const encrypted = await encryptToken(token, password);
     const updated = { tokens: [...(fresh.content.tokens || []), { label, ...encrypted }] };
     await putFile(CONFIG.authPath, updated, fresh.sha, `admin: adiciona acesso "${label}"`);
-    setStatus(`Acesso de "${label}" adicionado.`, "ok");
+    toast(`Acesso de "${label}" adicionado.`, "ok");
     labelInput.value = "";
     tokenInput.value = "";
     passwordInput.value = "";
     await loadAccess();
   } catch (err) {
-    setStatus(`Erro ao adicionar acesso: ${err.message}`, "error");
+    toast(`Erro ao adicionar acesso: ${err.message}`, "error");
   } finally {
     submit.disabled = false;
   }
@@ -995,65 +1077,16 @@ async function revokeAccess(index, label) {
     )
   )
     return;
-  setStatus(`Revogando acesso de "${label}"…`);
   try {
     const fresh = await getFile(CONFIG.authPath);
     const tokens = [...(fresh.content.tokens || [])];
     tokens.splice(index, 1);
     await putFile(CONFIG.authPath, { tokens }, fresh.sha, `admin: revoga acesso "${label}"`);
-    setStatus(`Acesso de "${label}" revogado.`, "ok");
+    toast(`Acesso de "${label}" revogado.`, "ok");
     await loadAccess();
   } catch (err) {
-    setStatus(`Erro ao revogar: ${err.message}`, "error");
+    toast(`Erro ao revogar: ${err.message}`, "error");
   }
-}
-
-// ----------------------------------------------------------------------------
-// Helpers de formulário
-// ----------------------------------------------------------------------------
-
-function formField(label, type, value, placeholder) {
-  const field = el("div", "field");
-  const labelId = `f-${slugify(label)}-${Math.random().toString(36).slice(2, 7)}`;
-  const labelEl = el("label", "", label);
-  labelEl.htmlFor = labelId;
-  field.appendChild(labelEl);
-
-  let input;
-  if (type === "textarea") {
-    input = document.createElement("textarea");
-    input.className = "input";
-    input.rows = 3;
-  } else {
-    input = document.createElement("input");
-    input.className = "input";
-    input.type = type;
-  }
-  input.id = labelId;
-  input.value = value ?? "";
-  if (placeholder) input.placeholder = placeholder;
-  field.appendChild(input);
-  return field;
-}
-
-function inputValue(field) {
-  return field.querySelector("input, textarea").value;
-}
-
-function uniqueSlug(existingIds, title, prefix) {
-  const base = prefix ? `${prefix}-${slugify(title)}` : slugify(title);
-  let candidate = base || (prefix ? `${prefix}-item` : "item");
-  let n = 2;
-  while (existingIds.includes(candidate)) {
-    candidate = `${base}-${n}`;
-    n += 1;
-  }
-  return candidate;
-}
-
-function closeForm() {
-  document.getElementById("form-overlay").hidden = true;
-  document.getElementById("form-container").innerHTML = "";
 }
 
 // ----------------------------------------------------------------------------
