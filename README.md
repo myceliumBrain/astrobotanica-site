@@ -1,22 +1,37 @@
 # Astrobotânica — site do podcast
 
-Site estático (HTML + CSS + TypeScript) com duas seções de conteúdo:
-**Episódios** (players de `.mp3`) e **Roteiros** (artigos/transcrições, com
-leitor em tela cheia).
+Site estático (HTML + CSS + TypeScript), multi-página, com duas trilhas de
+conteúdo que se cruzam: **Podcast** (episódios com player de `.mp3`) e
+**Roteiros** (o texto completo de cada episódio).
 
 ## Estrutura
 
 ```
-astrobotanica-site/
-├── index.html          → estrutura da página
+site/
+├── index.html          → Home
+├── podcast.html         → lista de episódios
+├── episodio.html         → detalhe de um episódio (?id=ep-01)
+├── roteiros.html         → lista de roteiros
+├── roteiro.html           → detalhe de um roteiro (?id=roteiro-01)
+├── sobre.html
+├── contato.html
 ├── css/style.css        → todo o visual (paleta, tipografia, layout)
 ├── src/
 │   ├── data.ts           → CONTEÚDO: episódios e roteiros (edite aqui)
-│   └── main.ts            → lógica: renderiza listas e o leitor de roteiro
+│   └── main.ts            → lógica: preenche cada página a partir de data.ts
 ├── dist/                 → JavaScript compilado (gerado a partir de src/)
-├── audio/                → coloque os arquivos .mp3 aqui
+├── audio/                → arquivos .mp3 dos episódios
 └── tsconfig.json
 ```
+
+Todas as páginas carregam o mesmo `dist/main.js`; cada função de renderização
+procura o elemento da sua página (`#episode-list`, `#episodio-content`,
+`#article-list`, `#roteiro-content`, `#home-latest-episode`,
+`#home-featured-article`) e não faz nada se ele não existir — por isso não é
+preciso um script diferente por página.
+
+Nav e rodapé são markup HTML repetido em cada página (sem servidor, sem
+includes) — ao editar um, replique a mudança nas outras páginas.
 
 ## Como adicionar um novo episódio
 
@@ -36,7 +51,9 @@ astrobotanica-site/
 },
 ```
 
-3. Recompile (veja abaixo).
+3. Recompile (veja abaixo). A página `podcast.html` e a Home passam a listar
+   o novo episódio automaticamente — não é preciso criar um HTML novo, a
+   página `episodio.html?id=ep-02` já funciona.
 
 ## Como adicionar um novo roteiro
 
@@ -80,19 +97,23 @@ python3 -m http.server 8000
 
 Depois acesse `http://localhost:8000` no navegador.
 
+## Antes de publicar
+
+- **Contato**: `contato.html` tem um email-placeholder (`seu-email@substituir.com`)
+  marcado com `<!-- TODO -->` no HTML — troque pelo seu email real.
+- **Assinatura do podcast**: os botões de Spotify/Apple Podcasts/RSS em
+  `podcast.html` e no rodapé estão como "em breve" até existirem links reais.
+  Depois de publicar em algum desses serviços, troque o texto pelo link real
+  e remova o estilo de botão desabilitado (`aria-disabled="true"`).
+
 ## Publicar
 
 Como é um site 100% estático, pode subir a pasta inteira (menos `src/` e
 `tsconfig.json`, que são só para desenvolvimento) para qualquer serviço de
 hospedagem estática: GitHub Pages, Netlify, Vercel, Cloudflare Pages, etc.
-Se for GitHub Pages, o fluxo `myceliumbrain`/`pontosdefuga` que você já usa
-serve perfeitamente para isso.
 
 ## Personalização rápida
 
-- **Cores**: todas as variáveis estão no topo de `css/style.css`, no bloco
-  `:root`.
-- **Tipografia**: trocada via Google Fonts no `<head>` do `index.html`
-  (atualmente Fraunces + Inter + IBM Plex Mono).
-- **Nome do podcast / tagline**: procure por "Astrobotânica" no
-  `index.html` e `dist/main.js`/`src` não precisa mexer, é só texto no HTML.
+- **Cores/tipografia**: todas as variáveis estão no topo de `css/style.css`,
+  no bloco `:root` (paleta azul, Barlow/Barlow Condensed/IBM Plex Mono).
+- **Nome do podcast / tagline**: procure por "Astrobotânica" em cada `.html`.
