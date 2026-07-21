@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Astrobotânica — um podcast sobre plantas fora da Terra</title>
+<meta name="description" content="Astrobotânica é um podcast sobre o reino das plantas e sua jornada para fora da Terra: pesquisa, história e especulação científica, com o pesquisador Pedro." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a href="#top" class="wordmark">
+      <span class="wordmark-main">Astrobotânica</span>
+      <span class="wordmark-badge">T+13,8 BI ANOS DESDE O BIG BANG</span>
+    </a>
+
+    <button id="nav-toggle" class="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="primary-nav">
+      <span></span><span></span><span></span>
+    </button>
+
+    <nav id="primary-nav" class="primary-nav">
+      <ul>
+        <li><a href="#top">Início</a></li>
+        <li><a href="#episodios">Episódios</a></li>
+        <li><a href="#roteiros">Roteiros</a></li>
+        <li><a href="#sobre">Sobre</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+
+  <section class="hero">
+    <svg class="hero-roots" viewBox="0 0 1200 500" preserveAspectRatio="none" aria-hidden="true">
+      <g fill="none" stroke="#3e6b4f" stroke-width="1" stroke-linecap="round">
+        <path d="M120 500 C 140 420, 90 380, 130 300 C 160 240, 110 200, 150 120" opacity="0.5"/>
+        <path d="M130 300 C 190 280, 210 240, 260 210" opacity="0.4"/>
+        <path d="M150 120 C 175 90, 165 60, 195 20" opacity="0.35"/>
+        <path d="M1080 500 C 1060 430, 1100 390, 1060 320 C 1035 270, 1085 230, 1050 160" opacity="0.5"/>
+        <path d="M1060 320 C 1005 300, 985 265, 935 240" opacity="0.4"/>
+        <path d="M1050 160 C 1025 125, 1035 95, 1000 55" opacity="0.35"/>
+        <path d="M600 500 C 615 440, 580 410, 610 350" opacity="0.3"/>
+      </g>
+    </svg>
+
+    <div class="wrap hero-inner">
+      <p class="hero-quote">“Se você tem um jardim e uma biblioteca, você tem tudo o que precisa.”</p>
+      <p class="hero-attribution">— Marco Túlio Cícero, cerca de 45 a.C.</p>
+
+      <p class="hero-sub">
+        Um podcast sobre o reino das plantas e sua jornada para fora da Terra —
+        pesquisa de bancada, história e especulação científica, com o pesquisador
+        Pedro.
+      </p>
+
+      <div class="hero-cta">
+        <a href="#episodios" class="btn btn-primary">Ouvir episódios</a>
+        <a href="#roteiros" class="btn btn-ghost">Ler roteiros</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="episodios" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow-mono">TRANSMISSÕES</span>
+          <h2 class="section-title">Episódios</h2>
+        </div>
+        <p class="section-note">Novos episódios adicionados aqui conforme publicados. Arquivos de áudio ficam em <code>/audio</code>.</p>
+      </div>
+
+      <div id="episode-list"></div>
+    </div>
+  </section>
+
+  <section id="roteiros" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow-mono">ARQUIVO</span>
+          <h2 class="section-title">Roteiros</h2>
+        </div>
+        <p class="section-note">O texto completo por trás de cada episódio, para ler, citar ou revisitar.</p>
+      </div>
+
+      <div id="article-list"></div>
+    </div>
+  </section>
+
+  <section id="sobre" class="section">
+    <div class="wrap">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow-mono">REGISTRO DE BORDO</span>
+          <h2 class="section-title">Sobre o podcast</h2>
+        </div>
+      </div>
+      <p class="hero-sub" style="max-width: 40rem;">
+        Astrobotânica é conduzido por Pedro, pesquisador na área, cobrindo desde
+        a pesquisa de bancada — rizobactérias promotoras de crescimento, óxido
+        de grafeno, cultivo em regolito lunar — até a história e o futuro de
+        levar plantas para fora da Terra.
+      </p>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <span class="footer-tagline">Astrobotânica — o reino das plantas, fora da Terra.</span>
+    <nav class="footer-links">
+      <a href="#top">Início</a>
+      <a href="#episodios">Episódios</a>
+      <a href="#roteiros">Roteiros</a>
+    </nav>
+  </div>
+</footer>
+
+<div id="reader-overlay" class="reader-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="reader-title">
+  <div class="reader-panel">
+    <button id="reader-close" class="reader-close" type="button">Fechar ✕</button>
+    <div id="reader-content"></div>
+  </div>
+</div>
+
+<script type="module" src="dist/main.js"></script>
+</body>
+</html>
