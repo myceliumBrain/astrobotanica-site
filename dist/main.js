@@ -2,7 +2,6 @@
 // main.js — gerado a partir de src/main.ts. Não edite diretamente:
 // edite src/main.ts e recompile com `npx tsc`.
 // ============================================================================
-import { EPISODES, ARTICLES } from "./data.js";
 function formatDate(iso) {
     const [year, month, day] = iso.split("-").map(Number);
     const date = new Date(Date.UTC(year, month - 1, day));
@@ -24,21 +23,37 @@ function el(tag, className, text) {
         node.textContent = text;
     return node;
 }
-function corners() {
-    return ["tl", "tr", "bl", "br"].map((pos) => el("i", `corner ${pos}`));
-}
 function getParam(name) {
     return new URLSearchParams(location.search).get(name);
 }
-function renderEpisodeList() {
+async function loadJSON(path) {
+    try {
+        const res = await fetch(path);
+        if (!res.ok)
+            throw new Error(`${path}: HTTP ${res.status}`);
+        const items = (await res.json());
+        return { items, failed: false };
+    }
+    catch (err) {
+        console.error(`Falha ao carregar ${path}`, err);
+        return { items: [], failed: true };
+    }
+}
+const loadEpisodes = () => loadJSON("data/episodes.json");
+const loadArticles = () => loadJSON("data/articles.json");
+function renderEpisodeList(episodes) {
     const list = document.getElementById("episode-list");
     if (!list)
         return;
-    if (EPISODES.length === 0) {
+    if (episodes.failed) {
+        list.appendChild(el("p", "empty-state", "Não foi possível carregar os episódios agora."));
+        return;
+    }
+    if (episodes.items.length === 0) {
         list.appendChild(el("p", "empty-state", "Nenhum episódio publicado ainda. Volte em breve."));
         return;
     }
-    const sorted = [...EPISODES].sort((a, b) => b.number - a.number);
+    const sorted = [...episodes.items].sort((a, b) => b.number - a.number);
     for (const episode of sorted) {
         const row = document.createElement("a");
         row.className = "episode-row";
@@ -52,12 +67,16 @@ function renderEpisodeList() {
         list.appendChild(row);
     }
 }
-function renderEpisodeDetail() {
+function renderEpisodeDetail(episodes) {
     const root = document.getElementById("episodio-content");
     if (!root)
         return;
+    if (episodes.failed) {
+        root.appendChild(el("p", "empty-state", "Não foi possível carregar o episódio agora."));
+        return;
+    }
     const id = getParam("id");
-    const episode = (id ? EPISODES.find((e) => e.id === id) : undefined) ?? EPISODES[0];
+    const episode = (id ? episodes.items.find((e) => e.id === id) : undefined) ?? episodes.items[0];
     if (!episode) {
         root.appendChild(el("p", "empty-state", "Episódio não encontrado."));
         return;
@@ -65,8 +84,7 @@ function renderEpisodeDetail() {
     root.appendChild(el("span", "tag tag-accent", `Episódio ${episode.number}`));
     root.appendChild(el("h1", "", episode.title));
     root.appendChild(el("p", "episode-detail-meta", `${formatDate(episode.date)} · ${episode.duration}`));
-    const player = el("div", "player-panel blueprint");
-    corners().forEach((c) => player.appendChild(c));
+    const player = el("div", "player-panel");
     const audio = document.createElement("audio");
     audio.controls = true;
     audio.preload = "none";
@@ -80,18 +98,17 @@ function renderEpisodeDetail() {
     const body = el("div", "episode-body");
     body.appendChild(el("p", "", episode.description));
     root.appendChild(body);
-    if (episode.articleId && ARTICLES.some((a) => a.id === episode.articleId)) {
-        const link = document.createElement("a");
-        link.className = "text-link";
-        link.style.display = "inline-block";
-        link.style.marginTop = "1.5rem";
-        link.href = `roteiro.html?id=${episode.articleId}`;
-        link.textContent = "Ler o roteiro completo →";
-        root.appendChild(link);
+    if (episode.transcript && episode.transcript.length > 0) {
+        root.appendChild(el("h2", "transcript-heading", "Transcrição completa"));
+        const transcript = el("div", "episode-body");
+        for (const paragraph of episode.transcript) {
+            transcript.appendChild(el("p", "", paragraph));
+        }
+        root.appendChild(transcript);
     }
     const related = document.getElementById("episodio-related");
     if (related) {
-        const others = EPISODES.filter((e) => e.id !== episode.id);
+        const others = episodes.items.filter((e) => e.id !== episode.id);
         if (others.length === 0) {
             related.appendChild(el("p", "empty-state", "Ainda não há outros episódios publicados."));
         }
@@ -109,24 +126,26 @@ function renderEpisodeDetail() {
     }
     document.title = `${episode.title} — Astrobotânica`;
 }
-function renderArticleList() {
+function renderArticleList(articles) {
     const list = document.getElementById("article-list");
     if (!list)
         return;
-    if (ARTICLES.length === 0) {
-        list.appendChild(el("p", "empty-state", "Nenhum roteiro publicado ainda. Volte em breve."));
+    if (articles.failed) {
+        list.appendChild(el("p", "empty-state", "Não foi possível carregar os artigos agora."));
         return;
     }
-    const sorted = [...ARTICLES].sort((a, b) => (a.date < b.date ? 1 : -1));
+    if (articles.items.length === 0) {
+        list.appendChild(el("p", "empty-state", "Nenhum artigo publicado ainda. Volte em breve."));
+        return;
+    }
+    const sorted = [...articles.items].sort((a, b) => (a.date < b.date ? 1 : -1));
     for (const article of sorted) {
         const card = document.createElement("a");
-        card.className = "card blueprint";
-        card.href = `roteiro.html?id=${article.id}`;
-        corners().forEach((c) => card.appendChild(c));
-        card.appendChild(el("div", "card-kicker", "Roteiro"));
+        card.className = "card";
+        card.href = `artigo.html?id=${article.id}`;
+        card.appendChild(el("div", "card-kicker", article.category));
         card.appendChild(el("div", "card-title", article.title));
-        if (article.subtitle)
-            card.appendChild(el("p", "card-body", article.subtitle));
+        card.appendChild(el("p", "card-body", article.excerpt));
         const meta = el("div", "card-meta");
         meta.appendChild(el("span", "", formatDate(article.date)));
         meta.appendChild(el("span", "", "·"));
@@ -135,17 +154,21 @@ function renderArticleList() {
         list.appendChild(card);
     }
 }
-function renderArticleDetail() {
-    const root = document.getElementById("roteiro-content");
+function renderArticleDetail(articles) {
+    const root = document.getElementById("artigo-content");
     if (!root)
         return;
-    const id = getParam("id");
-    const article = (id ? ARTICLES.find((a) => a.id === id) : undefined) ?? ARTICLES[0];
-    if (!article) {
-        root.appendChild(el("p", "empty-state", "Roteiro não encontrado."));
+    if (articles.failed) {
+        root.appendChild(el("p", "empty-state", "Não foi possível carregar o artigo agora."));
         return;
     }
-    root.appendChild(el("span", "tag tag-accent", "Roteiro"));
+    const id = getParam("id");
+    const article = (id ? articles.items.find((a) => a.id === id) : undefined) ?? articles.items[0];
+    if (!article) {
+        root.appendChild(el("p", "empty-state", "Artigo não encontrado."));
+        return;
+    }
+    root.appendChild(el("span", "tag tag-accent", article.category));
     root.appendChild(el("h1", "", article.title));
     if (article.subtitle) {
         root.appendChild(el("p", "article-subtitle", article.subtitle));
@@ -160,31 +183,18 @@ function renderArticleDetail() {
         body.appendChild(el("p", "", paragraph));
     }
     root.appendChild(body);
-    if (article.episodeId) {
-        const episode = EPISODES.find((e) => e.id === article.episodeId);
-        if (episode) {
-            const link = document.createElement("a");
-            link.className = "text-link";
-            link.style.display = "inline-block";
-            link.style.marginTop = "1.5rem";
-            link.href = `episodio.html?id=${episode.id}`;
-            link.textContent = "← Ouvir o episódio correspondente";
-            root.appendChild(link);
-        }
-    }
-    const related = document.getElementById("roteiro-related");
+    const related = document.getElementById("artigo-related");
     if (related) {
-        const others = ARTICLES.filter((a) => a.id !== article.id);
+        const others = articles.items.filter((a) => a.id !== article.id);
         if (others.length === 0) {
-            related.appendChild(el("p", "empty-state", "Ainda não há outros roteiros publicados."));
+            related.appendChild(el("p", "empty-state", "Ainda não há outros artigos publicados."));
         }
         else {
             for (const art of others) {
                 const card = document.createElement("a");
-                card.className = "card blueprint";
-                card.href = `roteiro.html?id=${art.id}`;
-                corners().forEach((c) => card.appendChild(c));
-                card.appendChild(el("div", "card-kicker", "Roteiro"));
+                card.className = "card";
+                card.href = `artigo.html?id=${art.id}`;
+                card.appendChild(el("div", "card-kicker", art.category));
                 card.appendChild(el("div", "card-title", art.title));
                 related.appendChild(card);
             }
@@ -192,41 +202,49 @@ function renderArticleDetail() {
     }
     document.title = `${article.title} — Astrobotânica`;
 }
-function renderHomeHighlights() {
+function renderHomeHighlights(episodes, articles) {
     const epRoot = document.getElementById("home-latest-episode");
     if (epRoot) {
-        const latest = [...EPISODES].sort((a, b) => b.number - a.number)[0];
-        if (latest) {
-            const row = document.createElement("a");
-            row.className = "episode-row";
-            row.href = `episodio.html?id=${latest.id}`;
-            row.appendChild(el("span", "episode-row-number", pad(latest.number)));
-            const main = el("div", "episode-row-main");
-            main.appendChild(el("div", "episode-row-title", latest.title));
-            main.appendChild(el("div", "episode-row-meta", `${latest.duration} · ${formatDate(latest.date)}`));
-            row.appendChild(main);
-            epRoot.appendChild(row);
+        if (episodes.failed) {
+            epRoot.appendChild(el("p", "empty-state", "Não foi possível carregar os episódios agora."));
         }
         else {
-            epRoot.appendChild(el("p", "empty-state", "Nenhum episódio publicado ainda."));
+            const latest = [...episodes.items].sort((a, b) => b.number - a.number)[0];
+            if (latest) {
+                const row = document.createElement("a");
+                row.className = "episode-row";
+                row.href = `episodio.html?id=${latest.id}`;
+                row.appendChild(el("span", "episode-row-number", pad(latest.number)));
+                const main = el("div", "episode-row-main");
+                main.appendChild(el("div", "episode-row-title", latest.title));
+                main.appendChild(el("div", "episode-row-meta", `${latest.duration} · ${formatDate(latest.date)}`));
+                row.appendChild(main);
+                epRoot.appendChild(row);
+            }
+            else {
+                epRoot.appendChild(el("p", "empty-state", "Nenhum episódio publicado ainda."));
+            }
         }
     }
     const artRoot = document.getElementById("home-featured-article");
     if (artRoot) {
-        const featured = ARTICLES[0];
-        if (featured) {
-            const card = document.createElement("a");
-            card.className = "card blueprint";
-            card.href = `roteiro.html?id=${featured.id}`;
-            corners().forEach((c) => card.appendChild(c));
-            card.appendChild(el("div", "card-kicker", "Roteiro"));
-            card.appendChild(el("div", "card-title", featured.title));
-            if (featured.subtitle)
-                card.appendChild(el("p", "card-body", featured.subtitle));
-            artRoot.appendChild(card);
+        if (articles.failed) {
+            artRoot.appendChild(el("p", "empty-state", "Não foi possível carregar os artigos agora."));
         }
         else {
-            artRoot.appendChild(el("p", "empty-state", "Nenhum roteiro publicado ainda."));
+            const featured = articles.items[0];
+            if (featured) {
+                const card = document.createElement("a");
+                card.className = "card";
+                card.href = `artigo.html?id=${featured.id}`;
+                card.appendChild(el("div", "card-kicker", featured.category));
+                card.appendChild(el("div", "card-title", featured.title));
+                card.appendChild(el("p", "card-body", featured.excerpt));
+                artRoot.appendChild(card);
+            }
+            else {
+                artRoot.appendChild(el("p", "empty-state", "Nenhum artigo publicado ainda."));
+            }
         }
     }
 }
@@ -246,11 +264,12 @@ function setupNav() {
         });
     });
 }
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     setupNav();
-    renderEpisodeList();
-    renderEpisodeDetail();
-    renderArticleList();
-    renderArticleDetail();
-    renderHomeHighlights();
+    const [episodes, articles] = await Promise.all([loadEpisodes(), loadArticles()]);
+    renderEpisodeList(episodes);
+    renderEpisodeDetail(episodes);
+    renderArticleList(articles);
+    renderArticleDetail(articles);
+    renderHomeHighlights(episodes, articles);
 });

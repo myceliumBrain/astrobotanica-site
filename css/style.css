@@ -4,7 +4,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root {
-  /* cor — papel claro, acento azul, traço de projeto técnico (blueprint) */
+  /* cor — papel claro, acento verde pastel */
   --bg: #f4f4f2;
   --bg-panel: #ececea;
   --ink: #1d1f20;
@@ -12,11 +12,11 @@
   --ink-faint: color-mix(in srgb, var(--ink) 48%, transparent);
   --line: color-mix(in srgb, var(--ink) 15%, transparent);
 
-  --accent: #5980a6;
-  --accent-600: #597ea3;
-  --accent-700: #416180;
-  --accent-800: #2c455d;
-  --accent-100: #eaf2fb;
+  --accent: #7fad8b;
+  --accent-600: #6c9c79;
+  --accent-700: #4f7a5c;
+  --accent-800: #395a43;
+  --accent-100: #e6f1e9;
 
   /* tipografia */
   --font-heading: "Barlow Condensed", system-ui, sans-serif;
@@ -97,24 +97,6 @@ button { font-family: inherit; }
   margin-inline: auto;
   padding-inline: var(--space-3);
 }
-
-/* ============================================================================
-   BLUEPRINT — traço de canto usado em cartões, botões e molduras
-============================================================================ */
-.blueprint { position: relative; }
-.blueprint > .corner {
-  position: absolute; width: 10px; height: 10px;
-  color: color-mix(in srgb, var(--ink) 45%, transparent);
-}
-.blueprint > .corner::before, .blueprint > .corner::after {
-  content: ""; position: absolute; background: currentColor;
-}
-.blueprint > .corner::before { left: 4px; top: 0; width: 1px; height: 100%; }
-.blueprint > .corner::after  { top: 4px; left: 0; width: 100%; height: 1px; }
-.blueprint > .corner.tl { top: -5px; left: -5px; }
-.blueprint > .corner.tr { top: -5px; right: -5px; }
-.blueprint > .corner.bl { bottom: -5px; left: -5px; }
-.blueprint > .corner.br { bottom: -5px; right: -5px; }
 
 /* ============================================================================
    TAGS
@@ -346,7 +328,13 @@ button { font-family: inherit; }
 }
 .episode-body p + p { margin-top: var(--space-3); }
 
-/* ---- roteiros: grade ---- */
+.transcript-heading {
+  font-size: 1.3rem;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-2);
+}
+
+/* ---- artigos: grade ---- */
 #article-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
@@ -370,7 +358,7 @@ button { font-family: inherit; }
 .card-body { font-size: 0.88rem; color: var(--ink-dim); flex: 1; }
 .card-meta { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-faint); display: flex; gap: 6px; align-items: center; }
 
-/* ---- roteiro: detalhe ---- */
+/* ---- artigo: detalhe ---- */
 .article-body {
   font-size: 1.05rem;
   line-height: 1.75;
