@@ -10,8 +10,6 @@
 
 .admin-main { padding-block: var(--space-4); max-width: 52rem; }
 
-.admin-screen { display: block; }
-
 .admin-card {
   max-width: 32rem;
   margin-inline: auto;
@@ -112,6 +110,7 @@
   padding: var(--space-4) var(--space-3);
   z-index: 50;
 }
+.admin-form-overlay[hidden] { display: none; }
 .admin-form-panel {
   background: var(--bg);
   border: 1px solid var(--line);

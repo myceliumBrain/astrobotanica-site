@@ -10,28 +10,28 @@
 
 <header class="site-header">
   <nav class="nav wrap">
-    <a href="index.html" class="nav-brand">astrobotânica</a>
+    <a href="index.html" class="nav-brand" data-text="brand.name">astrobotânica</a>
     <button id="nav-toggle" class="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="primary-nav">
       <span></span><span></span><span></span>
     </button>
     <div id="primary-nav" class="primary-nav">
-      <a href="index.html">Home</a>
-      <a href="artigos.html" aria-current="page">Artigos</a>
-      <a href="podcast.html">Podcast</a>
-      <a href="sobre.html">Sobre</a>
-      <a href="contato.html" class="btn btn-primary">Contato</a>
+      <a href="index.html" data-text="nav.home">Home</a>
+      <a href="artigos.html" aria-current="page" data-text="nav.articles">Artigos</a>
+      <a href="podcast.html" data-text="nav.podcast">Podcast</a>
+      <a href="sobre.html" data-text="nav.about">Sobre</a>
+      <a href="contato.html" class="btn btn-primary" data-text="nav.contact">Contato</a>
     </div>
   </nav>
 </header>
 
 <main>
   <article class="wrap" style="max-width:48rem;padding-top:2.5rem;padding-bottom:1.5rem">
-    <a href="artigos.html" class="btn btn-ghost" style="margin-bottom:1rem;display:inline-block">← Voltar aos artigos</a>
+    <a href="artigos.html" class="btn btn-ghost" style="margin-bottom:1rem;display:inline-block" data-text="artigo.backLink">← Voltar aos artigos</a>
     <div id="artigo-content"></div>
   </article>
 
   <section class="section wrap">
-    <h2 style="font-size:1.4rem;margin-bottom:1.5rem">Continue lendo</h2>
+    <h2 style="font-size:1.4rem;margin-bottom:1.5rem" data-text="artigo.relatedHeading">Continue lendo</h2>
     <div id="artigo-related" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(17rem,1fr));gap:1.5rem"></div>
   </section>
 </main>
@@ -39,26 +39,26 @@
 <footer class="site-footer">
   <div class="wrap footer-inner">
     <div class="footer-brand">
-      <span class="footer-word">astrobotânica</span>
-      <p class="footer-tagline">Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.</p>
+      <span class="footer-word" data-text="brand.name">astrobotânica</span>
+      <p class="footer-tagline" data-text="brand.footerTagline">Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.</p>
     </div>
     <div class="footer-cols">
       <div class="footer-col">
-        <span class="footer-heading">Navegação</span>
-        <a href="artigos.html">Artigos</a>
-        <a href="podcast.html">Podcast</a>
-        <a href="sobre.html">Sobre</a>
-        <a href="contato.html">Contato</a>
+        <span class="footer-heading" data-text="footer.navHeading">Navegação</span>
+        <a href="artigos.html" data-text="nav.articles">Artigos</a>
+        <a href="podcast.html" data-text="nav.podcast">Podcast</a>
+        <a href="sobre.html" data-text="nav.about">Sobre</a>
+        <a href="contato.html" data-text="nav.contact">Contato</a>
       </div>
       <div class="footer-col">
-        <span class="footer-heading">Ouça em</span>
-        <span class="footer-soon">Spotify — em breve</span>
-        <span class="footer-soon">Apple Podcasts — em breve</span>
-        <span class="footer-soon">RSS — em breve</span>
+        <span class="footer-heading" data-text="footer.listenHeading">Ouça em</span>
+        <span class="footer-soon" data-text="platforms.spotify">Spotify — em breve</span>
+        <span class="footer-soon" data-text="platforms.apple">Apple Podcasts — em breve</span>
+        <span class="footer-soon" data-text="platforms.rss">RSS — em breve</span>
       </div>
     </div>
   </div>
-  <div class="wrap footer-copy">© 2026 Astrobotânica.</div>
+  <div class="wrap footer-copy" data-text="brand.copyright">© 2026 Astrobotânica.</div>
 </footer>
 
 <script type="module" src="dist/main.js"></script>

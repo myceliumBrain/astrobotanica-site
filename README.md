@@ -20,6 +20,7 @@ site/
 ├── data/
 │   ├── episodes.json      → CONTEÚDO: episódios
 │   ├── articles.json       → CONTEÚDO: artigos
+│   ├── site.json            → todo o texto fixo do site (nav, rodapé, títulos, textos de cada página)
 │   └── auth.json            → acessos do painel (tokens criptografados, não em texto puro)
 ├── src/main.ts            → lógica do site: busca os JSON e preenche cada página
 ├── dist/main.js            → JavaScript compilado (gerado a partir de src/)
@@ -45,6 +46,20 @@ servido por HTTP (veja "Como visualizar localmente" abaixo) — abrir o
 `index.html` direto no navegador (duplo clique, `file://...`) não carrega os
 JSON por causa de uma restrição de segurança do navegador.
 
+### Textos fixos do site (`data/site.json`)
+
+Todo o texto que não é um episódio nem um artigo — nome do site, itens de
+menu, textos do rodapé, título/introdução de cada página, os 3 cartões da
+página Sobre, o email de contato, etc. — vem de `data/site.json`, editável
+pela aba **Textos** do painel (ou direto no JSON).
+
+O mecanismo é genérico: qualquer elemento HTML com
+`data-text="secao.chave"` é preenchido com `site.secao.chave` assim que a
+página carrega (função `applySiteText()` em `src/main.ts`). Para tornar mais
+um pedaço de texto editável no futuro, são dois passos: adicionar a chave em
+`data/site.json` e o atributo `data-text="..."` correspondente no HTML — não
+precisa de nenhuma lógica nova.
+
 ## Painel de administração (`/admin`)
 
 É por ali que todo o conteúdo do site é adicionado, editado e removido —
@@ -53,10 +68,12 @@ tanto rodando localmente quanto no site já publicado. Não existe link para
 (ex: `http://localhost:8000/admin/` ou `https://seu-dominio/admin/`).
 
 **Como funciona**: o painel não tem servidor próprio. Ele lê e grava
-`data/episodes.json`, `data/articles.json` e `data/auth.json` fazendo
-chamadas diretas à API do GitHub — cada "Salvar", "Excluir" ou mudança de
-acesso vira um commit de verdade no repositório
-`myceliumBrain/astrobotanica-site`, branch `main`.
+`data/episodes.json`, `data/articles.json`, `data/site.json` e
+`data/auth.json` fazendo chamadas diretas à API do GitHub — cada "Salvar",
+"Excluir" ou mudança de acesso vira um commit de verdade no repositório
+`myceliumBrain/astrobotanica-site`, branch `main`. A aba **Textos** reúne
+todo o texto fixo do site (ver seção acima) num formulário só, com um único
+botão "Salvar textos".
 
 Cada pessoa usa **seu próprio token de acesso pessoal do GitHub** — nunca um
 token compartilhado, e nunca em texto puro. O token é criptografado no
@@ -182,12 +199,16 @@ abrir o arquivo direto) é obrigatório, pois o conteúdo é carregado via
 - **Primeiro acesso do `/admin`**: veja a seção "Painel de administração"
   acima — é preciso configurar pelo menos um acesso (token + senha) antes de
   editar qualquer conteúdo pelo painel.
-- **Contato**: `contato.html` tem um email-placeholder (`seu-email@substituir.com`)
-  marcado com `<!-- TODO -->` no HTML — troque pelo seu email real.
-- **Assinatura do podcast**: os botões de Spotify/Apple Podcasts/RSS em
-  `podcast.html` e no rodapé estão como "em breve" até existirem links reais.
-  Depois de publicar em algum desses serviços, troque o texto pelo link real
-  e remova o estilo de botão desabilitado (`aria-disabled="true"`).
+- **Contato**: `data/site.json` (`contato.email`) tem um valor de exemplo
+  (`seu-email@substituir.com`) — troque pelo seu email real na aba Textos do
+  painel, ou direto no JSON.
+- **Assinatura do podcast**: os textos de Spotify/Apple Podcasts/RSS em
+  `data/site.json` (`platforms.*`) estão como "em breve" até existirem links
+  reais. Trocar o texto ali já atualiza rodapé, Podcast e Contato ao mesmo
+  tempo — mas eles continuam sendo `<span>`, não links; se quiser que virem
+  links de verdade quando publicar em algum desses serviços, essa parte
+  ainda precisa de uma edição no HTML (`podcast.html` e o rodapé de cada
+  página), não só no texto.
 
 ## Publicar
 

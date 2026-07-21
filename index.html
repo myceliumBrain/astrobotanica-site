@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Astrobotânica — divulgação científica e podcast sobre plantas fora da Terra</title>
-<meta name="description" content="Astrobotânica é um projeto de divulgação científica sobre o reino das plantas e sua jornada para fora da Terra: artigos e, em paralelo, um podcast, com o pesquisador Pedro." />
+<title data-text="home.metaTitle">Astrobotânica — divulgação científica e podcast sobre plantas fora da Terra</title>
+<meta name="description" data-text="home.metaDescription" data-text-attr="content" content="Astrobotânica é um projeto de divulgação científica sobre o reino das plantas e sua jornada para fora da Terra: artigos e, em paralelo, um podcast, com o pesquisador Pedro." />
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -14,16 +14,16 @@
 
 <header class="site-header">
   <nav class="nav wrap">
-    <a href="index.html" class="nav-brand">astrobotânica</a>
+    <a href="index.html" class="nav-brand" data-text="brand.name">astrobotânica</a>
     <button id="nav-toggle" class="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="primary-nav">
       <span></span><span></span><span></span>
     </button>
     <div id="primary-nav" class="primary-nav">
-      <a href="index.html" aria-current="page">Home</a>
-      <a href="artigos.html">Artigos</a>
-      <a href="podcast.html">Podcast</a>
-      <a href="sobre.html">Sobre</a>
-      <a href="contato.html" class="btn btn-primary">Contato</a>
+      <a href="index.html" aria-current="page" data-text="nav.home">Home</a>
+      <a href="artigos.html" data-text="nav.articles">Artigos</a>
+      <a href="podcast.html" data-text="nav.podcast">Podcast</a>
+      <a href="sobre.html" data-text="nav.about">Sobre</a>
+      <a href="contato.html" class="btn btn-primary" data-text="nav.contact">Contato</a>
     </div>
   </nav>
 </header>
@@ -31,25 +31,25 @@
 <main>
 
   <section class="hero wrap">
-    <span class="tag tag-accent">Divulgação científica &amp; Podcast</span>
-    <h1>Ciência vegetal para além da Terra</h1>
-    <p class="hero-quote">“Se você tem um jardim e uma biblioteca, você tem tudo o que precisa.”</p>
-    <p class="hero-attribution">— Marco Túlio Cícero, cerca de 45 a.C.</p>
-    <p>
+    <span class="tag tag-accent" data-text="home.heroTag">Divulgação científica &amp; Podcast</span>
+    <h1 data-text="home.heroTitle">Ciência vegetal para além da Terra</h1>
+    <p class="hero-quote" data-text="home.heroQuote">“Se você tem um jardim e uma biblioteca, você tem tudo o que precisa.”</p>
+    <p class="hero-attribution" data-text="home.heroAttribution">— Marco Túlio Cícero, cerca de 45 a.C.</p>
+    <p data-text="home.heroText">
       Artigos de divulgação científica sobre botânica, agricultura espacial e a
       jornada das plantas para fora da Terra — e, em paralelo, um podcast, com
       o pesquisador Pedro.
     </p>
     <div class="hero-cta">
-      <a href="artigos.html" class="btn btn-primary">Ler os artigos</a>
-      <a href="podcast.html" class="btn btn-secondary">Ouvir o podcast</a>
+      <a href="artigos.html" class="btn btn-primary" data-text="home.ctaPrimary">Ler os artigos</a>
+      <a href="podcast.html" class="btn btn-secondary" data-text="home.ctaSecondary">Ouvir o podcast</a>
     </div>
   </section>
 
   <section class="section wrap">
     <div class="section-head">
-      <h2>Artigos em destaque</h2>
-      <a href="artigos.html" class="btn btn-ghost">Ver todos</a>
+      <h2 data-text="home.featuredHeading">Artigos em destaque</h2>
+      <a href="artigos.html" class="btn btn-ghost" data-text="home.featuredCta">Ver todos</a>
     </div>
     <div id="home-featured-article"></div>
   </section>
@@ -57,9 +57,9 @@
   <section class="section wrap">
     <div class="feature-panel">
       <div class="feature-panel-copy">
-        <div class="card-kicker">Podcast Astrobotânica</div>
-        <h2 style="font-size:1.6rem;margin:0.4rem 0">Conversas sobre plantas, solo e espaço</h2>
-        <p style="color:var(--ink-dim)">Pesquisa de bancada, história e especulação científica sobre o reino das plantas fora da Terra.</p>
+        <div class="card-kicker" data-text="home.panelKicker">Podcast Astrobotânica</div>
+        <h2 style="font-size:1.6rem;margin:0.4rem 0" data-text="home.panelHeading">Conversas sobre plantas, solo e espaço</h2>
+        <p style="color:var(--ink-dim)" data-text="home.panelText">Pesquisa de bancada, história e especulação científica sobre o reino das plantas fora da Terra.</p>
       </div>
       <div class="feature-panel-episode">
         <div id="home-latest-episode" style="flex:1"></div>
@@ -72,26 +72,26 @@
 <footer class="site-footer">
   <div class="wrap footer-inner">
     <div class="footer-brand">
-      <span class="footer-word">astrobotânica</span>
-      <p class="footer-tagline">Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.</p>
+      <span class="footer-word" data-text="brand.name">astrobotânica</span>
+      <p class="footer-tagline" data-text="brand.footerTagline">Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.</p>
     </div>
     <div class="footer-cols">
       <div class="footer-col">
-        <span class="footer-heading">Navegação</span>
-        <a href="artigos.html">Artigos</a>
-        <a href="podcast.html">Podcast</a>
-        <a href="sobre.html">Sobre</a>
-        <a href="contato.html">Contato</a>
+        <span class="footer-heading" data-text="footer.navHeading">Navegação</span>
+        <a href="artigos.html" data-text="nav.articles">Artigos</a>
+        <a href="podcast.html" data-text="nav.podcast">Podcast</a>
+        <a href="sobre.html" data-text="nav.about">Sobre</a>
+        <a href="contato.html" data-text="nav.contact">Contato</a>
       </div>
       <div class="footer-col">
-        <span class="footer-heading">Ouça em</span>
-        <span class="footer-soon">Spotify — em breve</span>
-        <span class="footer-soon">Apple Podcasts — em breve</span>
-        <span class="footer-soon">RSS — em breve</span>
+        <span class="footer-heading" data-text="footer.listenHeading">Ouça em</span>
+        <span class="footer-soon" data-text="platforms.spotify">Spotify — em breve</span>
+        <span class="footer-soon" data-text="platforms.apple">Apple Podcasts — em breve</span>
+        <span class="footer-soon" data-text="platforms.rss">RSS — em breve</span>
       </div>
     </div>
   </div>
-  <div class="wrap footer-copy">© 2026 Astrobotânica.</div>
+  <div class="wrap footer-copy" data-text="brand.copyright">© 2026 Astrobotânica.</div>
 </footer>
 
 <script type="module" src="dist/main.js"></script>

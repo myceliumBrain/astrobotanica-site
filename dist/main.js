@@ -41,6 +41,40 @@ async function loadJSON(path) {
 }
 const loadEpisodes = () => loadJSON("data/episodes.json");
 const loadArticles = () => loadJSON("data/articles.json");
+function getByPath(obj, path) {
+    return path
+        .split(".")
+        .reduce((acc, key) => (acc && typeof acc === "object" ? acc[key] : undefined), obj);
+}
+async function loadSiteText() {
+    try {
+        const res = await fetch("data/site.json");
+        if (!res.ok)
+            throw new Error(`data/site.json: HTTP ${res.status}`);
+        return (await res.json());
+    }
+    catch (err) {
+        console.error("Falha ao carregar data/site.json", err);
+        return null;
+    }
+}
+function applySiteText(site) {
+    if (!site)
+        return;
+    document.querySelectorAll("[data-text]").forEach((el) => {
+        const path = el.getAttribute("data-text");
+        if (!path)
+            return;
+        const value = getByPath(site, path);
+        if (typeof value !== "string")
+            return;
+        const attr = el.getAttribute("data-text-attr");
+        if (attr)
+            el.setAttribute(attr, value);
+        else
+            el.textContent = value;
+    });
+}
 function renderEpisodeList(episodes) {
     const list = document.getElementById("episode-list");
     if (!list)
@@ -266,7 +300,8 @@ function setupNav() {
 }
 document.addEventListener("DOMContentLoaded", async () => {
     setupNav();
-    const [episodes, articles] = await Promise.all([loadEpisodes(), loadArticles()]);
+    const [episodes, articles, site] = await Promise.all([loadEpisodes(), loadArticles(), loadSiteText()]);
+    applySiteText(site);
     renderEpisodeList(episodes);
     renderEpisodeDetail(episodes);
     renderArticleList(articles);

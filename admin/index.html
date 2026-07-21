@@ -74,6 +74,7 @@
     <div class="admin-tabs">
       <button type="button" class="admin-tab is-active" data-tab="articles">Artigos</button>
       <button type="button" class="admin-tab" data-tab="episodes">Episódios</button>
+      <button type="button" class="admin-tab" data-tab="texts">Textos</button>
       <button type="button" class="admin-tab" data-tab="access">Acessos</button>
     </div>
 
@@ -93,6 +94,22 @@
         <button type="button" class="btn btn-primary" data-action="new-episode">+ Novo episódio</button>
       </div>
       <div id="episodes-list" class="admin-item-list"></div>
+    </div>
+
+    <div id="tab-texts" class="admin-tab-panel" hidden>
+      <div class="admin-panel-head">
+        <h2>Textos do site</h2>
+        <button type="button" class="btn btn-primary" data-action="save-texts">Salvar textos</button>
+      </div>
+      <p class="admin-hint">
+        Todo o texto fixo do site (nav, rodapé, títulos, textos de cada
+        página) vem daqui. Um único "Salvar" grava tudo de uma vez em
+        <code>data/site.json</code>.
+      </p>
+      <div id="texts-form"></div>
+      <div class="admin-form-actions" style="border-top: none;">
+        <button type="button" class="btn btn-primary" data-action="save-texts">Salvar textos</button>
+      </div>
     </div>
 
     <div id="tab-access" class="admin-tab-panel" hidden>

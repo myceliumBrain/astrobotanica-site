@@ -1,0 +1,84 @@
+{
+  "brand": {
+    "name": "astrobotânica",
+    "footerTagline": "Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.",
+    "copyright": "© 2026 Astrobotânica."
+  },
+  "nav": {
+    "home": "Home",
+    "articles": "Artigos",
+    "podcast": "Podcast",
+    "about": "Sobre",
+    "contact": "Contato"
+  },
+  "footer": {
+    "navHeading": "Navegação",
+    "listenHeading": "Ouça em"
+  },
+  "platforms": {
+    "spotify": "Spotify — em breve",
+    "apple": "Apple Podcasts — em breve",
+    "rss": "RSS — em breve",
+    "instagram": "Instagram — em breve"
+  },
+  "home": {
+    "metaTitle": "Astrobotânica — divulgação científica e podcast sobre plantas fora da Terra",
+    "metaDescription": "Astrobotânica é um projeto de divulgação científica sobre o reino das plantas e sua jornada para fora da Terra: artigos e, em paralelo, um podcast, com o pesquisador Pedro.",
+    "heroTag": "Divulgação científica & Podcast",
+    "heroTitle": "Ciência vegetal para além da Terra",
+    "heroQuote": "“Se você tem um jardim e uma biblioteca, você tem tudo o que precisa.”",
+    "heroAttribution": "— Marco Túlio Cícero, cerca de 45 a.C.",
+    "heroText": "Artigos de divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra — e, em paralelo, um podcast, com o pesquisador Pedro.",
+    "ctaPrimary": "Ler os artigos",
+    "ctaSecondary": "Ouvir o podcast",
+    "featuredHeading": "Artigos em destaque",
+    "featuredCta": "Ver todos",
+    "panelKicker": "Podcast Astrobotânica",
+    "panelHeading": "Conversas sobre plantas, solo e espaço",
+    "panelText": "Pesquisa de bancada, história e especulação científica sobre o reino das plantas fora da Terra."
+  },
+  "podcast": {
+    "metaDescription": "Todos os episódios do podcast Astrobotânica: pesquisa de bancada, história e especulação científica sobre plantas fora da Terra.",
+    "tag": "Podcast",
+    "title": "Astrobotânica",
+    "intro": "Um episódio por vez, sobre o reino das plantas e sua jornada para fora da Terra — pesquisa de bancada, história e especulação científica."
+  },
+  "episodio": {
+    "backLink": "← Voltar ao podcast",
+    "relatedHeading": "Outros episódios"
+  },
+  "artigos": {
+    "metaDescription": "Artigos de divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra.",
+    "tag": "Artigos",
+    "title": "Artigos",
+    "intro": "Divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra."
+  },
+  "artigo": {
+    "backLink": "← Voltar aos artigos",
+    "relatedHeading": "Continue lendo"
+  },
+  "sobre": {
+    "metaDescription": "Astrobotânica é conduzido por Pedro, pesquisador na área, cobrindo pesquisa de bancada e a jornada das plantas para fora da Terra.",
+    "tag": "Sobre",
+    "title": "Registro de bordo",
+    "intro": "Astrobotânica é conduzido por Pedro, pesquisador na área, cobrindo desde a pesquisa de bancada — rizobactérias promotoras de crescimento, óxido de grafeno, cultivo em regolito lunar — até a história e o futuro de levar plantas para fora da Terra. O projeto é, em primeiro lugar, um espaço de divulgação científica em texto; em paralelo, os mesmos temas viram conversa longa no podcast.",
+    "card1Kicker": "Método",
+    "card1Title": "Pesquisa de bancada",
+    "card1Body": "Cada artigo parte de temas que atravessam a pesquisa em astrobotânica — não de especulação solta.",
+    "card2Kicker": "Fontes",
+    "card2Title": "Fonte citada",
+    "card2Body": "O que é ciência estabelecida e o que é especulação fica sempre marcado, sem misturar os dois.",
+    "card3Kicker": "Formato",
+    "card3Title": "Artigos e podcast",
+    "card3Body": "Os artigos são o principal; o podcast aprofunda os mesmos temas em conversa longa."
+  },
+  "contato": {
+    "metaDescription": "Fale com o podcast Astrobotânica — sugestões de pauta, correções ou propostas de entrevista.",
+    "tag": "Contato",
+    "title": "Fale comigo",
+    "intro": "Sugestões de pauta, correções ou propostas de entrevista para o podcast — escreva a qualquer momento.",
+    "emailKicker": "Email",
+    "email": "seu-email@substituir.com",
+    "emailNote": "Para pautas, correções e propostas de entrevista."
+  }
+}

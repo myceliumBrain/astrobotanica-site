@@ -19,7 +19,129 @@ const CONFIG = {
   authPath: "data/auth.json",
   episodesPath: "data/episodes.json",
   articlesPath: "data/articles.json",
+  sitePath: "data/site.json",
 };
+
+// Descreve todos os campos de texto do site (ver data/site.json e os
+// atributos data-text="..." no HTML de cada página). Editar aqui só muda
+// o formulário do painel — os valores em si vêm sempre do arquivo.
+const SITE_TEXT_SCHEMA = [
+  {
+    heading: "Marca (aparece em todas as páginas)",
+    fields: [
+      { key: "brand.name", label: "Nome (logo no menu e rodapé)", type: "text" },
+      { key: "brand.footerTagline", label: "Frase do rodapé", type: "textarea" },
+      { key: "brand.copyright", label: "Linha de copyright do rodapé", type: "text" },
+    ],
+  },
+  {
+    heading: "Menu de navegação",
+    fields: [
+      { key: "nav.home", label: "Home", type: "text" },
+      { key: "nav.articles", label: "Artigos", type: "text" },
+      { key: "nav.podcast", label: "Podcast", type: "text" },
+      { key: "nav.about", label: "Sobre", type: "text" },
+      { key: "nav.contact", label: "Contato", type: "text" },
+    ],
+  },
+  {
+    heading: "Rodapé",
+    fields: [
+      { key: "footer.navHeading", label: "Título da coluna de navegação", type: "text" },
+      { key: "footer.listenHeading", label: "Título da coluna \"Ouça em\"", type: "text" },
+    ],
+  },
+  {
+    heading: "Plataformas (usado no rodapé, Podcast e Contato)",
+    fields: [
+      { key: "platforms.spotify", label: "Spotify", type: "text" },
+      { key: "platforms.apple", label: "Apple Podcasts", type: "text" },
+      { key: "platforms.rss", label: "RSS", type: "text" },
+      { key: "platforms.instagram", label: "Instagram", type: "text" },
+    ],
+  },
+  {
+    heading: "Home",
+    fields: [
+      { key: "home.metaTitle", label: "Título da aba do navegador", type: "text" },
+      { key: "home.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "home.heroTag", label: "Selo acima do título", type: "text" },
+      { key: "home.heroTitle", label: "Título principal", type: "text" },
+      { key: "home.heroQuote", label: "Citação", type: "textarea" },
+      { key: "home.heroAttribution", label: "Autoria da citação", type: "text" },
+      { key: "home.heroText", label: "Texto de apresentação", type: "textarea" },
+      { key: "home.ctaPrimary", label: "Botão primário", type: "text" },
+      { key: "home.ctaSecondary", label: "Botão secundário", type: "text" },
+      { key: "home.featuredHeading", label: "Título \"Artigos em destaque\"", type: "text" },
+      { key: "home.featuredCta", label: "Link \"ver todos\"", type: "text" },
+      { key: "home.panelKicker", label: "Selo do painel do podcast", type: "text" },
+      { key: "home.panelHeading", label: "Título do painel do podcast", type: "text" },
+      { key: "home.panelText", label: "Texto do painel do podcast", type: "textarea" },
+    ],
+  },
+  {
+    heading: "Podcast (lista de episódios)",
+    fields: [
+      { key: "podcast.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "podcast.tag", label: "Selo", type: "text" },
+      { key: "podcast.title", label: "Título", type: "text" },
+      { key: "podcast.intro", label: "Texto de introdução", type: "textarea" },
+    ],
+  },
+  {
+    heading: "Episódio (página de detalhe)",
+    fields: [
+      { key: "episodio.backLink", label: "Link \"voltar\"", type: "text" },
+      { key: "episodio.relatedHeading", label: "Título \"outros episódios\"", type: "text" },
+    ],
+  },
+  {
+    heading: "Artigos (lista)",
+    fields: [
+      { key: "artigos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "artigos.tag", label: "Selo", type: "text" },
+      { key: "artigos.title", label: "Título", type: "text" },
+      { key: "artigos.intro", label: "Texto de introdução", type: "textarea" },
+    ],
+  },
+  {
+    heading: "Artigo (página de detalhe)",
+    fields: [
+      { key: "artigo.backLink", label: "Link \"voltar\"", type: "text" },
+      { key: "artigo.relatedHeading", label: "Título \"continue lendo\"", type: "text" },
+    ],
+  },
+  {
+    heading: "Sobre",
+    fields: [
+      { key: "sobre.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "sobre.tag", label: "Selo", type: "text" },
+      { key: "sobre.title", label: "Título", type: "text" },
+      { key: "sobre.intro", label: "Texto de introdução", type: "textarea" },
+      { key: "sobre.card1Kicker", label: "Cartão 1 — selo", type: "text" },
+      { key: "sobre.card1Title", label: "Cartão 1 — título", type: "text" },
+      { key: "sobre.card1Body", label: "Cartão 1 — texto", type: "textarea" },
+      { key: "sobre.card2Kicker", label: "Cartão 2 — selo", type: "text" },
+      { key: "sobre.card2Title", label: "Cartão 2 — título", type: "text" },
+      { key: "sobre.card2Body", label: "Cartão 2 — texto", type: "textarea" },
+      { key: "sobre.card3Kicker", label: "Cartão 3 — selo", type: "text" },
+      { key: "sobre.card3Title", label: "Cartão 3 — título", type: "text" },
+      { key: "sobre.card3Body", label: "Cartão 3 — texto", type: "textarea" },
+    ],
+  },
+  {
+    heading: "Contato",
+    fields: [
+      { key: "contato.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "contato.tag", label: "Selo", type: "text" },
+      { key: "contato.title", label: "Título", type: "text" },
+      { key: "contato.intro", label: "Texto de introdução", type: "textarea" },
+      { key: "contato.emailKicker", label: "Selo do cartão de email", type: "text" },
+      { key: "contato.email", label: "Email de contato", type: "text" },
+      { key: "contato.emailNote", label: "Nota abaixo do email", type: "text" },
+    ],
+  },
+];
 
 const LOCKOUT = {
   storageKey: "astrobotanica-admin-attempts",
@@ -354,7 +476,7 @@ async function enterApp() {
     .catch(() => {}); // cosmético — se falhar, só não mostra o nome
   showScreen("app-screen");
   setupTabs();
-  await Promise.all([loadArticles(), loadEpisodes(), loadAccess()]);
+  await Promise.all([loadArticles(), loadEpisodes(), loadAccess(), loadTexts()]);
 }
 
 function renderHeaderActions() {
@@ -384,6 +506,7 @@ function setupTabs() {
       const target = tab.dataset.tab;
       document.getElementById("tab-articles").hidden = target !== "articles";
       document.getElementById("tab-episodes").hidden = target !== "episodes";
+      document.getElementById("tab-texts").hidden = target !== "texts";
       document.getElementById("tab-access").hidden = target !== "access";
     });
   });
@@ -391,6 +514,9 @@ function setupTabs() {
   document.querySelector('[data-action="new-article"]').addEventListener("click", () => openArticleForm(null));
   document.querySelector('[data-action="new-episode"]').addEventListener("click", () => openEpisodeForm(null));
   document.getElementById("access-submit").addEventListener("click", addAccess);
+  document
+    .querySelectorAll('[data-action="save-texts"]')
+    .forEach((btn) => btn.addEventListener("click", saveTexts));
 }
 
 // ----------------------------------------------------------------------------
@@ -706,6 +832,77 @@ async function saveEpisode(existing, values) {
     setStatus(`Episódio "${values.title}" salvo.`, "ok");
     closeForm();
     await loadEpisodes();
+  } catch (err) {
+    setStatus(`Erro ao salvar: ${err.message}`, "error");
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Textos do site: formulário único, gerado a partir de SITE_TEXT_SCHEMA
+// ----------------------------------------------------------------------------
+
+let siteTextCache = null; // { content: {...}, sha }
+const siteTextInputs = new Map(); // key ("a.b.c") -> <input>/<textarea>
+
+function getByPath(obj, path) {
+  return path.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
+}
+
+function setByPath(obj, path, value) {
+  const keys = path.split(".");
+  let cur = obj;
+  keys.forEach((key, i) => {
+    if (i === keys.length - 1) {
+      cur[key] = value;
+    } else {
+      if (typeof cur[key] !== "object" || cur[key] === null) cur[key] = {};
+      cur = cur[key];
+    }
+  });
+}
+
+async function loadTexts() {
+  const container = document.getElementById("texts-form");
+  container.innerHTML = "";
+  container.appendChild(el("p", "empty-state", "Carregando…"));
+  try {
+    siteTextCache = await getFile(CONFIG.sitePath);
+    renderTextsForm();
+  } catch (err) {
+    container.innerHTML = "";
+    container.appendChild(el("p", "empty-state", `Não foi possível carregar: ${err.message}`));
+  }
+}
+
+function renderTextsForm() {
+  const container = document.getElementById("texts-form");
+  container.innerHTML = "";
+  siteTextInputs.clear();
+
+  for (const section of SITE_TEXT_SCHEMA) {
+    container.appendChild(el("h3", "", section.heading));
+    const grid = el("div", "admin-form-grid");
+    for (const fieldDef of section.fields) {
+      const currentValue = getByPath(siteTextCache.content, fieldDef.key) ?? "";
+      const field = formField(fieldDef.label, fieldDef.type, currentValue);
+      grid.appendChild(field);
+      siteTextInputs.set(fieldDef.key, field.querySelector("input, textarea"));
+    }
+    container.appendChild(grid);
+  }
+}
+
+async function saveTexts() {
+  setStatus("Salvando textos…");
+  try {
+    const fresh = await getFile(CONFIG.sitePath);
+    const updated = JSON.parse(JSON.stringify(fresh.content));
+    siteTextInputs.forEach((input, key) => {
+      setByPath(updated, key, input.value);
+    });
+    await putFile(CONFIG.sitePath, updated, fresh.sha, "admin: atualiza textos do site");
+    setStatus("Textos salvos.", "ok");
+    await loadTexts();
   } catch (err) {
     setStatus(`Erro ao salvar: ${err.message}`, "error");
   }

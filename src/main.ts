@@ -30,6 +30,11 @@ interface Loaded<T> {
   failed: boolean;
 }
 
+// Textos do site (nav, rodapé, títulos, etc.) — ver data/site.json.
+// Formato livre (chave -> string ou objeto aninhado); consumido via
+// applySiteText() a partir dos atributos data-text="secao.chave" no HTML.
+type SiteText = Record<string, unknown>;
+
 // ----------------------------------------------------------------------------
 // Utilitários
 // ----------------------------------------------------------------------------
@@ -78,6 +83,42 @@ async function loadJSON<T>(path: string): Promise<Loaded<T>> {
 
 const loadEpisodes = () => loadJSON<Episode>("data/episodes.json");
 const loadArticles = () => loadJSON<Article>("data/articles.json");
+
+// ----------------------------------------------------------------------------
+// Textos do site: preenche qualquer elemento marcado com data-text="a.b.c"
+// a partir de data/site.json. data-text-attr="atributo" define um atributo
+// em vez de textContent (usado na tag <meta description>).
+// ----------------------------------------------------------------------------
+
+function getByPath(obj: unknown, path: string): unknown {
+  return path
+    .split(".")
+    .reduce<unknown>((acc, key) => (acc && typeof acc === "object" ? (acc as Record<string, unknown>)[key] : undefined), obj);
+}
+
+async function loadSiteText(): Promise<SiteText | null> {
+  try {
+    const res = await fetch("data/site.json");
+    if (!res.ok) throw new Error(`data/site.json: HTTP ${res.status}`);
+    return (await res.json()) as SiteText;
+  } catch (err) {
+    console.error("Falha ao carregar data/site.json", err);
+    return null;
+  }
+}
+
+function applySiteText(site: SiteText | null): void {
+  if (!site) return;
+  document.querySelectorAll<HTMLElement>("[data-text]").forEach((el) => {
+    const path = el.getAttribute("data-text");
+    if (!path) return;
+    const value = getByPath(site, path);
+    if (typeof value !== "string") return;
+    const attr = el.getAttribute("data-text-attr");
+    if (attr) el.setAttribute(attr, value);
+    else el.textContent = value;
+  });
+}
 
 // ----------------------------------------------------------------------------
 // Podcast: lista de episódios
@@ -368,7 +409,8 @@ function setupNav(): void {
 
 document.addEventListener("DOMContentLoaded", async () => {
   setupNav();
-  const [episodes, articles] = await Promise.all([loadEpisodes(), loadArticles()]);
+  const [episodes, articles, site] = await Promise.all([loadEpisodes(), loadArticles(), loadSiteText()]);
+  applySiteText(site);
   renderEpisodeList(episodes);
   renderEpisodeDetail(episodes);
   renderArticleList(articles);
