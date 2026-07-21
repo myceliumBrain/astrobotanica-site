@@ -24,18 +24,9 @@
   "home": {
     "metaTitle": "Astrobotânica — divulgação científica e podcast sobre plantas fora da Terra",
     "metaDescription": "Astrobotânica é um projeto de divulgação científica sobre o reino das plantas e sua jornada para fora da Terra: artigos e, em paralelo, um podcast, com o pesquisador Pedro.",
-    "heroTag": "Divulgação científica & Podcast",
-    "heroTitle": "Ciência vegetal para além da Terra",
-    "heroQuote": "“Se você tem um jardim e uma biblioteca, você tem tudo o que precisa.”",
-    "heroAttribution": "— Marco Túlio Cícero, cerca de 45 a.C.",
-    "heroText": "Artigos de divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra — e, em paralelo, um podcast, com o pesquisador Pedro.",
-    "ctaPrimary": "Ler os artigos",
-    "ctaSecondary": "Ouvir o podcast",
-    "featuredHeading": "Artigos em destaque",
+    "featuredHeading": "Artigos",
     "featuredCta": "Ver todos",
-    "panelKicker": "Podcast Astrobotânica",
-    "panelHeading": "Conversas sobre plantas, solo e espaço",
-    "panelText": "Pesquisa de bancada, história e especulação científica sobre o reino das plantas fora da Terra."
+    "panelKicker": "Podcast Astrobotânica"
   },
   "podcast": {
     "metaDescription": "Todos os episódios do podcast Astrobotânica: pesquisa de bancada, história e especulação científica sobre plantas fora da Terra.",

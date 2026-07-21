@@ -26,6 +26,7 @@ site/
 ├── dist/main.js            → JavaScript compilado (gerado a partir de src/)
 ├── audio/                 → arquivos .mp3 dos episódios
 ├── robots.txt             → impede que buscadores indexem /admin
+├── serve.py               → servidor local com URLs limpas (ver "Como visualizar localmente")
 └── tsconfig.json
 ```
 
@@ -160,7 +161,12 @@ conveniência, não o único jeito. Veja os formatos abaixo se preferir editar
 }
 ```
 
-`category` aparece como etiqueta no cartão; `subtitle` é opcional.
+`category` aparece como etiqueta no cartão; `subtitle` é opcional. `image`
+também é opcional (caminho de uma imagem de capa, ex:
+`images/artigos/nome-do-arquivo.jpg`) — sem ela, o cartão mostra só um
+retângulo vazio no lugar do pôster. Assim como o `.mp3` dos episódios, o
+arquivo de imagem em si precisa ser enviado à pasta `images/artigos/` por
+fora (via git); o painel só grava o caminho no JSON.
 
 ### Formato de um episódio
 
@@ -200,15 +206,21 @@ automaticamente — é preciso estar conectado à internet nesse passo).
 
 ## Como visualizar localmente
 
-Qualquer servidor estático simples funciona, por exemplo:
+Os links do site são "limpos" (`/podcast`, não `/podcast.html`) — o GitHub
+Pages resolve isso automaticamente (uma requisição para `/podcast` serve
+`podcast.html` sem redirecionar), mas o `python3 -m http.server` padrão não
+sabe fazer esse mapeamento. Por isso, use o script incluído:
 
 ```bash
-python3 -m http.server 8000
+python3 serve.py 8000
 ```
 
-Depois acesse `http://localhost:8000` no navegador. Servir por HTTP (e não
-abrir o arquivo direto) é obrigatório, pois o conteúdo é carregado via
-`fetch()` a partir de `data/*.json`.
+Ele funciona como o `http.server` normal, só que também resolve `/podcast` →
+`podcast.html` (e assim por diante) — os links do site funcionam localmente
+do mesmo jeito que no ar. Depois acesse `http://localhost:8000` no
+navegador. Servir por HTTP (e não abrir o arquivo direto) é obrigatório de
+qualquer forma, pois o conteúdo é carregado via `fetch()` a partir de
+`data/*.json`.
 
 ## Antes de publicar
 
@@ -238,3 +250,13 @@ desde que o serviço sirva os arquivos por HTTP (todos esses servem).
 - **Cores/tipografia**: todas as variáveis estão no topo de `css/style.css`,
   no bloco `:root` (paleta verde pastel, Barlow/Barlow Condensed/IBM Plex Mono).
 - **Nome do podcast / tagline**: procure por "Astrobotânica" em cada `.html`.
+
+## Layout
+
+- **Cabeçalho**: logo centralizada em cima, menu de navegação sempre visível
+  logo abaixo (sem menu hambúrguer/overlay) — classes `.header-stack` /
+  `.brand-mark` / `.primary-nav` em `css/style.css`.
+- **Grade de artigos**: cartões de altura uniforme (pôster + título + data),
+  usada igual na Home, em `/artigos` e em "Continue lendo" — classes
+  `.article-grid` / `.article-card` em `css/style.css`, geradas por
+  `buildArticleCard()` em `src/main.ts`.

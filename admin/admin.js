@@ -85,18 +85,9 @@ const PAGE_SCHEMA = [
     fields: [
       { key: "home.metaTitle", label: "Título da aba do navegador", type: "text" },
       { key: "home.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "home.heroTag", label: "Selo acima do título", type: "text" },
-      { key: "home.heroTitle", label: "Título principal", type: "text" },
-      { key: "home.heroQuote", label: "Citação", type: "textarea" },
-      { key: "home.heroAttribution", label: "Autoria da citação", type: "text" },
-      { key: "home.heroText", label: "Texto de apresentação", type: "textarea" },
-      { key: "home.ctaPrimary", label: "Botão primário", type: "text" },
-      { key: "home.ctaSecondary", label: "Botão secundário", type: "text" },
       { key: "home.featuredHeading", label: "Título \"Artigos em destaque\"", type: "text" },
       { key: "home.featuredCta", label: "Link \"ver todos\"", type: "text" },
       { key: "home.panelKicker", label: "Selo do painel do podcast", type: "text" },
-      { key: "home.panelHeading", label: "Título do painel do podcast", type: "text" },
-      { key: "home.panelText", label: "Texto do painel do podcast", type: "textarea" },
     ],
   },
   {
@@ -353,19 +344,30 @@ function base64ToUtf8(b64) {
   return textDecoder.decode(b64ToBytes(b64.replace(/\n/g, "")));
 }
 
+// Um arquivo vazio/corrompido no GitHub (ex: alguém apagou o conteúdo sem
+// colocar um JSON válido) não deve travar o app com um erro de parse — é
+// tratado como "sem dados" e cada chamador decide o que fazer com isso.
+function safeJsonParse(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
 async function getFileAnon(path) {
   const data = await ghRequest(
     `/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}?ref=${CONFIG.branch}&_=${Date.now()}`,
     { auth: false }
   );
-  return { content: JSON.parse(base64ToUtf8(data.content)), sha: data.sha };
+  return { content: safeJsonParse(base64ToUtf8(data.content)), sha: data.sha };
 }
 
 async function getFile(path) {
   const data = await ghRequest(
     `/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}?ref=${CONFIG.branch}&_=${Date.now()}`
   );
-  return { content: JSON.parse(base64ToUtf8(data.content)), sha: data.sha };
+  return { content: safeJsonParse(base64ToUtf8(data.content)), sha: data.sha };
 }
 
 async function putFile(path, contentObj, sha, message) {
@@ -401,7 +403,8 @@ async function init() {
     return;
   }
 
-  if (!auth.content.tokens || auth.content.tokens.length === 0) {
+  const tokens = auth.content?.tokens;
+  if (!tokens || tokens.length === 0) {
     setupSetupScreen();
   } else {
     setupLoginScreen();
@@ -430,7 +433,7 @@ function setupSetupScreen() {
     try {
       const fresh = await getFile(CONFIG.authPath);
       const encrypted = await encryptToken(token, password);
-      const updated = { tokens: [...(fresh.content.tokens || []), { label, ...encrypted }] };
+      const updated = { tokens: [...(fresh.content?.tokens || []), { label, ...encrypted }] };
       await putFile(CONFIG.authPath, updated, fresh.sha, `admin: configura autenticação (${label})`);
       await enterApp();
     } catch (err) {
@@ -468,7 +471,7 @@ function setupLoginScreen() {
     error.textContent = "";
     try {
       const fresh = await getFileAnon(CONFIG.authPath);
-      const tokens = fresh.content.tokens || [];
+      const tokens = fresh.content?.tokens || [];
       let recovered = null;
       for (const entry of tokens) {
         recovered = await decryptToken(entry, password);
@@ -622,7 +625,7 @@ function collectAll() {
     const record = contentData.articles[i];
     if (!record) return;
     const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
-    if ((key === "subtitle") && !value) delete record[key];
+    if ((key === "subtitle" || key === "image") && !value) delete record[key];
     else record[key] = value;
   });
   document.querySelectorAll("[data-episode]").forEach((input) => {
@@ -762,7 +765,17 @@ function buildArticleCard(article, i, total) {
   grid.appendChild(buildInput("Título", "text", article.title, { article: i, key: "title" }));
   grid.appendChild(buildInput("Subtítulo (opcional)", "text", article.subtitle, { article: i, key: "subtitle" }));
 
-  const excerpt = buildTextarea("Resumo (cartão de listagem)", article.excerpt, { article: i, key: "excerpt" });
+  const imageField = buildInput(
+    "Imagem de capa (opcional)",
+    "text",
+    article.image,
+    { article: i, key: "image" },
+    "images/artigos/nome-do-arquivo.jpg"
+  );
+  imageField.classList.add("full");
+  grid.appendChild(imageField);
+
+  const excerpt = buildTextarea("Resumo (só na página do artigo)", article.excerpt, { article: i, key: "excerpt" });
   excerpt.classList.add("full");
   grid.appendChild(excerpt);
 
@@ -1013,7 +1026,7 @@ async function loadAccess() {
 function renderAccessList() {
   const list = document.getElementById("access-list");
   list.innerHTML = "";
-  const tokens = accessCache.content.tokens || [];
+  const tokens = accessCache.content?.tokens || [];
 
   if (tokens.length === 0) {
     list.appendChild(el("p", "empty-state", "Nenhum acesso cadastrado."));
@@ -1056,7 +1069,7 @@ async function addAccess() {
   try {
     const fresh = await getFile(CONFIG.authPath);
     const encrypted = await encryptToken(token, password);
-    const updated = { tokens: [...(fresh.content.tokens || []), { label, ...encrypted }] };
+    const updated = { tokens: [...(fresh.content?.tokens || []), { label, ...encrypted }] };
     await putFile(CONFIG.authPath, updated, fresh.sha, `admin: adiciona acesso "${label}"`);
     toast(`Acesso de "${label}" adicionado.`, "ok");
     labelInput.value = "";
@@ -1079,7 +1092,7 @@ async function revokeAccess(index, label) {
     return;
   try {
     const fresh = await getFile(CONFIG.authPath);
-    const tokens = [...(fresh.content.tokens || [])];
+    const tokens = [...(fresh.content?.tokens || [])];
     tokens.splice(index, 1);
     await putFile(CONFIG.authPath, { tokens }, fresh.sha, `admin: revoga acesso "${label}"`);
     toast(`Acesso de "${label}" revogado.`, "ok");
