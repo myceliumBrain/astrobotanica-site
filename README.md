@@ -179,6 +179,7 @@ fora (via git); o painel só grava o caminho no JSON.
   "date": "2026-08-10",
   "duration": "28:40",
   "audioSrc": "audio/episodio-02.mp3",
+  "image": "images/episodios/ep-02.jpg",
   "transcript": [
     "Primeiro parágrafo da transcrição...",
     "Segundo parágrafo..."
@@ -187,9 +188,15 @@ fora (via git); o painel só grava o caminho no JSON.
 ```
 
 `transcript` é opcional — se presente, o texto completo aparece na própria
-página do episódio, abaixo do player. O painel só edita o JSON; o arquivo
-`.mp3` em si precisa ser enviado à pasta `audio/` por fora (via git), tanto
-editando manualmente quanto pelo painel.
+página do episódio, abaixo do player. `image` também é opcional (capa
+quadrada mostrada no topo da página do episódio, acima do título).
+
+Diferente dos artigos, o `.mp3` e a imagem de um episódio **podem ser
+enviados direto pelo painel** — o campo de cada um tem um botão de envio de
+arquivo que faz o commit do binário para `audio/` ou `images/episodios/`
+automaticamente (usando a Git Data API do GitHub, já que a Contents API não
+serve para arquivos grandes) e preenche o caminho no JSON sozinho. Ainda dá
+para colar/editar o caminho manualmente no campo de texto, se preferir.
 
 ## Como recompilar depois de editar `src/main.ts`
 

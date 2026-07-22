@@ -123,6 +123,14 @@ function renderEpisodeDetail(episodes) {
         root.appendChild(el("p", "empty-state", "Episódio não encontrado."));
         return;
     }
+    if (episode.image) {
+        const cover = el("div", "episode-cover");
+        const img = document.createElement("img");
+        img.src = episode.image;
+        img.alt = "";
+        cover.appendChild(img);
+        root.appendChild(cover);
+    }
     root.appendChild(el("span", "tag tag-accent", `Episódio ${episode.number}`));
     root.appendChild(el("h1", "", episode.title));
     root.appendChild(el("p", "episode-detail-meta", `${formatDate(episode.date)} · ${episode.duration}`));

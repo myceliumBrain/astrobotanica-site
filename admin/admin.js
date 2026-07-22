@@ -222,9 +222,16 @@ function setByPath(obj, path, value) {
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 
-function bytesToB64(bytes) {
+function bytesToB64(bytesLike) {
+  // Conversão em blocos: evita o custo (e, em arquivos grandes, o risco de
+  // estourar a pilha) de chamar String.fromCharCode um byte por vez ou
+  // espalhar milhões de argumentos de uma vez.
+  const bytes = new Uint8Array(bytesLike);
+  const chunkSize = 0x8000;
   let binary = "";
-  new Uint8Array(bytes).forEach((b) => { binary += String.fromCharCode(b); });
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+  }
   return btoa(binary);
 }
 
@@ -381,6 +388,51 @@ async function putFile(path, contentObj, sha, message) {
       branch: CONFIG.branch,
     }),
   });
+}
+
+// ----------------------------------------------------------------------------
+// Upload de arquivos binários (áudio/imagem) — a Contents API (putFile) só
+// aceita arquivos pequenos; para .mp3/imagens usamos a Git Data API
+// (blob + tree + commit + atualização da referência), que suporta arquivos
+// bem maiores e cria um commit próprio direto na branch.
+// ----------------------------------------------------------------------------
+
+async function commitBinaryFile(path, base64Content, message) {
+  const repoBase = `/repos/${CONFIG.owner}/${CONFIG.repo}`;
+  const ref = await ghRequest(`${repoBase}/git/ref/heads/${CONFIG.branch}`);
+  const baseCommitSha = ref.object.sha;
+  const baseCommit = await ghRequest(`${repoBase}/git/commits/${baseCommitSha}`);
+  const blob = await ghRequest(`${repoBase}/git/blobs`, {
+    method: "POST",
+    body: JSON.stringify({ content: base64Content, encoding: "base64" }),
+  });
+  const tree = await ghRequest(`${repoBase}/git/trees`, {
+    method: "POST",
+    body: JSON.stringify({
+      base_tree: baseCommit.tree.sha,
+      tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }],
+    }),
+  });
+  const commit = await ghRequest(`${repoBase}/git/commits`, {
+    method: "POST",
+    body: JSON.stringify({ message, tree: tree.sha, parents: [baseCommitSha] }),
+  });
+  await ghRequest(`${repoBase}/git/refs/heads/${CONFIG.branch}`, {
+    method: "PATCH",
+    body: JSON.stringify({ sha: commit.sha }),
+  });
+  return path;
+}
+
+async function uploadBinaryFile(path, file, message) {
+  const buffer = await file.arrayBuffer();
+  const base64 = bytesToB64(buffer);
+  return commitBinaryFile(path, base64, message);
+}
+
+function fileExtension(filename, fallback) {
+  const match = /\.([a-zA-Z0-9]+)$/.exec(filename || "");
+  return match ? match[1].toLowerCase() : fallback;
 }
 
 // ----------------------------------------------------------------------------
@@ -643,6 +695,7 @@ function collectAll() {
       else record.transcript = paragraphs;
       return;
     }
+    if (key === "image" && !input.value) { delete record.image; return; }
     record[key] = input.value;
   });
   document.querySelectorAll("[data-site]").forEach((input) => {
@@ -704,6 +757,78 @@ function buildTextarea(labelText, value, dataset, multilineParagraphs) {
   Object.entries(dataset).forEach(([k, v]) => { textarea.dataset[k] = v; });
   if (multilineParagraphs) textarea.dataset.multiline = "paragraphs";
   return buildField(labelText, textarea);
+}
+
+// Campo de upload: um input de texto (mostra/permite editar o caminho
+// salvo) + um botão de arquivo que faz o commit direto no GitHub e
+// preenche o texto sozinho ao terminar.
+function buildFileUploadField(labelText, currentValue, dataset, opts) {
+  const wrap = el("div", "field file-upload-field");
+  wrap.appendChild(el("label", "", labelText));
+
+  const row = el("div", "file-upload-row");
+  const textInput = document.createElement("input");
+  textInput.className = "input";
+  textInput.type = "text";
+  textInput.value = currentValue ?? "";
+  if (opts.placeholder) textInput.placeholder = opts.placeholder;
+  Object.entries(dataset).forEach(([k, v]) => { textInput.dataset[k] = v; });
+  row.appendChild(textInput);
+
+  const fileLabel = el("label", "btn btn-secondary btn-small file-upload-btn", opts.buttonText || "Enviar arquivo");
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.hidden = true;
+  if (opts.accept) fileInput.accept = opts.accept;
+  fileLabel.appendChild(fileInput);
+  row.appendChild(fileLabel);
+  wrap.appendChild(row);
+
+  const status = el("span", "file-upload-status");
+  wrap.appendChild(status);
+
+  let preview;
+  if (opts.preview) {
+    preview = document.createElement("img");
+    preview.className = "file-upload-preview";
+    preview.style.display = currentValue ? "" : "none";
+    // O painel vive em /admin/; os caminhos salvos são relativos à raiz do
+    // site, então a pré-visualização precisa subir um nível.
+    if (currentValue) preview.src = /^https?:\/\//i.test(currentValue) ? currentValue : `../${currentValue}`;
+    wrap.appendChild(preview);
+  }
+
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const path = opts.buildPath(file);
+    fileLabel.classList.add("disabled");
+    fileInput.disabled = true;
+    status.textContent = "Enviando… não feche esta aba.";
+    status.dataset.kind = "pending";
+    try {
+      await uploadBinaryFile(path, file, opts.buildMessage(path));
+      textInput.value = path;
+      textInput.dispatchEvent(new Event("input", { bubbles: true }));
+      textInput.dispatchEvent(new Event("change", { bubbles: true }));
+      status.textContent = `Enviado ✓`;
+      status.dataset.kind = "ok";
+      if (preview) {
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "";
+      }
+    } catch (err) {
+      status.textContent = `Erro ao enviar: ${err.message}`;
+      status.dataset.kind = "err";
+      toast(`Erro ao enviar arquivo: ${err.message}`, "error");
+    } finally {
+      fileLabel.classList.remove("disabled");
+      fileInput.disabled = false;
+      fileInput.value = "";
+    }
+  });
+
+  return wrap;
 }
 
 function buildReorderButtons(idx, total, onUp, onDown) {
@@ -863,6 +988,14 @@ function renderEpisodesList() {
   items.forEach((episode, i) => container.appendChild(buildEpisodeCard(episode, i, items.length)));
 }
 
+// Lê o valor atual do campo "id" direto do DOM (pode ter sido editado e
+// ainda não persistido em contentData) para nomear os arquivos enviados.
+function episodeSlug(i, episode) {
+  const idInput = document.querySelector(`[data-episode="${i}"][data-key="id"]`);
+  const raw = (idInput && idInput.value.trim()) || episode.id || `episodio-${i + 1}`;
+  return slugify(raw) || `episodio-${i + 1}`;
+}
+
 function buildEpisodeCard(episode, i, total) {
   const card = el("div", "card");
   card.id = `episode-card-${i}`;
@@ -891,7 +1024,37 @@ function buildEpisodeCard(episode, i, total) {
   grid.appendChild(description);
 
   grid.appendChild(buildInput("Data", "date", episode.date, { episode: i, key: "date" }));
-  grid.appendChild(buildInput("Caminho do áudio", "text", episode.audioSrc, { episode: i, key: "audioSrc" }, "audio/episodio-02.mp3"));
+
+  const audioField = buildFileUploadField(
+    "Áudio do episódio",
+    episode.audioSrc,
+    { episode: i, key: "audioSrc" },
+    {
+      accept: "audio/mpeg,.mp3",
+      buttonText: "Enviar .mp3",
+      placeholder: "audio/episodio-02.mp3",
+      buildPath: () => `audio/${episodeSlug(i, episode)}.mp3`,
+      buildMessage: (path) => `admin: envia áudio do episódio "${episode.title || episode.id}" (${path})`,
+    }
+  );
+  audioField.classList.add("full");
+  grid.appendChild(audioField);
+
+  const imageField = buildFileUploadField(
+    "Imagem do episódio (opcional)",
+    episode.image,
+    { episode: i, key: "image" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar imagem",
+      placeholder: "images/episodios/ep-02.jpg",
+      preview: true,
+      buildPath: (file) => `images/episodios/${episodeSlug(i, episode)}.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia imagem do episódio "${episode.title || episode.id}" (${path})`,
+    }
+  );
+  imageField.classList.add("full");
+  grid.appendChild(imageField);
 
   const transcript = buildTextarea(
     "Transcrição (opcional) — um parágrafo por linha",

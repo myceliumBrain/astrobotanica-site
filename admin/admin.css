@@ -257,6 +257,29 @@ a, button { cursor: pointer; }
 .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
 .fields-grid .full { grid-column: 1 / -1; }
 
+/* ── UPLOAD DE ARQUIVO (áudio/imagem) ── */
+.file-upload-row { display: flex; gap: 0.5rem; }
+.file-upload-row .input { flex: 1; min-width: 0; }
+.file-upload-btn { flex: none; white-space: nowrap; }
+.file-upload-btn.disabled { opacity: 0.5; pointer-events: none; }
+.file-upload-status {
+  font-family: var(--adm-mono);
+  font-size: 0.72rem;
+  color: var(--adm-muted);
+  min-height: 1.2em;
+}
+.file-upload-status[data-kind="ok"] { color: var(--adm-accent); }
+.file-upload-status[data-kind="err"] { color: var(--adm-danger); }
+.file-upload-status[data-kind="pending"] { color: #e8c547; }
+.file-upload-preview {
+  width: 6rem;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border: 1px solid var(--adm-border);
+  border-radius: 3px;
+  margin-top: 0.4rem;
+}
+
 /* ── REORDER ── */
 .reorder-btns { display: flex; flex-direction: column; gap: 2px; flex: none; }
 .reorder-btn {

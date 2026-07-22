@@ -11,6 +11,7 @@ interface Episode {
   date: string; // formato AAAA-MM-DD
   duration: string; // formato "MM:SS" ou "HH:MM:SS"
   audioSrc: string; // caminho para o arquivo .mp3, ex: "audio/episodio-01.mp3"
+  image?: string; // opcional: caminho da imagem de capa, ex: "images/episodios/ep-01.jpg"
   transcript?: string[]; // opcional: transcrição completa, um parágrafo por item
 }
 
@@ -195,6 +196,15 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
   if (!episode) {
     root.appendChild(el("p", "empty-state", "Episódio não encontrado."));
     return;
+  }
+
+  if (episode.image) {
+    const cover = el("div", "episode-cover");
+    const img = document.createElement("img");
+    img.src = episode.image;
+    img.alt = "";
+    cover.appendChild(img);
+    root.appendChild(cover);
   }
 
   root.appendChild(el("span", "tag tag-accent", `Episódio ${episode.number}`));
