@@ -5,7 +5,7 @@
     "title": "Um Jardim e uma Biblioteca",
     "description": "Episódio piloto. O que é astrobotânica, por que uma planta não cabe num pen-drive, e uma carta para quem estiver ouvindo isso fora da Terra.",
     "date": "2026-07-20",
-    "duration": "6:32",
+    "duration": "6:32 min",
     "audioSrc": "audio/episodio-01.mp3",
     "transcript": [
       "A mais de dois mil anos, um estadista romano chamado marco túlio cícero disse: “se você tem um jardim e uma biblioteca, você tem tudo o que precisa”. Atualmente, essa frase me acompanha, e no futuro, ecoará pela lua, por marte e depois, para além de onde nós imaginamos. Sabe, livros podem ser compactados, apesar de que particularmente eu gosto bastante de abrir um livro físico, mas a informação de milhares de livros pode ser comprimida e colocada em um pequeno pen-drive. Ao contrário disso, plantas, sendo a base da nossa alimentação, não tem a mesma capacidade de compactação.",
@@ -13,6 +13,7 @@
       "Sem mais devagações, vamos ao tema de hoje: O que é a tal da astrobotânica? Astro vem de espaço, galaxia, universo. Botânica tem a ver com as planta, aquelas que tem folhas, caules, raízes e que nós temos contato desde que somos bebês. Dentro disso, esse campo de estudo visa buscar plantas no espaço, assim como também entender como fazer com que as plantas que evoluiram na terra, saiam dela. Nesse sentido, é claro, temos grandes implicações, na primeira afirmação, onde eu disse que nós buscamos plantas no espaço, aqui a gente poderia se perguntar: existem plantas em qualquer outro lugar do universo? Ainda não sabemos disso. Mas claro, como uma das coisas que caracteriza a gente é a curiosidade, nós vamos buscar isso até encontrarmos, e se não encontrarmos, certamente terão coisas magnificas no caminho. Por outro lado, a astrobotânica também se preocupa em levar as plantas da terra para fora dela, tirando-as da fina camada de atmosfera no qual elas se desenvolveram ao longo dos últimos 500 milhões de anos, ou se quisermos contar a história desde as primeiras algas, dos últimos 3 bilhões de anos.",
       "Ao longo dos episódios, serei seu acompanhante nessa jornada. No fim, esse podcast é a história de como a nossa espécie saiu para explorar o universo e percebeu que tinha que levar um reino consigo, esse reino era a base da nutrição, sensação de conforto, lembrança de casa. Esse era o reino das plantas e esse é o podcast astrobotânica."
     ],
-    "image": "images/episodios/ep-01.jpg"
+    "image": "images/episodios/ep-01.jpg",
+    "featured": true
   }
 ]
