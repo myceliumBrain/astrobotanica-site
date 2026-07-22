@@ -258,6 +258,12 @@ a, button { cursor: pointer; }
 .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
 .fields-grid .full { grid-column: 1 / -1; }
 
+/* ── PAR PT/EN (textos do site: ver buildSiteField) ── */
+.field-group { display: flex; flex-direction: column; gap: 0.6rem; }
+.field-group.full { grid-column: 1 / -1; }
+.field--en { padding-left: 0.7rem; border-left: 2px solid var(--adm-border); }
+.field--en label { color: var(--adm-muted); }
+
 /* ── DESTAQUE NA HOME (checkbox) ── */
 .checkbox-field { justify-content: center; }
 .checkbox-row {

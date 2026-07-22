@@ -23,6 +23,7 @@ const CONFIG = {
   articlesPath: "data/articles.json",
   membersPath: "data/members.json",
   sitePath: "data/site.json",
+  siteEnPath: "data/site.en.json",
 };
 
 const PATHS = {
@@ -30,6 +31,7 @@ const PATHS = {
   episodes: CONFIG.episodesPath,
   members: CONFIG.membersPath,
   site: CONFIG.sitePath,
+  siteEn: CONFIG.siteEnPath,
 };
 
 // Quantos artigos/episódios marcados como "destaque" cabem na Home (ver
@@ -609,7 +611,7 @@ async function enterApp() {
 // Conteúdo: carregar, salvar, marcar sujo
 // ----------------------------------------------------------------------------
 
-let contentData = { articles: null, episodes: null, members: null, site: null };
+let contentData = { articles: null, episodes: null, members: null, site: null, siteEn: null };
 const dirty = new Set();
 
 // Uploads de áudio/imagem confirmados (via "Salvar alterações" de um card),
@@ -656,16 +658,18 @@ async function getFileOrEmpty(path, fallback) {
 async function loadContent() {
   setSaveStatus("carregando…");
   try {
-    const [articles, episodes, members, site] = await Promise.all([
+    const [articles, episodes, members, site, siteEn] = await Promise.all([
       getFile(CONFIG.articlesPath),
       getFile(CONFIG.episodesPath),
       getFileOrEmpty(CONFIG.membersPath, []),
       getFile(CONFIG.sitePath),
+      getFileOrEmpty(CONFIG.siteEnPath, {}),
     ]);
     contentData.articles = articles.content;
     contentData.episodes = episodes.content;
     contentData.members = members.content || [];
     contentData.site = site.content;
+    contentData.siteEn = siteEn.content || {};
     dirty.clear();
     renderArticlesList();
     renderEpisodesList();
@@ -737,6 +741,9 @@ function collectAll() {
   collectMemberLinks();
   document.querySelectorAll("[data-site]").forEach((input) => {
     setByPath(contentData.site, input.dataset.site, input.value);
+  });
+  document.querySelectorAll("[data-site-en]").forEach((input) => {
+    setByPath(contentData.siteEn, input.dataset.siteEn, input.value);
   });
 }
 
@@ -1445,14 +1452,38 @@ function addMember() {
 // Textos do site: Marca & navegação + Páginas
 // ----------------------------------------------------------------------------
 
+// Cada campo de texto do site vem em par: a versão em português (editada
+// direto em contentData.site, como sempre) e, logo abaixo, a versão em
+// inglês (contentData.siteEn) — mantida manualmente por quem edita o
+// painel. Textos novos não traduzem sozinhos: é preciso preencher o campo
+// "(EN)" à mão sempre que criar/mudar um campo em português.
 function buildSiteField(fieldDef) {
+  const wrap = el("div", "field-group");
+  if (fieldDef.type === "textarea") wrap.classList.add("full");
+
   const value = getByPath(contentData.site, fieldDef.key) ?? "";
-  const field =
+  const ptField =
     fieldDef.type === "textarea"
       ? buildTextarea(fieldDef.label, value, { site: fieldDef.key })
       : buildInput(fieldDef.label, "text", value, { site: fieldDef.key });
-  if (fieldDef.type === "textarea") field.classList.add("full");
-  return field;
+  wrap.appendChild(ptField);
+
+  const valueEn = getByPath(contentData.siteEn, fieldDef.key) ?? "";
+  const enField =
+    fieldDef.type === "textarea"
+      ? buildTextarea(`${fieldDef.label} (EN)`, valueEn, { siteEn: fieldDef.key })
+      : buildInput(`${fieldDef.label} (EN)`, "text", valueEn, { siteEn: fieldDef.key });
+  enField.classList.add("field--en");
+  wrap.appendChild(enField);
+
+  return wrap;
+}
+
+// Delegação: distingue se o campo que mudou é a versão pt (data-site) ou en
+// (data-site-en) e marca só a seção correspondente como suja.
+function handleSiteFieldChange(event) {
+  if (event.target.dataset.site !== undefined) markDirty("site");
+  if (event.target.dataset.siteEn !== undefined) markDirty("siteEn");
 }
 
 function renderGeneralForm() {
@@ -1466,8 +1497,8 @@ function renderGeneralForm() {
     }
     container.appendChild(grid);
   }
-  container.addEventListener("input", () => markDirty("site"));
-  container.addEventListener("change", () => markDirty("site"));
+  container.addEventListener("input", handleSiteFieldChange);
+  container.addEventListener("change", handleSiteFieldChange);
 }
 
 function renderPageForms() {
@@ -1479,8 +1510,8 @@ function renderPageForms() {
       grid.appendChild(buildSiteField(fieldDef));
     }
     container.appendChild(grid);
-    container.addEventListener("input", () => markDirty("site"));
-    container.addEventListener("change", () => markDirty("site"));
+    container.addEventListener("input", handleSiteFieldChange);
+    container.addEventListener("change", handleSiteFieldChange);
   }
 }
 
