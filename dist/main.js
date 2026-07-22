@@ -489,7 +489,7 @@ function renderHomeHighlights(episodes, articles) {
 // ----------------------------------------------------------------------------
 
 function buildMemberCard(member) {
-    const card = el("div", "card member-card");
+    const row = el("div", "member-card");
 
     const photo = el("div", "member-photo");
     if (member.image) {
@@ -499,9 +499,9 @@ function buildMemberCard(member) {
         img.loading = "lazy";
         photo.appendChild(img);
     }
-    card.appendChild(photo);
+    row.appendChild(photo);
 
-    const info = el("div", "member-info");
+    const info = el("div", "card member-info");
     info.appendChild(el("div", "card-title", member.name));
     info.appendChild(el("p", "card-body", member.description));
 
@@ -518,9 +518,9 @@ function buildMemberCard(member) {
         }
         info.appendChild(links);
     }
-    card.appendChild(info);
+    row.appendChild(info);
 
-    return card;
+    return row;
 }
 
 function renderMembersList(members) {
