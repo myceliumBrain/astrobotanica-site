@@ -628,6 +628,11 @@ async function enterApp() {
 let contentData = { articles: null, episodes: null, site: null };
 const dirty = new Set();
 
+// Uploads de áudio/imagem confirmados (via "Salvar alterações" de um card),
+// aguardando o clique em "Salvar no GitHub" — só então são de fato
+// enviados. Cada item: { path, file, message }.
+const pendingUploads = [];
+
 function setSaveStatus(message, kind) {
   const status = document.getElementById("save-status");
   status.textContent = message;
@@ -675,56 +680,77 @@ async function loadContent() {
   }
 }
 
+function applyArticleField(input) {
+  const i = Number(input.dataset.article);
+  const key = input.dataset.key;
+  const record = contentData.articles[i];
+  if (!record) return;
+  if (input.type === "checkbox") {
+    if (input.checked) record[key] = true;
+    else delete record[key];
+    return;
+  }
+  const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
+  if ((key === "subtitle" || key === "image") && !value) delete record[key];
+  else record[key] = value;
+}
+
+function applyEpisodeField(input) {
+  const i = Number(input.dataset.episode);
+  const key = input.dataset.key;
+  const record = contentData.episodes[i];
+  if (!record) return;
+  if (input.type === "checkbox") {
+    if (input.checked) record[key] = true;
+    else delete record[key];
+    return;
+  }
+  if (key === "number") {
+    record.number = Number(input.value);
+    return;
+  }
+  if (input.dataset.multiline === "paragraphs") {
+    const paragraphs = linesToParagraphs(input.value);
+    if (paragraphs.length === 0) delete record.transcript;
+    else record.transcript = paragraphs;
+    return;
+  }
+  if (key === "image" && !input.value) { delete record.image; return; }
+  record[key] = input.value;
+}
+
+// collectAll(): sincroniza TUDO que está na tela pra dentro de contentData —
+// usado antes de reordenar/remover/adicionar (e no salvamento final), pra
+// não perder edição em outros cards quando a lista é redesenhada do zero.
 function collectAll() {
-  document.querySelectorAll("[data-article]").forEach((input) => {
-    const i = Number(input.dataset.article);
-    const key = input.dataset.key;
-    const record = contentData.articles[i];
-    if (!record) return;
-    if (input.type === "checkbox") {
-      if (input.checked) record[key] = true;
-      else delete record[key];
-      return;
-    }
-    const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
-    if ((key === "subtitle" || key === "image") && !value) delete record[key];
-    else record[key] = value;
-  });
-  document.querySelectorAll("[data-episode]").forEach((input) => {
-    const i = Number(input.dataset.episode);
-    const key = input.dataset.key;
-    const record = contentData.episodes[i];
-    if (!record) return;
-    if (input.type === "checkbox") {
-      if (input.checked) record[key] = true;
-      else delete record[key];
-      return;
-    }
-    if (key === "number") {
-      record.number = Number(input.value);
-      return;
-    }
-    if (input.dataset.multiline === "paragraphs") {
-      const paragraphs = linesToParagraphs(input.value);
-      if (paragraphs.length === 0) delete record.transcript;
-      else record.transcript = paragraphs;
-      return;
-    }
-    if (key === "image" && !input.value) { delete record.image; return; }
-    record[key] = input.value;
-  });
+  document.querySelectorAll("[data-article]").forEach(applyArticleField);
+  document.querySelectorAll("[data-episode]").forEach(applyEpisodeField);
   document.querySelectorAll("[data-site]").forEach((input) => {
     setByPath(contentData.site, input.dataset.site, input.value);
   });
 }
 
+// Collectors por card: só sincronizam os campos daquele artigo/episódio
+// específico — usados pelo botão "Salvar alterações" de cada bloco, que é
+// o único jeito de uma edição de texto/checkbox/arquivo virar de fato uma
+// alteração pendente (ver buildSaveCardButton).
+function collectArticleCardFields(i) {
+  document.querySelectorAll(`[data-article="${i}"]`).forEach(applyArticleField);
+}
+function collectEpisodeCardFields(i) {
+  document.querySelectorAll(`[data-episode="${i}"]`).forEach(applyEpisodeField);
+}
+
 async function saveAll() {
-  collectAll();
-  if (dirty.size === 0) return;
+  if (dirty.size === 0 && pendingUploads.length === 0) return;
   const saveBtn = document.getElementById("save-btn");
   saveBtn.disabled = true;
   setSaveStatus("salvando…", "pending");
   try {
+    for (const upload of pendingUploads) {
+      await uploadBinaryFile(upload.path, upload.file, upload.message);
+    }
+    pendingUploads.length = 0;
     for (const section of dirty) {
       const fresh = await getFile(PATHS[section]);
       await putFile(PATHS[section], contentData[section], fresh.sha, `admin: atualiza ${section}`);
@@ -846,37 +872,52 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     wrap.appendChild(preview);
   }
 
-  fileInput.addEventListener("change", async () => {
+  // O arquivo escolhido só fica "pendente" aqui — nada é enviado ainda.
+  // Só vira alteração de fato ao clicar em "Salvar alterações" do card
+  // (confirmFileUpload), e só é transmitido ao GitHub ao clicar em
+  // "Salvar no GitHub" (ver saveAll). Isso mantém arquivo e texto com a
+  // mesma regra: nada sai do navegador sem confirmação explícita.
+  let pending = null;
+
+  fileInput.addEventListener("change", () => {
     const file = fileInput.files[0];
     if (!file) return;
     const path = opts.buildPath(file);
-    fileLabel.classList.add("disabled");
-    fileInput.disabled = true;
-    status.textContent = "Enviando… não feche esta aba.";
+    pending = { path, file, message: opts.buildMessage(path) };
+    status.textContent = `Selecionado: ${path} — clique em "Salvar alterações" para confirmar.`;
     status.dataset.kind = "pending";
-    try {
-      await uploadBinaryFile(path, file, opts.buildMessage(path));
-      textInput.value = path;
-      textInput.dispatchEvent(new Event("input", { bubbles: true }));
-      textInput.dispatchEvent(new Event("change", { bubbles: true }));
-      status.textContent = `Enviado ✓`;
-      status.dataset.kind = "ok";
-      if (preview) {
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = "";
-      }
-    } catch (err) {
-      status.textContent = `Erro ao enviar: ${err.message}`;
-      status.dataset.kind = "err";
-      toast(`Erro ao enviar arquivo: ${err.message}`, "error");
-    } finally {
-      fileLabel.classList.remove("disabled");
-      fileInput.disabled = false;
-      fileInput.value = "";
+    if (preview) {
+      preview.src = URL.createObjectURL(file);
+      preview.style.display = "";
     }
+    fileInput.value = "";
   });
 
+  wrap.confirmFileUpload = function confirmFileUpload() {
+    if (!pending) return;
+    pendingUploads.push(pending);
+    textInput.value = pending.path;
+    status.textContent = `Na fila — será enviado ao clicar em "Salvar no GitHub".`;
+    status.dataset.kind = "ok";
+    pending = null;
+  };
+
   return wrap;
+}
+
+// Botão "Salvar alterações" de um card: é o único gatilho que sincroniza
+// os campos daquele bloco pra dentro de contentData e marca a seção como
+// suja — digitar/marcar checkbox/escolher arquivo, sozinhos, não fazem
+// nada até esse clique (ver collectArticleCardFields/collectEpisodeCardFields
+// e confirmFileUpload em buildFileUploadField).
+function buildSaveCardButton(onSave) {
+  const btn = el("button", "btn btn-primary btn-small", "Salvar alterações");
+  btn.type = "button";
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    onSave();
+  });
+  return btn;
 }
 
 function buildReorderButtons(idx, total, onUp, onDown) {
@@ -974,6 +1015,12 @@ function buildArticleCard(article, i, total) {
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
+  const saveBtn = buildSaveCardButton(() => {
+    collectArticleCardFields(i);
+    markDirty("articles");
+    toast('Alterações do artigo prontas — clique em "Salvar no GitHub" para enviar.', "ok");
+  });
+  actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover artigo");
   removeBtn.type = "button";
   removeBtn.addEventListener("click", () => removeArticle(i));
@@ -981,8 +1028,6 @@ function buildArticleCard(article, i, total) {
   body.appendChild(actions);
 
   card.appendChild(body);
-  card.addEventListener("input", () => markDirty("articles"));
-  card.addEventListener("change", () => markDirty("articles"));
 
   return card;
 }
@@ -1139,6 +1184,14 @@ function buildEpisodeCard(episode, i, total) {
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
+  const saveBtn = buildSaveCardButton(() => {
+    audioField.confirmFileUpload();
+    imageField.confirmFileUpload();
+    collectEpisodeCardFields(i);
+    markDirty("episodes");
+    toast('Alterações do episódio prontas — clique em "Salvar no GitHub" para enviar.', "ok");
+  });
+  actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover episódio");
   removeBtn.type = "button";
   removeBtn.addEventListener("click", () => removeEpisode(i));
@@ -1146,8 +1199,6 @@ function buildEpisodeCard(episode, i, total) {
   body.appendChild(actions);
 
   card.appendChild(body);
-  card.addEventListener("input", () => markDirty("episodes"));
-  card.addEventListener("change", () => markDirty("episodes"));
 
   return card;
 }

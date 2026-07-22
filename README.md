@@ -80,13 +80,24 @@ tanto rodando localmente quanto no site já publicado. Não existe link para
 **Como funciona**: o painel não tem servidor próprio, e edita em memória —
 `data/episodes.json`, `data/articles.json` e `data/site.json` só são
 gravados no GitHub quando você clica em **"Salvar no GitHub"**, no topo da
-tela (reordenar com as setas ▲▼, adicionar, remover e editar campos mudam
-só o que está na tela; o botão fica habilitado enquanto houver alteração
-pendente, e o status ao lado mostra "alterações pendentes" / "salvando…" /
-"salvo ✓"). Um clique salva de uma vez todos os arquivos que você mexeu,
-cada um como um commit no repositório `myceliumBrain/astrobotanica-site`,
+tela. Reordenar (setas ▲▼), adicionar e remover artigo/episódio já contam
+como alteração na hora. Já **editar campos de um card** (texto, checkbox,
+upload de áudio/imagem) não conta como nada até você clicar em **"Salvar
+alterações"**, no fim daquele card — só esse clique sincroniza o que está
+escrito na tela pra dentro da alteração pendente (é aí que aparece
+"alterações pendentes" no topo). Antes disso, digitar/marcar/escolher um
+arquivo fica só ali no navegador, sem efeito nenhum; ao trocar de card ou
+fechar a aba sem clicar em "Salvar alterações", o que não foi confirmado
+se perde. Um upload de áudio/imagem funciona igual: escolher o arquivo só
+o deixa pronto pra confirmar — o arquivo em si só é de fato enviado ao
+GitHub junto com o resto, no clique em "Salvar no GitHub" (o status ao
+lado do campo mostra essa fila: "selecionado" → "na fila" → enviado). O
+botão do topo fica habilitado enquanto houver alteração pendente, e o
+status ao lado mostra "alterações pendentes" / "salvando…" / "salvo ✓". Um
+clique nele salva de uma vez tudo o que está pendente (JSON e arquivos),
+cada JSON como um commit no repositório `myceliumBrain/astrobotanica-site`,
 branch `main`. **Acessos** é a exceção: adicionar/revogar ali já commita na
-hora, sem esperar o botão de salvar.
+hora, sem esperar nenhum desses botões.
 
 A ordem dos artigos e episódios nas listas (setas ▲▼) é a mesma ordem em que
 eles aparecem no site público — não há mais reordenação automática por data.
@@ -203,16 +214,19 @@ fora (via git); o painel só grava o caminho no JSON. `featured` é opcional
 }
 ```
 
-`transcript` é opcional — se presente, o texto completo aparece na própria
-página do episódio, abaixo do player. `image` também é opcional (capa
-quadrada mostrada no topo da página do episódio, acima do título).
+`transcript` é opcional — a transcrição some recolhida por padrão (só as
+primeiras linhas, com "▼ Ver transcrição completa" pra abrir o resto).
+`image` também é opcional: um banner (16:9, mostrado a metade da altura)
+no topo da página do episódio, com a etiqueta/título/data sobrepostos nele.
 
 Diferente dos artigos, o `.mp3` e a imagem de um episódio **podem ser
 enviados direto pelo painel** — o campo de cada um tem um botão de envio de
-arquivo que faz o commit do binário para `audio/` ou `images/episodios/`
-automaticamente (usando a Git Data API do GitHub, já que a Contents API não
-serve para arquivos grandes) e preenche o caminho no JSON sozinho. Ainda dá
-para colar/editar o caminho manualmente no campo de texto, se preferir.
+arquivo; o caminho ao lado é só leitura (mostra o que está salvo, não dá
+pra digitar nele). Escolher um arquivo não envia nada ainda — só fica
+"selecionado" até você clicar em "Salvar alterações" do card (vira "na
+fila"), e só é de fato commitado para `audio/` ou `images/episodios/` (via
+Git Data API do GitHub, já que a Contents API não serve para arquivos
+grandes) quando você clica em "Salvar no GitHub".
 
 ## Como recompilar depois de editar `src/main.ts`
 
