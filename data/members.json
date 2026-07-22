@@ -2,7 +2,13 @@
   {
     "id": "integrante-pedro",
     "name": "Pedro Henrique Tenorio Alvarenga",
-    "description": "Pedro é um apaixonado por biologia, especialmente plantas e microbiologia. Desde antes da graduação, sempre flertou com a cosmologia, e a oportunidade de juntar todos os blocos veio com a entrada no Laboratório de Biologia Molecular de Plantas e Fungos da UNIRIO, onde passou a atuar em pesquisas de astrobotânica na área de Space Farming.",
-    "image": "images/integrantes/integrante-pedro.jpeg"
+    "description": "Apaixonado por conhecimento, graduou-se em biologia, com foco em microbiologia e plantas. Desde antes da graduação, sempre flertou com a astronomia, e a oportunidade de juntar todos os campos de conhecimento veio com a entrada no Laboratório de Biologia Molecular de Plantas e Fungos da UNIRIO, onde passou a atuar em pesquisas de astrobotânica na área de Space Farming.",
+    "image": "images/integrantes/integrante-pedro.jpeg",
+    "links": [
+      {
+        "label": "Currículo Lattes",
+        "url": "http://lattes.cnpq.br/3569412519597121"
+      }
+    ]
   }
 ]
