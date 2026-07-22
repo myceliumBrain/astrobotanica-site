@@ -67,6 +67,7 @@
   "artigo": {
     "metaTitle": "Article — Astrobotanica",
     "backLink": "← Back to articles",
+    "byLine": "By {{author}}",
     "relatedHeading": "Keep reading",
     "loadError": "Couldn't load the article right now.",
     "notFound": "Article not found.",

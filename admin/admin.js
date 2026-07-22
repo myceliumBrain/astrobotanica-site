@@ -121,6 +121,7 @@ const PAGE_SCHEMA = [
     label: "Notícia",
     fields: [
       { key: "artigo.backLink", label: "Link \"voltar\"", type: "text" },
+      { key: "artigo.byLine", label: "Texto do autor (use {{author}})", type: "text" },
       { key: "artigo.relatedHeading", label: "Título \"continue lendo\"", type: "text" },
     ],
   },
@@ -402,21 +403,18 @@ async function putFile(path, contentObj, sha, message) {
 // bem maiores e cria um commit próprio direto na branch.
 // ----------------------------------------------------------------------------
 
-async function commitBinaryFile(path, base64Content, message) {
+// Passo comum a qualquer commit direto na branch via Git Data API (usado
+// tanto para enviar quanto para remover um arquivo binário): busca a ponta
+// atual da branch, monta uma tree só com as mudanças pedidas (por cima da
+// tree atual, via base_tree) e move a branch pra esse novo commit.
+async function commitTreeChange(entries, message) {
   const repoBase = `/repos/${CONFIG.owner}/${CONFIG.repo}`;
   const ref = await ghRequest(`${repoBase}/git/ref/heads/${CONFIG.branch}`);
   const baseCommitSha = ref.object.sha;
   const baseCommit = await ghRequest(`${repoBase}/git/commits/${baseCommitSha}`);
-  const blob = await ghRequest(`${repoBase}/git/blobs`, {
-    method: "POST",
-    body: JSON.stringify({ content: base64Content, encoding: "base64" }),
-  });
   const tree = await ghRequest(`${repoBase}/git/trees`, {
     method: "POST",
-    body: JSON.stringify({
-      base_tree: baseCommit.tree.sha,
-      tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }],
-    }),
+    body: JSON.stringify({ base_tree: baseCommit.tree.sha, tree: entries }),
   });
   const commit = await ghRequest(`${repoBase}/git/commits`, {
     method: "POST",
@@ -426,6 +424,15 @@ async function commitBinaryFile(path, base64Content, message) {
     method: "PATCH",
     body: JSON.stringify({ sha: commit.sha }),
   });
+}
+
+async function commitBinaryFile(path, base64Content, message) {
+  const repoBase = `/repos/${CONFIG.owner}/${CONFIG.repo}`;
+  const blob = await ghRequest(`${repoBase}/git/blobs`, {
+    method: "POST",
+    body: JSON.stringify({ content: base64Content, encoding: "base64" }),
+  });
+  await commitTreeChange([{ path, mode: "100644", type: "blob", sha: blob.sha }], message);
   return path;
 }
 
@@ -433,6 +440,15 @@ async function uploadBinaryFile(path, file, message) {
   const buffer = await file.arrayBuffer();
   const base64 = bytesToB64(buffer);
   return commitBinaryFile(path, base64, message);
+}
+
+// Remove um arquivo binário da branch (usado quando um upload novo substitui
+// um arquivo antigo com caminho diferente — ver pendingDeletions). Uma
+// entrada de tree com sha: null apaga aquele caminho no commit resultante;
+// se o arquivo já não existir mais (ex: dois envios apontando pro mesmo
+// arquivo antigo), o GitHub só ignora essa entrada, sem erro.
+async function deleteBinaryFile(path, message) {
+  await commitTreeChange([{ path, mode: "100644", type: "blob", sha: null }], message);
 }
 
 function fileExtension(filename, fallback) {
@@ -634,6 +650,13 @@ const dirty = new Set();
 // enviados. Cada item: { path, file, message }.
 const pendingUploads = [];
 
+// Arquivos antigos a apagar do repositório porque um upload novo tomou o
+// lugar deles (capa/áudio substituídos, ou imagem removida do corpo) —
+// preenchido em confirmFileUpload (buildFileUploadField) e em
+// applyArticleField (corpo). Processado em saveAll(), depois dos uploads.
+// Cada item: { path, message }.
+const pendingDeletions = [];
+
 function setSaveStatus(message, kind) {
   const status = document.getElementById("save-status");
   status.textContent = message;
@@ -670,6 +693,43 @@ async function getFileOrEmpty(path, fallback) {
   }
 }
 
+// Corrige ids que fujam do padrão slug (ex: espaço em vez de traço,
+// maiúsculas) — acontece em registros criados antes do id virar automático
+// (ver nextIdNumber), ou editados à mão direto no JSON. Sem isso, o id
+// destoa dos nomes de arquivo (imagem/áudio), que são derivados dele.
+// Não mexe em `image`/`audioSrc`: só o texto do id muda aqui, o arquivo já
+// enviado com o nome antigo continua onde está — é preciso reenviá-lo (o
+// campo de upload já vai calcular o novo caminho certo a partir do id
+// corrigido) pra ele passar a bater com o id novo.
+function normalizeIds(items) {
+  let changed = false;
+  for (const item of items) {
+    if (!item.id) continue;
+    const clean = slugify(item.id);
+    if (clean && clean !== item.id) {
+      item.id = clean;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+// Remove campos que saíram do formulário (ex: "excerpt", tirado do card de
+// notícia por não ser usado em lugar nenhum do site) mas que podem ter
+// ficado gravados em registros salvos antes da mudança.
+function stripLegacyFields(items, keys) {
+  let changed = false;
+  for (const item of items) {
+    for (const key of keys) {
+      if (key in item) {
+        delete item[key];
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
 async function loadContent() {
   setSaveStatus("carregando…");
   try {
@@ -686,12 +746,23 @@ async function loadContent() {
     contentData.site = site.content;
     contentData.siteEn = siteEn.content || {};
     dirty.clear();
+    let fixedArticles = normalizeIds(contentData.articles);
+    if (stripLegacyFields(contentData.articles, ["excerpt"])) fixedArticles = true;
+    const fixedEpisodes = normalizeIds(contentData.episodes);
+    if (fixedArticles) dirty.add("articles");
+    if (fixedEpisodes) dirty.add("episodes");
     renderArticlesList();
     renderEpisodesList();
     renderMembersList();
     renderGeneralForm();
-    setSaveStatus("dados carregados ✓", "ok");
-    document.getElementById("save-btn").disabled = true;
+    if (fixedArticles || fixedEpisodes) {
+      document.getElementById("save-btn").disabled = false;
+      setSaveStatus("alterações pendentes", "pending");
+      toast('Encontrei alguma coisa desatualizada (identificador fora do padrão ou campo removido) e já corrigi — clique em "Salvar no GitHub" para confirmar.', "ok");
+    } else {
+      setSaveStatus("dados carregados ✓", "ok");
+      document.getElementById("save-btn").disabled = true;
+    }
   } catch (err) {
     setSaveStatus("erro ao carregar ✗", "err");
     toast(`Não foi possível carregar: ${err.message}`, "error");
@@ -711,6 +782,21 @@ function finalizeRichTextHtml(container) {
   return clone.innerHTML;
 }
 
+// Caminhos de imagem (não http(s), não blob: de pré-visualização) que
+// aparecem num HTML de corpo — usado para comparar a versão antiga com a
+// nova e descobrir quais imagens saíram do texto (ver applyArticleField).
+function extractImagePaths(html) {
+  const paths = new Set();
+  if (!html) return paths;
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  div.querySelectorAll("img[src]").forEach((img) => {
+    const src = img.getAttribute("src");
+    if (src && !/^(https?:|blob:)/i.test(src)) paths.add(src);
+  });
+  return paths;
+}
+
 function applyArticleField(input) {
   const i = Number(input.dataset.article);
   const key = input.dataset.key;
@@ -722,11 +808,22 @@ function applyArticleField(input) {
     return;
   }
   if (input.dataset.richtext === "html") {
-    record[key] = finalizeRichTextHtml(input);
+    const newHtml = finalizeRichTextHtml(input);
+    // Imagem que estava no HTML salvo antes e não está mais no novo —
+    // saiu do texto (apagada no editor), então o arquivo fica sem uso;
+    // agenda a remoção junto do resto das alterações pendentes.
+    const oldPaths = extractImagePaths(record[key]);
+    const newPaths = extractImagePaths(newHtml);
+    oldPaths.forEach((path) => {
+      if (!newPaths.has(path)) {
+        pendingDeletions.push({ path, message: `admin: remove imagem não usada mais no corpo (${path})` });
+      }
+    });
+    record[key] = newHtml;
     return;
   }
   const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
-  if ((key === "subtitle" || key === "image") && !value) delete record[key];
+  if ((key === "subtitle" || key === "image" || key === "author") && !value) delete record[key];
   else record[key] = value;
 }
 
@@ -795,7 +892,7 @@ function collectMemberCardFields(i) {
 }
 
 async function saveAll() {
-  if (dirty.size === 0 && pendingUploads.length === 0) return;
+  if (dirty.size === 0 && pendingUploads.length === 0 && pendingDeletions.length === 0) return;
   const saveBtn = document.getElementById("save-btn");
   saveBtn.disabled = true;
   setSaveStatus("salvando…", "pending");
@@ -804,6 +901,12 @@ async function saveAll() {
       await uploadBinaryFile(upload.path, upload.file, upload.message);
     }
     pendingUploads.length = 0;
+    // Remoções depois dos envios: garante que o arquivo novo já está no
+    // lugar antes de mexer em qualquer coisa antiga.
+    for (const deletion of pendingDeletions) {
+      await deleteBinaryFile(deletion.path, deletion.message);
+    }
+    pendingDeletions.length = 0;
     for (const section of dirty) {
       // sha undefined (arquivo ainda não existe no repositório, ex: primeiro
       // salvamento de data/members.json) faz o PUT criar o arquivo em vez de
@@ -844,6 +947,52 @@ function buildInput(labelText, type, value, dataset, placeholder) {
   if (placeholder) input.placeholder = placeholder;
   Object.entries(dataset).forEach(([k, v]) => { input.dataset[k] = v; });
   return buildField(labelText, input);
+}
+
+// Campo numérico que só muda pelas setinhas do próprio input (spinner
+// nativo do navegador) — bloqueia qualquer tecla que insira caractere
+// (dígitos inclusive) e também colar, então digitar direto não tem efeito.
+function buildSpinnerNumberField(labelText, value, dataset) {
+  const input = document.createElement("input");
+  input.className = "input";
+  input.type = "number";
+  input.value = value ?? "";
+  Object.entries(dataset).forEach(([k, v]) => { input.dataset[k] = v; });
+  input.addEventListener("keydown", (e) => {
+    // Deixa passar Tab, setas, Backspace/Delete etc. (todas com e.key com
+    // mais de 1 caractere) — só bloqueia teclas que efetivamente escrevem
+    // algo no campo.
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) e.preventDefault();
+  });
+  input.addEventListener("paste", (e) => e.preventDefault());
+  return buildField(labelText, input);
+}
+
+// Campo só de leitura — usado para o identificador (id), que é preenchido
+// sozinho na criação do item (ver nextIdNumber) e não deve mudar depois:
+// os nomes dos arquivos enviados (imagem/áudio) são derivados dele, então
+// editá-lo à mão desalinharia o id do que já foi commitado no GitHub.
+function buildReadOnlyField(labelText, value) {
+  const input = document.createElement("input");
+  input.className = "input";
+  input.type = "text";
+  input.value = value ?? "";
+  input.readOnly = true;
+  return buildField(labelText, input);
+}
+
+// Próximo número livre para um prefixo de identificador (ex: "noticia",
+// "ep"): olha o maior número já usado entre os ids existentes com esse
+// prefixo e soma 1 — nunca reaproveita o número de um item excluído, então
+// dois itens diferentes nunca chegam a disputar o mesmo nome de arquivo.
+function nextIdNumber(items, prefix) {
+  const re = new RegExp(`^${prefix}-(\\d+)$`);
+  let max = 0;
+  for (const item of items) {
+    const match = re.exec(item.id || "");
+    if (match) max = Math.max(max, Number(match[1]));
+  }
+  return max + 1;
 }
 
 // Checkbox "Destacar na Home". `onToggle` recalcula o limite de HOME_MAX_ITEMS
@@ -888,9 +1037,9 @@ function buildTextarea(labelText, value, dataset, multilineParagraphs) {
   return buildField(labelText, textarea);
 }
 
-// Campo de upload: um input de texto (mostra/permite editar o caminho
-// salvo) + um botão de arquivo que faz o commit direto no GitHub e
-// preenche o texto sozinho ao terminar.
+// Campo de upload: um input de texto (só mostra o caminho salvo — travado,
+// nem clique nele funciona) + um botão de arquivo que faz o commit direto
+// no GitHub e preenche o texto sozinho ao terminar.
 function buildFileUploadField(labelText, currentValue, dataset, opts) {
   const wrap = el("div", "field file-upload-field");
   wrap.appendChild(el("label", "", labelText));
@@ -900,7 +1049,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   textInput.className = "input";
   textInput.type = "text";
   textInput.value = currentValue ?? "";
-  textInput.readOnly = true;
+  textInput.disabled = true;
   if (opts.placeholder) textInput.placeholder = opts.placeholder;
   Object.entries(dataset).forEach(([k, v]) => { textInput.dataset[k] = v; });
   row.appendChild(textInput);
@@ -951,6 +1100,15 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
 
   wrap.confirmFileUpload = function confirmFileUpload() {
     if (!pending) return;
+    // Se já existia um arquivo salvo com caminho diferente do novo (ex:
+    // extensão trocou, jpg por png), o antigo fica órfão no repositório —
+    // agenda a remoção dele junto com o novo envio, pra não acumular lixo.
+    if (currentValue && currentValue !== pending.path) {
+      pendingDeletions.push({
+        path: currentValue,
+        message: `admin: remove arquivo substituído (${currentValue})`,
+      });
+    }
     pendingUploads.push(pending);
     textInput.value = pending.path;
     status.textContent = `Na fila — será enviado ao clicar em "Salvar no GitHub".`;
@@ -986,6 +1144,33 @@ function buildRichTextField(labelText, value, dataset, opts) {
   boldBtn.addEventListener("mousedown", (e) => e.preventDefault());
   boldBtn.addEventListener("click", () => document.execCommand("bold"));
   toolbar.appendChild(boldBtn);
+
+  const italicBtn = el("button", "rich-text-btn rich-text-btn--italic", "Itálico");
+  italicBtn.type = "button";
+  italicBtn.title = "Itálico";
+  italicBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  italicBtn.addEventListener("click", () => document.execCommand("italic"));
+  toolbar.appendChild(italicBtn);
+
+  // Escala de tamanho legada do execCommand("fontSize") (1 a 7, padrão 3) —
+  // rotulada por nome em vez do número cru, pra ficar claro no menu.
+  const sizeSelect = document.createElement("select");
+  sizeSelect.className = "rich-text-select";
+  sizeSelect.title = "Tamanho da fonte";
+  [
+    { value: "", label: "Tamanho da fonte" },
+    { value: "2", label: "Pequeno" },
+    { value: "3", label: "Normal" },
+    { value: "4", label: "Médio" },
+    { value: "5", label: "Grande" },
+    { value: "6", label: "Muito grande" },
+  ].forEach(({ value, label }) => {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    sizeSelect.appendChild(opt);
+  });
+  toolbar.appendChild(sizeSelect);
 
   const imageBtn = el("button", "rich-text-btn", "+ imagem");
   imageBtn.type = "button";
@@ -1023,13 +1208,41 @@ function buildRichTextField(labelText, value, dataset, opts) {
   editor.addEventListener("keyup", saveSelection);
   editor.addEventListener("mouseup", saveSelection);
 
+  // Abrir o <select> também tira o foco do editor — guarda a seleção antes
+  // de abrir (mousedown) e restaura na hora de aplicar (change), mesma
+  // lógica do botão de imagem.
+  sizeSelect.addEventListener("mousedown", saveSelection);
+  sizeSelect.addEventListener("change", () => {
+    const value = sizeSelect.value;
+    sizeSelect.value = "";
+    if (!value) return;
+    editor.focus();
+    const sel = window.getSelection();
+    if (savedRange) {
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    }
+    document.execCommand("fontSize", false, value);
+    saveSelection();
+  });
+
   imageBtn.addEventListener("mousedown", (e) => e.preventDefault());
   imageBtn.addEventListener("click", () => imageInput.click());
 
   imageInput.addEventListener("change", () => {
     const file = imageInput.files[0];
     if (!file) return;
-    const path = opts.buildImagePath(file);
+    // Numeração sequencial (id-imagem-1, id-imagem-2...) olhando as imagens
+    // já presentes no editor (tanto as já salvas quanto as ainda pendentes),
+    // pra nunca repetir número mesmo remontando o card várias vezes.
+    const re = new RegExp(`-imagem-(\\d+)\\.[a-zA-Z0-9]+$`);
+    let maxN = 0;
+    editor.querySelectorAll("img").forEach((existing) => {
+      const src = existing.dataset.finalSrc || existing.getAttribute("src") || "";
+      const match = re.exec(src);
+      if (match) maxN = Math.max(maxN, Number(match[1]));
+    });
+    const path = `${opts.folder}/${opts.id}-imagem-${maxN + 1}.${fileExtension(file.name, "jpg")}`;
 
     const img = document.createElement("img");
     img.src = URL.createObjectURL(file);
@@ -1126,14 +1339,6 @@ function renderArticlesList() {
   enforceFeaturedLimit("articles");
 }
 
-// Lê o valor atual do campo "id" direto do DOM (pode ter sido editado e
-// ainda não persistido em contentData) para nomear os arquivos enviados.
-function articleSlug(i, article) {
-  const idInput = document.querySelector(`[data-article="${i}"][data-key="id"]`);
-  const raw = (idInput && idInput.value.trim()) || article.id || `noticia-${i + 1}`;
-  return slugify(raw) || `noticia-${i + 1}`;
-}
-
 function buildArticleCard(article, i, total) {
   const card = el("div", "card");
   card.id = `article-card-${i}`;
@@ -1152,10 +1357,11 @@ function buildArticleCard(article, i, total) {
   const body = el("div", "card-body");
   const grid = el("div", "fields-grid");
 
-  grid.appendChild(buildInput("Identificador (id)", "text", article.id, { article: i, key: "id" }));
+  grid.appendChild(buildReadOnlyField("Identificador (id)", article.id));
   grid.appendChild(buildInput("Categoria", "text", article.category, { article: i, key: "category" }, "Fisiologia vegetal"));
   grid.appendChild(buildInput("Título", "text", article.title, { article: i, key: "title" }));
   grid.appendChild(buildInput("Subtítulo (opcional)", "text", article.subtitle, { article: i, key: "subtitle" }));
+  grid.appendChild(buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro"));
 
   const imageField = buildFileUploadField(
     "Imagem de capa (opcional)",
@@ -1164,18 +1370,14 @@ function buildArticleCard(article, i, total) {
     {
       accept: "image/*",
       buttonText: "Enviar imagem",
-      placeholder: "images/noticias/nome-da-noticia.jpg",
+      placeholder: `images/noticias/${article.id}-imagem-principal.jpg`,
       preview: true,
-      buildPath: (file) => `images/noticias/${articleSlug(i, article)}.${fileExtension(file.name, "jpg")}`,
+      buildPath: (file) => `images/noticias/${article.id}-imagem-principal.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia imagem da notícia "${article.title || article.id}" (${path})`,
     }
   );
   imageField.classList.add("full");
   grid.appendChild(imageField);
-
-  const excerpt = buildTextarea("Resumo (só na página da notícia)", article.excerpt, { article: i, key: "excerpt" });
-  excerpt.classList.add("full");
-  grid.appendChild(excerpt);
 
   grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
   grid.appendChild(buildInput("Tempo de leitura", "text", article.readingTime, { article: i, key: "readingTime" }, "6 min"));
@@ -1194,8 +1396,8 @@ function buildArticleCard(article, i, total) {
     articleBodyToHtml(article.body),
     { article: i, key: "body" },
     {
-      buildImagePath: (file) =>
-        `images/noticias/${articleSlug(i, article)}-corpo-${Date.now()}.${fileExtension(file.name, "jpg")}`,
+      id: article.id,
+      folder: "images/noticias",
       buildImageMessage: (path) => `admin: envia imagem do corpo da notícia "${article.title || article.id}" (${path})`,
     }
   );
@@ -1246,7 +1448,7 @@ function removeArticle(i) {
 
 function addArticle() {
   collectAll();
-  const id = uniqueSlug(contentData.articles.map((a) => a.id), "nova-noticia");
+  const id = `noticia-${nextIdNumber(contentData.articles, "noticia")}`;
   // Insere no início: a home e a lista pública mostram as notícias na ordem
   // do array, então uma notícia nova já aparece em primeiro sem precisar
   // reordenar manualmente.
@@ -1254,7 +1456,6 @@ function addArticle() {
     id,
     category: "",
     title: "",
-    excerpt: "",
     date: new Date().toISOString().slice(0, 10),
     readingTime: "",
     body: "",
@@ -1286,14 +1487,6 @@ function renderEpisodesList() {
   enforceFeaturedLimit("episodes");
 }
 
-// Lê o valor atual do campo "id" direto do DOM (pode ter sido editado e
-// ainda não persistido em contentData) para nomear os arquivos enviados.
-function episodeSlug(i, episode) {
-  const idInput = document.querySelector(`[data-episode="${i}"][data-key="id"]`);
-  const raw = (idInput && idInput.value.trim()) || episode.id || `episodio-${i + 1}`;
-  return slugify(raw) || `episodio-${i + 1}`;
-}
-
 function buildEpisodeCard(episode, i, total) {
   const card = el("div", "card");
   card.id = `episode-card-${i}`;
@@ -1312,8 +1505,8 @@ function buildEpisodeCard(episode, i, total) {
   const body = el("div", "card-body");
   const grid = el("div", "fields-grid");
 
-  grid.appendChild(buildInput("Identificador (id)", "text", episode.id, { episode: i, key: "id" }));
-  grid.appendChild(buildInput("Número", "number", episode.number, { episode: i, key: "number" }));
+  grid.appendChild(buildReadOnlyField("Identificador (id)", episode.id));
+  grid.appendChild(buildSpinnerNumberField("Número", episode.number, { episode: i, key: "number" }));
   grid.appendChild(buildInput("Título", "text", episode.title, { episode: i, key: "title" }));
   grid.appendChild(buildInput("Duração", "text", episode.duration, { episode: i, key: "duration" }, "38:00 ou —"));
 
@@ -1339,8 +1532,8 @@ function buildEpisodeCard(episode, i, total) {
     {
       accept: "audio/mpeg,.mp3",
       buttonText: "Enviar .mp3",
-      placeholder: "audio/episodio-02.mp3",
-      buildPath: () => `audio/${episodeSlug(i, episode)}.mp3`,
+      placeholder: `audio/${episode.id}.mp3`,
+      buildPath: () => `audio/${episode.id}.mp3`,
       buildMessage: (path) => `admin: envia áudio do episódio "${episode.title || episode.id}" (${path})`,
     }
   );
@@ -1354,9 +1547,9 @@ function buildEpisodeCard(episode, i, total) {
     {
       accept: "image/*",
       buttonText: "Enviar imagem",
-      placeholder: "images/episodios/ep-02.jpg",
+      placeholder: `images/episodios/${episode.id}-imagem-principal.jpg`,
       preview: true,
-      buildPath: (file) => `images/episodios/${episodeSlug(i, episode)}.${fileExtension(file.name, "jpg")}`,
+      buildPath: (file) => `images/episodios/${episode.id}-imagem-principal.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia imagem do episódio "${episode.title || episode.id}" (${path})`,
     }
   );
@@ -1417,8 +1610,8 @@ function removeEpisode(i) {
 
 function addEpisode() {
   collectAll();
-  const nextNumber = Math.max(0, ...contentData.episodes.map((e) => e.number || 0)) + 1;
-  const id = uniqueSlug(contentData.episodes.map((e) => e.id), `ep-${nextNumber}`);
+  const nextNumber = nextIdNumber(contentData.episodes, "ep");
+  const id = `ep-${nextNumber}`;
   // Insere no início: a home e a lista pública mostram os episódios na
   // ordem do array, então um episódio novo já aparece em primeiro sem
   // precisar reordenar manualmente.

@@ -198,11 +198,11 @@ conveniência, não o único jeito. Veja os formatos abaixo se preferir editar
 
 ```json
 {
-  "id": "noticia-01",
+  "id": "noticia-1",
   "category": "Fisiologia vegetal",
   "title": "Título da notícia",
   "subtitle": "Subtítulo opcional",
-  "excerpt": "Resumo curto usado na listagem.",
+  "author": "Nome do autor (opcional)",
   "date": "2026-08-10",
   "readingTime": "6 min",
   "body": "<p>Primeiro parágrafo...</p><p>Segundo parágrafo com <strong>negrito</strong>.</p>",
@@ -210,12 +210,16 @@ conveniência, não o único jeito. Veja os formatos abaixo se preferir editar
 }
 ```
 
-`category` aparece como etiqueta no cartão; `subtitle` é opcional. `body` é
-HTML (parágrafos, `<strong>` para negrito, `<img>` para imagens no meio do
-texto) gerado pelo editor de formatação do painel — não precisa (e não deve)
-ser escrito à mão com conteúdo não confiável, já que é inserido direto na
-página via `innerHTML`. `image` também é opcional (caminho de uma imagem de
-capa, ex: `images/noticias/nome-da-noticia.jpg`) — sem ela, o cartão mostra
+`id` é preenchido sozinho na criação (`noticia-1`, `noticia-2`...) e trava
+depois — não editável pelo painel. `category` aparece como etiqueta no
+cartão; `subtitle` e `author` são opcionais (`author`, quando preenchido,
+aparece abaixo do título e de novo abaixo da data/tempo de leitura na página
+da notícia). `body` é HTML (parágrafos, `<strong>` para negrito, `<img>`
+para imagens no meio do texto) gerado pelo editor de formatação do painel —
+não precisa (e não deve) ser escrito à mão com conteúdo não confiável, já
+que é inserido direto na página via `innerHTML`. `image` também é opcional
+(caminho de uma imagem de capa, ex:
+`images/noticias/noticia-1-imagem-principal.jpg`) — sem ela, o cartão mostra
 só um retângulo vazio no lugar do pôster. Assim como no episódio, a imagem de
 capa e as imagens inseridas no corpo **podem ser enviadas direto pelo
 painel** (ver "Formato de um episódio" abaixo para como esse envio funciona).

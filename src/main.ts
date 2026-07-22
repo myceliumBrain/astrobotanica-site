@@ -21,7 +21,7 @@ interface Article {
   category: string; // ex: "Fisiologia vegetal", "Agricultura espacial"
   title: string;
   subtitle?: string;
-  excerpt: string; // resumo curto (usado só na página de detalhe)
+  author?: string; // opcional: mostrado abaixo do título na página de detalhe
   date: string; // formato AAAA-MM-DD
   readingTime: string; // ex: "6 min"
   body: string; // HTML gerado pelo editor do painel (negrito, parágrafos, imagens)
@@ -485,17 +485,48 @@ function renderArticleDetail(articles: Loaded<Article>): void {
     return;
   }
 
-  root.appendChild(el("span", "tag tag-accent", article.category));
-  root.appendChild(el("h1", "", article.title));
-  if (article.subtitle) {
-    root.appendChild(el("p", "article-subtitle", article.subtitle));
-  }
-
+  const tag = el("span", "tag tag-accent", article.category);
+  const heading = el("h1", "", article.title);
   const meta = el("div", "card-meta");
   meta.appendChild(el("span", "", formatDate(article.date)));
   meta.appendChild(el("span", "", "·"));
   meta.appendChild(el("span", "", article.readingTime));
-  root.appendChild(meta);
+
+  if (article.image) {
+    // Com imagem: etiqueta/título/data ficam sobrepostos nela (canto
+    // inferior esquerdo, corte de metade da altura de um banner 16:9) —
+    // mesmo tratamento da capa do episódio (ver .episode-cover).
+    const cover = el("div", "article-cover");
+    const img = document.createElement("img");
+    img.src = article.image;
+    img.alt = "";
+    cover.appendChild(img);
+    const overlay = el("div", "article-cover-overlay");
+    overlay.appendChild(tag);
+    overlay.appendChild(heading);
+    overlay.appendChild(meta);
+    cover.appendChild(overlay);
+    root.appendChild(cover);
+    if (article.author) {
+      root.appendChild(el("p", "article-author", i18next.t("artigo.byLine", { author: article.author })));
+    }
+    if (article.subtitle) {
+      root.appendChild(el("p", "article-subtitle", article.subtitle));
+    }
+  } else {
+    root.appendChild(tag);
+    root.appendChild(heading);
+    if (article.author) {
+      root.appendChild(el("p", "article-author", i18next.t("artigo.byLine", { author: article.author })));
+    }
+    if (article.subtitle) {
+      root.appendChild(el("p", "article-subtitle", article.subtitle));
+    }
+    root.appendChild(meta);
+    if (article.author) {
+      root.appendChild(el("p", "article-author", i18next.t("artigo.byLine", { author: article.author })));
+    }
+  }
 
   const body = el("div", "article-body");
   body.innerHTML = article.body;

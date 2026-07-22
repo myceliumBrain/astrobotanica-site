@@ -286,8 +286,13 @@ a, button { cursor: pointer; }
 /* ── UPLOAD DE ARQUIVO (áudio/imagem) ── */
 .file-upload-row { display: flex; gap: 0.5rem; }
 .file-upload-row .input { flex: 1; min-width: 0; }
-.file-upload-row .input[readonly] { color: var(--adm-off-white); cursor: default; }
-.file-upload-row .input[readonly]:focus { border-color: var(--adm-border); }
+.file-upload-row .input:disabled {
+  color: var(--adm-off-white);
+  -webkit-text-fill-color: var(--adm-off-white);
+  opacity: 1;
+  cursor: default;
+  pointer-events: none;
+}
 .file-upload-btn { flex: none; white-space: nowrap; }
 .file-upload-btn.disabled { opacity: 0.5; pointer-events: none; }
 .file-upload-status {
@@ -309,8 +314,8 @@ a, button { cursor: pointer; }
   margin-top: 0.4rem;
 }
 
-/* ── CORPO COM FORMATAÇÃO (negrito, parágrafos, imagens) ── */
-.rich-text-toolbar { display: flex; gap: 0.4rem; margin-bottom: 0.4rem; }
+/* ── CORPO COM FORMATAÇÃO (negrito, itálico, tamanho, parágrafos, imagens) ── */
+.rich-text-toolbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.4rem; }
 .rich-text-btn {
   font-family: var(--adm-mono);
   font-size: 0.7rem;
@@ -324,6 +329,19 @@ a, button { cursor: pointer; }
   transition: all 0.15s;
 }
 .rich-text-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
+.rich-text-btn--italic { font-style: italic; }
+.rich-text-select {
+  font-family: var(--adm-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.03em;
+  background: var(--adm-surface-2);
+  border: 1px solid var(--adm-border);
+  color: var(--adm-off-white);
+  padding: 0.4rem 0.5rem;
+  border-radius: 3px;
+  transition: border-color 0.15s;
+}
+.rich-text-select:hover, .rich-text-select:focus { border-color: var(--adm-accent); color: var(--adm-accent); }
 .rich-text-editor {
   min-height: 12rem;
   line-height: 1.6;

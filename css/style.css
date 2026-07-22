@@ -610,6 +610,37 @@ body.nav-open { overflow: hidden; }
   font-size: 1.1rem;
   margin: var(--space-1) 0 var(--space-3);
 }
+.article-author {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: var(--space-1) 0 0;
+}
+
+/* Capa da notícia (quando tem imagem): etiqueta/título/data sobrepostos no
+   canto inferior esquerdo, mesmo tratamento da capa do episódio — corte de
+   metade da altura de um banner 16:9 (ver .episode-cover). */
+.article-cover {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 32 / 9;
+  min-height: 8rem;
+  background: var(--accent-100);
+  overflow: hidden;
+  margin-bottom: var(--space-3);
+}
+.article-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.article-cover-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: var(--space-3);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0) 85%);
+}
+.article-cover-overlay .tag-accent { margin-bottom: var(--space-1); }
+.article-cover-overlay h1 { color: #fff; }
+.article-cover-overlay .card-meta { color: rgba(255, 255, 255, 0.8); }
 
 /* ---- painel de destaque (home) ---- */
 .feature-panel {
