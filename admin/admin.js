@@ -72,15 +72,6 @@ const GENERAL_SCHEMA = [
       { key: "footer.navHeading", label: "Título da coluna de navegação", type: "text" },
     ],
   },
-  {
-    heading: "Plataformas (usado no rodapé, Podcast e Contato)",
-    fields: [
-      { key: "platforms.spotify", label: "Spotify", type: "text" },
-      { key: "platforms.apple", label: "Apple Podcasts", type: "text" },
-      { key: "platforms.rss", label: "RSS", type: "text" },
-      { key: "platforms.instagram", label: "Instagram", type: "text" },
-    ],
-  },
 ];
 
 const PAGE_SCHEMA = [

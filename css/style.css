@@ -651,8 +651,6 @@ body.nav-open { overflow: hidden; }
   font-family: var(--font-mono);
   font-size: 0.8rem;
   color: var(--ink-faint);
-  border: 1px dashed var(--line);
-  padding: 2px 6px;
 }
 
 /* ============================================================================
