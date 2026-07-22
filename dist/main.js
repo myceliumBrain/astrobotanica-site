@@ -144,6 +144,7 @@ function renderEpisodeDetail(episodes) {
         root.appendChild(heading);
         root.appendChild(meta);
     }
+    root.appendChild(el("p", "player-label", "Ouça o podcast"));
     const player = el("div", "player-panel");
     const audio = document.createElement("audio");
     audio.controls = true;
@@ -160,11 +161,26 @@ function renderEpisodeDetail(episodes) {
     root.appendChild(body);
     if (episode.transcript && episode.transcript.length > 0) {
         root.appendChild(el("h2", "transcript-heading", "Transcrição completa"));
+        const wrap = el("div", "transcript-wrap collapsed");
         const transcript = el("div", "episode-body");
         for (const paragraph of episode.transcript) {
             transcript.appendChild(el("p", "", paragraph));
         }
-        root.appendChild(transcript);
+        wrap.appendChild(transcript);
+        root.appendChild(wrap);
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "transcript-toggle";
+        const chevron = el("span", "chevron", "▼");
+        const label = document.createTextNode(" Ver transcrição completa");
+        toggle.appendChild(chevron);
+        toggle.appendChild(label);
+        toggle.addEventListener("click", () => {
+            const collapsed = wrap.classList.toggle("collapsed");
+            chevron.textContent = collapsed ? "▼" : "▲";
+            label.textContent = collapsed ? " Ver transcrição completa" : " Ver menos";
+        });
+        root.appendChild(toggle);
     }
     const related = document.getElementById("episodio-related");
     if (related) {

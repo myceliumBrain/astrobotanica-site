@@ -272,7 +272,8 @@ button { font-family: inherit; }
 .episode-cover {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 32 / 9; /* metade da altura de um banner 16:9 na mesma largura */
+  min-height: 8rem; /* piso pro texto sobreposto não ficar espremido em telas estreitas */
   background: var(--accent-100);
   overflow: hidden;
   margin-bottom: var(--space-3);
@@ -290,6 +291,15 @@ button { font-family: inherit; }
 .episode-cover-overlay .tag-accent { margin-bottom: var(--space-1); }
 .episode-cover-overlay h1 { color: #fff; }
 .episode-cover-overlay .episode-detail-meta { color: rgba(255, 255, 255, 0.8); margin-bottom: 0; }
+
+.player-label {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-700);
+  margin-bottom: 4px;
+}
 
 .player-panel {
   border: 1px solid var(--line);
@@ -320,6 +330,32 @@ button { font-family: inherit; }
   margin-top: var(--space-4);
   margin-bottom: var(--space-2);
 }
+
+.transcript-wrap {
+  overflow: hidden;
+  max-height: 4000px; /* expandido: alto o bastante pra qualquer transcrição */
+  transition: max-height 0.4s ease;
+}
+.transcript-wrap.collapsed {
+  max-height: 8rem;
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+}
+
+.transcript-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--space-2);
+  padding: 0;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent-700);
+}
+.transcript-toggle:hover { color: var(--accent-800); }
+.transcript-toggle .chevron { display: inline-block; transition: transform 0.2s ease; }
 
 /* ---- artigos: grade estilo "pôster", altura uniforme ---- */
 .article-grid {
