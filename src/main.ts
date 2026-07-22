@@ -442,6 +442,28 @@ function renderHomeHighlights(episodes: Loaded<Episode>, articles: Loaded<Articl
 }
 
 // ----------------------------------------------------------------------------
+// Tema claro/escuro: a escolha (ou preferência do sistema) já é aplicada em
+// <html data-theme="..."> por um script inline no <head> de cada página,
+// antes da primeira pintura (evita flash do tema errado). Aqui só cuidamos
+// do botão: refletir o estado atual e alternar/persistir ao clicar.
+// ----------------------------------------------------------------------------
+
+function setupThemeToggle(): void {
+  const toggle = document.querySelector<HTMLButtonElement>(".theme-toggle");
+  if (!toggle) return;
+
+  const isDark = () => document.documentElement.getAttribute("data-theme") === "dark";
+  toggle.setAttribute("aria-checked", String(isDark()));
+
+  toggle.addEventListener("click", () => {
+    const next = isDark() ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("theme", next);
+    toggle.setAttribute("aria-checked", String(next === "dark"));
+  });
+}
+
+// ----------------------------------------------------------------------------
 // Menu: overlay de navegação aberto pelo botão hamburguer (.nav-toggle)
 // ----------------------------------------------------------------------------
 
@@ -520,6 +542,7 @@ function setupHeaderAutoHide(): void {
 document.addEventListener("DOMContentLoaded", async () => {
   setupHeaderAutoHide();
   setupNavOverlay();
+  setupThemeToggle();
   const [episodes, articles, site] = await Promise.all([loadEpisodes(), loadArticles(), loadSiteText()]);
   applySiteText(site);
   renderEpisodeList(episodes);

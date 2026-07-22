@@ -1,6 +1,17 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+<script>
+(function () {
+  try {
+    var t = localStorage.getItem("theme");
+    if (t !== "light" && t !== "dark") {
+      t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    document.documentElement.setAttribute("data-theme", t);
+  } catch (e) {}
+})();
+</script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Sobre — Astrobotânica</title>
@@ -17,6 +28,9 @@
       <span class="nav-toggle-bar"></span>
       <span class="nav-toggle-bar"></span>
       <span class="visually-hidden">Abrir menu</span>
+    </button>
+    <button type="button" class="theme-toggle" role="switch" aria-checked="false" aria-label="Alternar tema claro/escuro">
+      <span class="theme-toggle-track"><span class="theme-toggle-thumb"></span></span>
     </button>
   </div>
 </header>

@@ -36,6 +36,35 @@
   --measure: 38rem;
 }
 
+/* Tema escuro: aplicado via [data-theme="dark"] (escolha explícita, ver
+   .theme-toggle) ou automaticamente pelo prefers-color-scheme do sistema
+   quando não há escolha salva (ver regra @media logo abaixo). */
+:root[data-theme='dark'] {
+  --bg: #17181a;
+  --bg-panel: #1f2123;
+  --ink: #edf0ee;
+
+  --accent: #8fbf9b;
+  --accent-600: #a3cdad;
+  --accent-700: #bcdcc4;
+  --accent-800: #d8ecdd;
+  --accent-100: #223229;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #17181a;
+    --bg-panel: #1f2123;
+    --ink: #edf0ee;
+
+    --accent: #8fbf9b;
+    --accent-600: #a3cdad;
+    --accent-700: #bcdcc4;
+    --accent-800: #d8ecdd;
+    --accent-100: #223229;
+  }
+}
+
 /* ============================================================================
    RESET
 ============================================================================ */
@@ -54,6 +83,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
+  transition: background-color 0.2s ease, color 0.2s ease;
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.6;
@@ -192,6 +222,42 @@ button { font-family: inherit; }
 .nav-toggle[aria-expanded='true'] .nav-toggle-bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .nav-toggle[aria-expanded='true'] .nav-toggle-bar:nth-child(2) { opacity: 0; }
 .nav-toggle[aria-expanded='true'] .nav-toggle-bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+/* Alternador de tema claro/escuro (ver setupThemeToggle em src/main.ts) */
+.theme-toggle {
+  position: absolute;
+  right: var(--space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.theme-toggle-track {
+  display: block;
+  width: 2.75rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  position: relative;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+.theme-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.5rem - 6px);
+  height: calc(1.5rem - 6px);
+  border-radius: 50%;
+  background: var(--ink);
+  transition: transform 0.25s ease, background-color 0.2s ease;
+}
+.theme-toggle[aria-checked='true'] .theme-toggle-thumb {
+  transform: translateX(1.25rem);
+  background: var(--accent);
+}
 
 .visually-hidden {
   position: absolute;

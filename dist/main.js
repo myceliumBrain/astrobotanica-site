@@ -328,6 +328,18 @@ function setupHeaderAutoHide() {
         }
     }, { passive: true });
 }
+function setupThemeToggle() {
+    const toggle = document.querySelector(".theme-toggle");
+    if (!toggle) return;
+    const isDark = () => document.documentElement.getAttribute("data-theme") === "dark";
+    toggle.setAttribute("aria-checked", String(isDark()));
+    toggle.addEventListener("click", () => {
+        const next = isDark() ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", next);
+        localStorage.setItem("theme", next);
+        toggle.setAttribute("aria-checked", String(next === "dark"));
+    });
+}
 function setupNavOverlay() {
     const toggle = document.querySelector(".nav-toggle");
     const overlay = document.getElementById("nav-overlay");
@@ -359,6 +371,7 @@ function setupNavOverlay() {
 document.addEventListener("DOMContentLoaded", async () => {
     setupHeaderAutoHide();
     setupNavOverlay();
+    setupThemeToggle();
     const [episodes, articles, site] = await Promise.all([loadEpisodes(), loadArticles(), loadSiteText()]);
     applySiteText(site);
     renderEpisodeList(episodes);
