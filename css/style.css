@@ -191,6 +191,7 @@ button { font-family: inherit; }
   font-weight: 600;
   font-size: 2.4rem;
   letter-spacing: 0.01em;
+  text-transform: uppercase;
   text-decoration: none;
   color: var(--ink);
 }
@@ -334,6 +335,30 @@ button { font-family: inherit; }
   cursor: pointer;
 }
 
+/* Seletor de idioma, dentro do menu overlay (ver setupLangSwitch em src/main.ts) */
+.lang-switch {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.lang-btn {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  letter-spacing: 0.05em;
+  padding: 0.35rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.lang-btn[aria-current='true'] {
+  color: var(--accent-800);
+  border-color: var(--accent-700);
+  background: var(--accent-100);
+}
+
 body.nav-open { overflow: hidden; }
 
 /* ============================================================================
@@ -380,17 +405,14 @@ body.nav-open { overflow: hidden; }
   padding-block: var(--space-3);
 }
 
-/* ---- links de assinatura (subscribe) ---- */
-.subscribe-row { display: flex; gap: var(--space-2); flex-wrap: wrap; }
-
 /* ---- episódios: lista ---- */
 #episode-list { display: flex; flex-direction: column; gap: var(--space-2); }
 
 .episode-row {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3);
+  gap: clamp(var(--space-2), 4vw, var(--space-3));
+  padding: clamp(var(--space-2), 4vw, var(--space-3));
   border: 1px solid var(--line);
   text-decoration: none;
   color: inherit;
@@ -398,19 +420,34 @@ body.nav-open { overflow: hidden; }
 }
 .episode-row:hover { border-color: var(--accent-700); }
 
+.episode-row-image {
+  flex: none;
+  width: clamp(3rem, 16vw, 4.5rem);
+  aspect-ratio: 1;
+  background: var(--accent-100);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.episode-row-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.episode-row:hover .episode-row-image { border-color: var(--accent-700); }
+
 .episode-row-number {
   font-family: var(--font-heading);
-  font-size: 1.8rem;
+  font-size: clamp(1.1rem, 5vw, 1.8rem);
   color: var(--accent-700);
   flex: none;
   white-space: nowrap;
 }
 .episode-row-main { flex: 1; min-width: 0; }
-.episode-row-title { font-family: var(--font-heading); font-weight: 600; font-size: 1.15rem; }
-.episode-row-desc { font-size: 0.85rem; color: var(--ink-dim); margin-top: 2px; }
+.episode-row-title { font-family: var(--font-heading); font-weight: 600; font-size: clamp(0.95rem, 3.6vw, 1.15rem); }
+.episode-row-desc { font-size: clamp(0.78rem, 3vw, 0.85rem); color: var(--ink-dim); margin-top: 2px; }
 .episode-row-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: clamp(0.68rem, 2.6vw, 0.75rem);
   color: var(--ink-faint);
   flex: none;
   white-space: nowrap;
@@ -638,7 +675,6 @@ body.nav-open { overflow: hidden; }
 }
 .footer-col a { font-size: 0.85rem; text-decoration: none; color: var(--ink-dim); }
 .footer-col a:hover { color: var(--accent-700); }
-.footer-soon { font-size: 0.85rem; color: var(--ink-faint); }
 .footer-copy {
   font-family: var(--font-mono);
   font-size: 0.72rem;

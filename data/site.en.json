@@ -1,0 +1,107 @@
+{
+  "common": {
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "toggleTheme": "Toggle light/dark theme",
+    "language": "Language"
+  },
+  "brand": {
+    "name": "astrobotanica",
+    "footerTagline": "Science communication about the plant kingdom and its journey beyond Earth.",
+    "copyright": "© 2026 Astrobotanica."
+  },
+  "nav": {
+    "articles": "Articles",
+    "podcast": "Podcast",
+    "about": "About",
+    "contact": "Contact"
+  },
+  "footer": {
+    "navHeading": "Navigation"
+  },
+  "platforms": {
+    "spotify": "Spotify — coming soon",
+    "apple": "Apple Podcasts — coming soon",
+    "rss": "RSS — coming soon",
+    "instagram": "Instagram — coming soon"
+  },
+  "home": {
+    "metaTitle": "Astrobotanica — science communication and podcast about plants beyond Earth",
+    "metaDescription": "Astrobotanica is a science communication project about the plant kingdom and its journey beyond Earth: articles and, alongside them, a podcast, with researcher Pedro.",
+    "featuredHeading": "Articles",
+    "featuredCta": "See all",
+    "panelKicker": "Astrobotanica Podcast",
+    "loadErrorEpisodes": "Couldn't load the episodes right now.",
+    "emptyEpisodes": "No episodes published yet.",
+    "loadErrorArticles": "Couldn't load the articles right now.",
+    "emptyArticles": "No articles published yet."
+  },
+  "podcast": {
+    "metaTitle": "Podcast — Astrobotanica",
+    "metaDescription": "All episodes of the Astrobotanica podcast: bench research, history and scientific speculation about plants beyond Earth.",
+    "tag": "Podcast",
+    "title": "Podcast",
+    "intro": "One episode at a time, about the plant kingdom and its journey beyond Earth — bench research, history and scientific speculation.",
+    "episodesHeading": "Browse the episodes",
+    "loadError": "Couldn't load the episodes right now.",
+    "emptyList": "No episodes published yet. Check back soon."
+  },
+  "episodio": {
+    "metaTitle": "Episode — Astrobotanica",
+    "backLink": "← Back to podcast",
+    "relatedHeading": "Other episodes",
+    "loadError": "Couldn't load the episode right now.",
+    "notFound": "Episode not found.",
+    "tag": "Episode {{number}}",
+    "epNumber": "Ep. {{number}}",
+    "listenLabel": "Listen to the podcast",
+    "audioUnsupported": "Your browser doesn't support embedded audio.",
+    "transcriptHeading": "Full transcript",
+    "transcriptExpand": "Read full transcript",
+    "transcriptCollapse": "Show less",
+    "noOthers": "There are no other episodes published yet."
+  },
+  "artigos": {
+    "metaTitle": "Articles — Astrobotanica",
+    "metaDescription": "Science communication articles about botany, space agriculture and the journey of plants beyond Earth.",
+    "tag": "Articles",
+    "title": "Articles",
+    "intro": "Science communication about botany, space agriculture and the journey of plants beyond Earth.",
+    "loadError": "Couldn't load the articles right now.",
+    "emptyList": "No articles published yet. Check back soon."
+  },
+  "artigo": {
+    "metaTitle": "Article — Astrobotanica",
+    "backLink": "← Back to articles",
+    "relatedHeading": "Keep reading",
+    "loadError": "Couldn't load the article right now.",
+    "notFound": "Article not found.",
+    "noOthers": "There are no other articles published yet."
+  },
+  "sobre": {
+    "metaTitle": "About — Astrobotanica",
+    "metaDescription": "Astrobotanica is run by Pedro, a researcher in the field, covering bench research and the journey of plants beyond Earth.",
+    "tag": "About",
+    "title": "Ship's log",
+    "intro": "Astrobotanica is run by Pedro, a researcher in the field, covering everything from bench research — plant growth-promoting rhizobacteria, graphene oxide, cultivation in lunar regolith — to the history and future of taking plants beyond Earth. The project is, first and foremost, a written science communication space; alongside it, the same topics turn into long-form conversation on the podcast.",
+    "card1Kicker": "Method",
+    "card1Title": "Bench research",
+    "card1Body": "Every article starts from topics that run through astrobotany research — not loose speculation.",
+    "card2Kicker": "Sources",
+    "card2Title": "Cited sources",
+    "card2Body": "What is established science and what is speculation is always marked, never mixed together.",
+    "card3Kicker": "Format",
+    "card3Title": "Articles and podcast",
+    "card3Body": "Articles are the main format; the podcast dives deeper into the same topics in long-form conversation."
+  },
+  "contato": {
+    "metaTitle": "Contact — Astrobotanica",
+    "metaDescription": "Get in touch with the Astrobotanica podcast — story suggestions, corrections or interview proposals.",
+    "tag": "Contact",
+    "title": "Get in touch",
+    "intro": "Story suggestions, corrections or interview proposals for the podcast — write anytime.",
+    "emailKicker": "Email",
+    "email": "your-email@replace.com",
+    "emailNote": "For story suggestions, corrections and interview proposals."
+  }
+}

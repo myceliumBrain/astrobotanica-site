@@ -20,7 +20,8 @@ site/
 ├── data/
 │   ├── episodes.json      → CONTEÚDO: episódios
 │   ├── articles.json       → CONTEÚDO: artigos
-│   ├── site.json            → todo o texto fixo do site (nav, rodapé, títulos, textos de cada página)
+│   ├── site.json            → todo o texto fixo do site em português (nav, rodapé, títulos, textos de cada página) — editável pelo painel
+│   ├── site.en.json          → tradução em inglês do mesmo conteúdo (ver "Idioma" abaixo) — não editável pelo painel, só manualmente
 │   └── auth.json            → acessos do painel (tokens criptografados, não em texto puro)
 ├── src/main.ts            → lógica do site: busca os JSON e preenche cada página
 ├── dist/main.js            → JavaScript compilado (gerado a partir de src/)
@@ -55,11 +56,37 @@ página Sobre, o email de contato, etc. — vem de `data/site.json`, editável
 pelo painel (seções "Marca & navegação" e "Páginas" — ver abaixo).
 
 O mecanismo é genérico: qualquer elemento HTML com
-`data-text="secao.chave"` é preenchido com `site.secao.chave` assim que a
-página carrega (função `applySiteText()` em `src/main.ts`). Para tornar mais
-um pedaço de texto editável no futuro, são dois passos: adicionar a chave em
-`data/site.json` e o atributo `data-text="..."` correspondente no HTML — não
-precisa de nenhuma lógica nova.
+`data-text="secao.chave"` é preenchido com o valor de `secao.chave` (via
+i18next, ver "Idioma" abaixo) assim que a página carrega (função
+`applyTranslations()` em `src/main.ts`). Para tornar mais um pedaço de texto
+editável no futuro, são três passos: adicionar a chave em `data/site.json`
+**e** `data/site.en.json` (mesma chave, valor traduzido) e o atributo
+`data-text="..."` correspondente no HTML — não precisa de nenhuma lógica
+nova.
+
+## Idioma (pt/en)
+
+O site alterna entre português e inglês via
+[i18next](https://www.i18next.com/), carregado por CDN (`<script>` no
+`<head>` de cada página, antes de `dist/main.js`) — não há pacote instalado
+localmente nem passo de build para isso.
+
+- **Fonte da tradução**: `data/site.json` (português, também usado pelo
+  painel `/admin`) e `data/site.en.json` (inglês, mantido manualmente — o
+  painel não edita esse arquivo). As duas chaves precisam ficar em sincronia;
+  se uma chave existir só em português, o texto em inglês simplesmente não
+  aparece (o `data-text` mantém o texto em português já presente no HTML).
+- **Conteúdo de artigos/episódios** (título, corpo, transcrição etc., em
+  `data/episodes.json`/`data/articles.json`) **não é traduzido** — só a
+  interface fixa (menu, rodapé, títulos de página, mensagens de
+  carregamento/vazio/erro).
+- **Seletor**: botões "PT"/"EN" dentro do menu overlay (`.lang-switch`, ver
+  `setupLangSwitch()` em `src/main.ts`). A escolha fica em
+  `localStorage.lang`; sem escolha salva, usa o idioma do navegador.
+- **Sem CDN disponível**: se o script do i18next não carregar (offline,
+  bloqueado), `initI18n()` instala um tradutor mínimo local em cima de
+  `data/site.json` — o site continua funcionando em português, só sem a
+  troca de idioma.
 
 ## Painel de administração (`/admin`)
 
@@ -266,7 +293,8 @@ qualquer forma, pois o conteúdo é carregado via `fetch()` a partir de
   editar qualquer conteúdo pelo painel.
 - **Contato**: `data/site.json` (`contato.email`) tem um valor de exemplo
   (`seu-email@substituir.com`) — troque pelo seu email real em Páginas →
-  Contato, no painel, ou direto no JSON.
+  Contato, no painel, ou direto no JSON. Atualize também `contato.email` em
+  `data/site.en.json` (não é editável pelo painel).
 - **Assinatura do podcast**: os textos de Spotify/Apple Podcasts/RSS em
   `data/site.json` (`platforms.*`) estão como "em breve" até existirem links
   reais. Trocar o texto ali já atualiza rodapé, Podcast e Contato ao mesmo
@@ -290,9 +318,17 @@ desde que o serviço sirva os arquivos por HTTP (todos esses servem).
 
 ## Layout
 
-- **Cabeçalho**: logo centralizada em cima, menu de navegação sempre visível
-  logo abaixo (sem menu hambúrguer/overlay) — classes `.header-stack` /
-  `.brand-mark` / `.primary-nav` em `css/style.css`.
+- **Cabeçalho**: logo centralizada, botão hambúrguer à esquerda (abre o menu
+  em overlay/gaveta lateral, classes `.nav-toggle` / `.nav-overlay` /
+  `.nav-overlay-panel`) e alternador de tema claro/escuro à direita
+  (`.theme-toggle`) — classes em `css/style.css`, lógica em
+  `setupNavOverlay()`/`setupThemeToggle()` em `src/main.ts`. O seletor de
+  idioma (PT/EN) fica dentro do próprio menu overlay.
+- **Tema claro/escuro**: paleta alternativa em `:root[data-theme="dark"]`
+  (`css/style.css`), aplicada automaticamente pelo `prefers-color-scheme` do
+  sistema ou pela escolha salva em `localStorage.theme`; um script inline no
+  `<head>` de cada página aplica isso antes da primeira pintura, evitando
+  flash do tema errado.
 - **Grade de artigos**: cartões de altura uniforme (pôster + título + data),
   usada igual na Home, em `/artigos` e em "Continue lendo" — classes
   `.article-grid` / `.article-card` em `css/style.css`, geradas por

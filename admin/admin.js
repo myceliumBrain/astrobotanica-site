@@ -58,7 +58,6 @@ const GENERAL_SCHEMA = [
   {
     heading: "Menu de navegação",
     fields: [
-      { key: "nav.home", label: "Home", type: "text" },
       { key: "nav.articles", label: "Artigos", type: "text" },
       { key: "nav.podcast", label: "Podcast", type: "text" },
       { key: "nav.about", label: "Sobre", type: "text" },
@@ -69,7 +68,6 @@ const GENERAL_SCHEMA = [
     heading: "Rodapé",
     fields: [
       { key: "footer.navHeading", label: "Título da coluna de navegação", type: "text" },
-      { key: "footer.listenHeading", label: "Título da coluna \"Ouça em\"", type: "text" },
     ],
   },
   {

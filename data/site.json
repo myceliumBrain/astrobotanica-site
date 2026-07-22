@@ -1,4 +1,10 @@
 {
+  "common": {
+    "openMenu": "Abrir menu",
+    "closeMenu": "Fechar menu",
+    "toggleTheme": "Alternar tema claro/escuro",
+    "language": "Idioma"
+  },
   "brand": {
     "name": "astrobotânica",
     "footerTagline": "Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.",
@@ -11,8 +17,7 @@
     "contact": "Contato"
   },
   "footer": {
-    "navHeading": "Navegação",
-    "listenHeading": "Ouça em"
+    "navHeading": "Navegação"
   },
   "platforms": {
     "spotify": "Spotify — em breve",
@@ -25,29 +30,56 @@
     "metaDescription": "Astrobotânica é um projeto de divulgação científica sobre o reino das plantas e sua jornada para fora da Terra: artigos e, em paralelo, um podcast, com o pesquisador Pedro.",
     "featuredHeading": "Artigos",
     "featuredCta": "Ver todos",
-    "panelKicker": "Podcast Astrobotânica"
+    "panelKicker": "Podcast Astrobotânica",
+    "loadErrorEpisodes": "Não foi possível carregar os episódios agora.",
+    "emptyEpisodes": "Nenhum episódio publicado ainda.",
+    "loadErrorArticles": "Não foi possível carregar os artigos agora.",
+    "emptyArticles": "Nenhum artigo publicado ainda."
   },
   "podcast": {
+    "metaTitle": "Podcast — Astrobotânica",
     "metaDescription": "Todos os episódios do podcast Astrobotânica: pesquisa de bancada, história e especulação científica sobre plantas fora da Terra.",
     "tag": "Podcast",
-    "title": "Astrobotânica",
-    "intro": "Um episódio por vez, sobre o reino das plantas e sua jornada para fora da Terra — pesquisa de bancada, história e especulação científica."
+    "title": "Podcast",
+    "intro": "Um episódio por vez, sobre o reino das plantas e sua jornada para fora da Terra — pesquisa de bancada, história e especulação científica.",
+    "episodesHeading": "Acesse os episódios",
+    "loadError": "Não foi possível carregar os episódios agora.",
+    "emptyList": "Nenhum episódio publicado ainda. Volte em breve."
   },
   "episodio": {
+    "metaTitle": "Episódio — Astrobotânica",
     "backLink": "← Voltar ao podcast",
-    "relatedHeading": "Outros episódios"
+    "relatedHeading": "Outros episódios",
+    "loadError": "Não foi possível carregar o episódio agora.",
+    "notFound": "Episódio não encontrado.",
+    "tag": "Episódio {{number}}",
+    "epNumber": "Ep. {{number}}",
+    "listenLabel": "Ouça o podcast",
+    "audioUnsupported": "Seu navegador não suporta áudio incorporado.",
+    "transcriptHeading": "Transcrição completa",
+    "transcriptExpand": "Ver transcrição completa",
+    "transcriptCollapse": "Ver menos",
+    "noOthers": "Ainda não há outros episódios publicados."
   },
   "artigos": {
+    "metaTitle": "Artigos — Astrobotânica",
     "metaDescription": "Artigos de divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra.",
     "tag": "Artigos",
     "title": "Artigos",
-    "intro": "Divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra."
+    "intro": "Divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra.",
+    "loadError": "Não foi possível carregar os artigos agora.",
+    "emptyList": "Nenhum artigo publicado ainda. Volte em breve."
   },
   "artigo": {
+    "metaTitle": "Artigo — Astrobotânica",
     "backLink": "← Voltar aos artigos",
-    "relatedHeading": "Continue lendo"
+    "relatedHeading": "Continue lendo",
+    "loadError": "Não foi possível carregar o artigo agora.",
+    "notFound": "Artigo não encontrado.",
+    "noOthers": "Ainda não há outros artigos publicados."
   },
   "sobre": {
+    "metaTitle": "Sobre — Astrobotânica",
     "metaDescription": "Astrobotânica é conduzido por Pedro, pesquisador na área, cobrindo pesquisa de bancada e a jornada das plantas para fora da Terra.",
     "tag": "Sobre",
     "title": "Registro de bordo",
@@ -63,6 +95,7 @@
     "card3Body": "Os artigos são o principal; o podcast aprofunda os mesmos temas em conversa longa."
   },
   "contato": {
+    "metaTitle": "Contato — Astrobotânica",
     "metaDescription": "Fale com o podcast Astrobotânica — sugestões de pauta, correções ou propostas de entrevista.",
     "tag": "Contato",
     "title": "Fale comigo",

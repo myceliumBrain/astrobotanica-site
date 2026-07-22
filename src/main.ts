@@ -34,10 +34,10 @@ interface Loaded<T> {
   failed: boolean;
 }
 
-// Textos do site (nav, rodapé, títulos, etc.) — ver data/site.json.
-// Formato livre (chave -> string ou objeto aninhado); consumido via
-// applySiteText() a partir dos atributos data-text="secao.chave" no HTML.
-type SiteText = Record<string, unknown>;
+// i18next é carregado via <script> (CDN, ver <head> de cada página) antes
+// deste módulo — não há pacote/tipos instalados via npm neste projeto (não
+// há bundler), então ele é tratado como global de tipo solto.
+declare const i18next: any;
 
 // ----------------------------------------------------------------------------
 // Utilitários
@@ -46,7 +46,8 @@ type SiteText = Record<string, unknown>;
 function formatDate(iso: string): string {
   const [year, month, day] = iso.split("-").map(Number);
   const date = new Date(Date.UTC(year, month - 1, day));
-  return new Intl.DateTimeFormat("pt-BR", {
+  const locale = i18next.language === "en" ? "en-US" : "pt-BR";
+  return new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "long",
     year: "numeric",
@@ -89,10 +90,20 @@ const loadEpisodes = () => loadJSON<Episode>("data/episodes.json");
 const loadArticles = () => loadJSON<Article>("data/articles.json");
 
 // ----------------------------------------------------------------------------
-// Textos do site: preenche qualquer elemento marcado com data-text="a.b.c"
-// a partir de data/site.json. data-text-attr="atributo" define um atributo
-// em vez de textContent (usado na tag <meta description>).
+// Idioma: pt/en via i18next. Os textos fixos do site vivem em data/site.json
+// (pt, também usado pelo painel /admin) e data/site.en.json (en, tradução
+// mantida à mão). data-text="a.b.c" no HTML marca onde aplicar cada chave;
+// data-text-attr="atributo" aplica num atributo em vez de textContent (usado
+// em <meta description> e nos aria-label).
 // ----------------------------------------------------------------------------
+
+type Lang = "pt" | "en";
+
+function detectInitialLang(): Lang {
+  const stored = localStorage.getItem("lang");
+  if (stored === "pt" || stored === "en") return stored;
+  return navigator.language.slice(0, 2).toLowerCase() === "en" ? "en" : "pt";
+}
 
 function getByPath(obj: unknown, path: string): unknown {
   return path
@@ -100,27 +111,96 @@ function getByPath(obj: unknown, path: string): unknown {
     .reduce<unknown>((acc, key) => (acc && typeof acc === "object" ? (acc as Record<string, unknown>)[key] : undefined), obj);
 }
 
-async function loadSiteText(): Promise<SiteText | null> {
-  try {
-    const res = await fetch("data/site.json");
-    if (!res.ok) throw new Error(`data/site.json: HTTP ${res.status}`);
-    return (await res.json()) as SiteText;
-  } catch (err) {
-    console.error("Falha ao carregar data/site.json", err);
-    return null;
-  }
+// Se o i18next (carregado via CDN, ver <head>) não estiver disponível — CDN
+// bloqueado/offline — substitui o global por um tradutor mínimo em cima do
+// JSON em português, só para o site continuar funcionando (sem troca de
+// idioma) em vez de quebrar por completo.
+function installI18nFallback(ptResources: unknown): void {
+  (window as any).i18next = {
+    language: "pt",
+    t: (key: string, opts?: Record<string, unknown>) => {
+      const raw = getByPath(ptResources, key);
+      if (typeof raw !== "string") return key;
+      if (!opts) return raw;
+      return raw.replace(/\{\{(\w+)\}\}/g, (_, k) => (opts[k] !== undefined ? String(opts[k]) : ""));
+    },
+    exists: (key: string) => typeof getByPath(ptResources, key) === "string",
+    changeLanguage: async () => {},
+  };
 }
 
-function applySiteText(site: SiteText | null): void {
-  if (!site) return;
-  document.querySelectorAll<HTMLElement>("[data-text]").forEach((el) => {
-    const path = el.getAttribute("data-text");
-    if (!path) return;
-    const value = getByPath(site, path);
-    if (typeof value !== "string") return;
-    const attr = el.getAttribute("data-text-attr");
-    if (attr) el.setAttribute(attr, value);
-    else el.textContent = value;
+async function initI18n(): Promise<void> {
+  let ptResources = {};
+  let enResources = {};
+  try {
+    const [pt, en] = await Promise.all([
+      fetch("data/site.json").then((r) => r.json()),
+      fetch("data/site.en.json").then((r) => r.json()),
+    ]);
+    ptResources = pt;
+    enResources = en;
+  } catch (err) {
+    console.error("Falha ao carregar os textos do site", err);
+  }
+
+  if (typeof i18next === "undefined") {
+    console.error("i18next não carregou (CDN indisponível?) — usando substituto em português.");
+    installI18nFallback(ptResources);
+    return;
+  }
+
+  try {
+    await i18next.init({
+      lng: detectInitialLang(),
+      fallbackLng: "pt",
+      resources: {
+        pt: { translation: ptResources },
+        en: { translation: enResources },
+      },
+    });
+  } catch (err) {
+    console.error("Falha ao iniciar i18next", err);
+    installI18nFallback(ptResources);
+    return;
+  }
+
+  document.documentElement.lang = i18next.language === "en" ? "en" : "pt-BR";
+}
+
+function applyTranslations(): void {
+  document.querySelectorAll<HTMLElement>("[data-text]").forEach((node) => {
+    const path = node.getAttribute("data-text");
+    if (!path || !i18next.exists(path)) return;
+    const value = i18next.t(path);
+    const attr = node.getAttribute("data-text-attr");
+    if (attr) node.setAttribute(attr, value);
+    else node.textContent = value;
+  });
+}
+
+function setupLangSwitch(onChange: () => void): void {
+  const buttons = document.querySelectorAll<HTMLButtonElement>(".lang-btn");
+  if (buttons.length === 0) return;
+
+  function reflect(): void {
+    buttons.forEach((btn) => {
+      btn.setAttribute("aria-current", String(btn.dataset.lang === i18next.language));
+    });
+  }
+
+  reflect();
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const lang = btn.dataset.lang;
+      if (!lang || lang === i18next.language) return;
+      await i18next.changeLanguage(lang);
+      localStorage.setItem("lang", lang);
+      document.documentElement.lang = lang === "en" ? "en" : "pt-BR";
+      reflect();
+      applyTranslations();
+      onChange();
+    });
   });
 }
 
@@ -134,16 +214,29 @@ function buildEpisodeRow(episode: Episode, showDescription: boolean): HTMLAnchor
   row.className = "episode-row";
   row.href = `/episodio?id=${episode.id}`;
 
-  row.appendChild(el("span", "episode-row-number", `Ep. ${pad(episode.number)}`));
+  if (episode.image) {
+    const image = el("div", "episode-row-image");
+    const img = document.createElement("img");
+    img.src = episode.image;
+    img.alt = "";
+    img.loading = "lazy";
+    image.appendChild(img);
+    row.appendChild(image);
+  }
+
+  row.appendChild(
+    el("span", "episode-row-number", i18next.t("episodio.epNumber", { number: pad(episode.number) }))
+  );
   const main = el("div", "episode-row-main");
   main.appendChild(el("div", "episode-row-title", episode.title));
   if (showDescription) {
     main.appendChild(el("p", "episode-row-desc", episode.description));
   }
   row.appendChild(main);
-  row.appendChild(
-    el("div", "episode-row-meta", `${episode.duration} · ${formatDate(episode.date)}`)
-  );
+  const meta = el("div", "episode-row-meta");
+  meta.appendChild(el("span", "", formatDate(episode.date)));
+  meta.appendChild(el("span", "", episode.duration));
+  row.appendChild(meta);
 
   return row;
 }
@@ -173,10 +266,11 @@ function renderEpisodeList(episodes: Loaded<Episode>): void {
   if (!list) return;
 
   if (episodes.failed) {
-    list.appendChild(el("p", "empty-state", "Não foi possível carregar os episódios agora."));
+    list.innerHTML = "";
+    list.appendChild(el("p", "empty-state", i18next.t("podcast.loadError")));
     return;
   }
-  renderEpisodeRows(list, episodes.items, "Nenhum episódio publicado ainda. Volte em breve.", true);
+  renderEpisodeRows(list, episodes.items, i18next.t("podcast.emptyList"), true);
 }
 
 // ----------------------------------------------------------------------------
@@ -186,9 +280,10 @@ function renderEpisodeList(episodes: Loaded<Episode>): void {
 function renderEpisodeDetail(episodes: Loaded<Episode>): void {
   const root = document.getElementById("episodio-content");
   if (!root) return;
+  root.innerHTML = "";
 
   if (episodes.failed) {
-    root.appendChild(el("p", "empty-state", "Não foi possível carregar o episódio agora."));
+    root.appendChild(el("p", "empty-state", i18next.t("episodio.loadError")));
     return;
   }
 
@@ -196,11 +291,11 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
   const episode = (id ? episodes.items.find((e) => e.id === id) : undefined) ?? episodes.items[0];
 
   if (!episode) {
-    root.appendChild(el("p", "empty-state", "Episódio não encontrado."));
+    root.appendChild(el("p", "empty-state", i18next.t("episodio.notFound")));
     return;
   }
 
-  const tag = el("span", "tag tag-accent", `Episódio ${episode.number}`);
+  const tag = el("span", "tag tag-accent", i18next.t("episodio.tag", { number: episode.number }));
   const heading = el("h1", "", episode.title);
   const meta = el("p", "episode-detail-meta", `${formatDate(episode.date)} · ${episode.duration}`);
 
@@ -224,7 +319,7 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
     root.appendChild(meta);
   }
 
-  root.appendChild(el("p", "player-label", "Ouça o podcast"));
+  root.appendChild(el("p", "player-label", i18next.t("episodio.listenLabel")));
 
   const player = el("div", "player-panel");
   const audio = document.createElement("audio");
@@ -234,7 +329,7 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
   source.src = episode.audioSrc;
   source.type = "audio/mpeg";
   audio.appendChild(source);
-  audio.appendChild(document.createTextNode("Seu navegador não suporta áudio incorporado."));
+  audio.appendChild(document.createTextNode(i18next.t("episodio.audioUnsupported")));
   player.appendChild(audio);
   root.appendChild(player);
 
@@ -243,7 +338,7 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
   root.appendChild(body);
 
   if (episode.transcript && episode.transcript.length > 0) {
-    root.appendChild(el("h2", "transcript-heading", "Transcrição completa"));
+    root.appendChild(el("h2", "transcript-heading", i18next.t("episodio.transcriptHeading")));
 
     // Começa recolhida (só as primeiras linhas, com fade) pra não empurrar
     // "outros episódios" pra longe — o botão abaixo expande sob demanda.
@@ -259,30 +354,29 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
     toggle.type = "button";
     toggle.className = "transcript-toggle";
     const chevron = el("span", "chevron", "▼");
-    const label = document.createTextNode(" Ver transcrição completa");
+    const label = document.createTextNode(` ${i18next.t("episodio.transcriptExpand")}`);
     toggle.appendChild(chevron);
     toggle.appendChild(label);
     toggle.addEventListener("click", () => {
       const collapsed = wrap.classList.toggle("collapsed");
       chevron.textContent = collapsed ? "▼" : "▲";
-      label.textContent = collapsed ? " Ver transcrição completa" : " Ver menos";
+      label.textContent = ` ${i18next.t(collapsed ? "episodio.transcriptExpand" : "episodio.transcriptCollapse")}`;
     });
     root.appendChild(toggle);
   }
 
   const related = document.getElementById("episodio-related");
   if (related) {
+    related.innerHTML = "";
     const others = episodes.items.filter((e) => e.id !== episode.id);
     if (others.length === 0) {
-      related.appendChild(
-        el("p", "empty-state", "Ainda não há outros episódios publicados.")
-      );
+      related.appendChild(el("p", "empty-state", i18next.t("episodio.noOthers")));
     } else {
       for (const ep of others) {
         const row = document.createElement("a");
         row.className = "episode-row";
         row.href = `/episodio?id=${ep.id}`;
-        row.appendChild(el("span", "episode-row-number", `Ep. ${pad(ep.number)}`));
+        row.appendChild(el("span", "episode-row-number", i18next.t("episodio.epNumber", { number: pad(ep.number) })));
         row.appendChild(el("div", "episode-row-main episode-row-title", ep.title));
         row.appendChild(el("div", "episode-row-meta", ep.duration));
         related.appendChild(row);
@@ -347,10 +441,11 @@ function renderArticleList(articles: Loaded<Article>): void {
   if (!list) return;
 
   if (articles.failed) {
-    list.appendChild(el("p", "empty-state", "Não foi possível carregar os artigos agora."));
+    list.innerHTML = "";
+    list.appendChild(el("p", "empty-state", i18next.t("artigos.loadError")));
     return;
   }
-  renderArticleGrid(list, articles.items, "Nenhum artigo publicado ainda. Volte em breve.");
+  renderArticleGrid(list, articles.items, i18next.t("artigos.emptyList"));
 }
 
 // ----------------------------------------------------------------------------
@@ -360,9 +455,10 @@ function renderArticleList(articles: Loaded<Article>): void {
 function renderArticleDetail(articles: Loaded<Article>): void {
   const root = document.getElementById("artigo-content");
   if (!root) return;
+  root.innerHTML = "";
 
   if (articles.failed) {
-    root.appendChild(el("p", "empty-state", "Não foi possível carregar o artigo agora."));
+    root.appendChild(el("p", "empty-state", i18next.t("artigo.loadError")));
     return;
   }
 
@@ -370,7 +466,7 @@ function renderArticleDetail(articles: Loaded<Article>): void {
   const article = (id ? articles.items.find((a) => a.id === id) : undefined) ?? articles.items[0];
 
   if (!article) {
-    root.appendChild(el("p", "empty-state", "Artigo não encontrado."));
+    root.appendChild(el("p", "empty-state", i18next.t("artigo.notFound")));
     return;
   }
 
@@ -395,7 +491,7 @@ function renderArticleDetail(articles: Loaded<Article>): void {
   const related = document.getElementById("artigo-related");
   if (related) {
     const others = articles.items.filter((a) => a.id !== article.id);
-    renderArticleGrid(related, others, "Ainda não há outros artigos publicados.");
+    renderArticleGrid(related, others, i18next.t("artigo.noOthers"));
   }
 
   document.title = `${article.title} — Astrobotânica`;
@@ -425,18 +521,20 @@ function renderHomeHighlights(episodes: Loaded<Episode>, articles: Loaded<Articl
   const epRoot = document.getElementById("home-episodes");
   if (epRoot) {
     if (episodes.failed) {
-      epRoot.appendChild(el("p", "empty-state", "Não foi possível carregar os episódios agora."));
+      epRoot.innerHTML = "";
+      epRoot.appendChild(el("p", "empty-state", i18next.t("home.loadErrorEpisodes")));
     } else {
-      renderEpisodeRows(epRoot, selectHomeItems(episodes.items, HOME_MAX_ITEMS), "Nenhum episódio publicado ainda.", false);
+      renderEpisodeRows(epRoot, selectHomeItems(episodes.items, HOME_MAX_ITEMS), i18next.t("home.emptyEpisodes"), false);
     }
   }
 
   const artRoot = document.getElementById("home-featured-article");
   if (artRoot) {
     if (articles.failed) {
-      artRoot.appendChild(el("p", "empty-state", "Não foi possível carregar os artigos agora."));
+      artRoot.innerHTML = "";
+      artRoot.appendChild(el("p", "empty-state", i18next.t("home.loadErrorArticles")));
     } else {
-      renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), "Nenhum artigo publicado ainda.");
+      renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), i18next.t("home.emptyArticles"));
     }
   }
 }
@@ -543,11 +641,20 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupHeaderAutoHide();
   setupNavOverlay();
   setupThemeToggle();
-  const [episodes, articles, site] = await Promise.all([loadEpisodes(), loadArticles(), loadSiteText()]);
-  applySiteText(site);
-  renderEpisodeList(episodes);
-  renderEpisodeDetail(episodes);
-  renderArticleList(articles);
-  renderArticleDetail(articles);
-  renderHomeHighlights(episodes, articles);
+
+  await initI18n();
+  applyTranslations();
+
+  const [episodes, articles] = await Promise.all([loadEpisodes(), loadArticles()]);
+
+  function renderAll(): void {
+    renderEpisodeList(episodes);
+    renderEpisodeDetail(episodes);
+    renderArticleList(articles);
+    renderArticleDetail(articles);
+    renderHomeHighlights(episodes, articles);
+  }
+
+  renderAll();
+  setupLangSwitch(renderAll);
 });

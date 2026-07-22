@@ -11,10 +11,19 @@
     document.documentElement.setAttribute("data-theme", t);
   } catch (e) {}
 })();
+(function () {
+  try {
+    var l = localStorage.getItem("lang");
+    if (l !== "pt" && l !== "en") {
+      l = navigator.language.slice(0, 2).toLowerCase() === "en" ? "en" : "pt";
+    }
+    document.documentElement.setAttribute("lang", l === "en" ? "en" : "pt-BR");
+  } catch (e) {}
+})();
 </script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Artigos — Astrobotânica</title>
+<title data-text="artigos.metaTitle">Artigos — Astrobotânica</title>
 <meta name="description" data-text="artigos.metaDescription" data-text-attr="content" content="Artigos de divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra." />
 <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -27,9 +36,9 @@
       <span class="nav-toggle-bar"></span>
       <span class="nav-toggle-bar"></span>
       <span class="nav-toggle-bar"></span>
-      <span class="visually-hidden">Abrir menu</span>
+      <span class="visually-hidden" data-text="common.openMenu">Abrir menu</span>
     </button>
-    <button type="button" class="theme-toggle" role="switch" aria-checked="false" aria-label="Alternar tema claro/escuro">
+    <button type="button" class="theme-toggle" role="switch" aria-checked="false" aria-label="Alternar tema claro/escuro" data-text="common.toggleTheme" data-text-attr="aria-label">
       <span class="theme-toggle-track"><span class="theme-toggle-thumb"></span></span>
     </button>
   </div>
@@ -37,11 +46,15 @@
 
 <div class="nav-overlay" id="nav-overlay">
   <nav class="nav-overlay-panel">
-    <button type="button" class="nav-overlay-close" aria-label="Fechar menu">✕</button>
+    <button type="button" class="nav-overlay-close" aria-label="Fechar menu" data-text="common.closeMenu" data-text-attr="aria-label">✕</button>
     <a href="/artigos" aria-current="page" data-text="nav.articles">Artigos</a>
     <a href="/podcast" data-text="nav.podcast">Podcast</a>
     <a href="/sobre" data-text="nav.about">Sobre</a>
     <a href="/contato" data-text="nav.contact">Contato</a>
+    <div class="lang-switch" role="group" data-text-attr="aria-label" data-text="common.language" aria-label="Idioma">
+      <button type="button" class="lang-btn" data-lang="pt">PT</button>
+      <button type="button" class="lang-btn" data-lang="en">EN</button>
+    </div>
   </nav>
 </div>
 
@@ -70,17 +83,12 @@
         <a href="/sobre" data-text="nav.about">Sobre</a>
         <a href="/contato" data-text="nav.contact">Contato</a>
       </div>
-      <div class="footer-col">
-        <span class="footer-heading" data-text="footer.listenHeading">Ouça em</span>
-        <span class="footer-soon" data-text="platforms.spotify">Spotify — em breve</span>
-        <span class="footer-soon" data-text="platforms.apple">Apple Podcasts — em breve</span>
-        <span class="footer-soon" data-text="platforms.rss">RSS — em breve</span>
-      </div>
     </div>
   </div>
   <div class="wrap footer-copy" data-text="brand.copyright">© 2026 Astrobotânica.</div>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/i18next@23.16.8/dist/umd/i18next.min.js"></script>
 <script type="module" src="dist/main.js"></script>
 </body>
 </html>
