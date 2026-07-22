@@ -271,6 +271,12 @@ a, button { cursor: pointer; }
 .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--adm-accent); }
 .checkbox-row input[type="checkbox"]:disabled { opacity: 0.4; }
 
+/* ── LINKS DE INTEGRANTE (lista de tamanho livre) ── */
+.member-links-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.6rem; }
+.member-link-row { display: flex; gap: 0.5rem; }
+.member-link-row .member-link-label { flex: 0 0 30%; }
+.member-link-row .member-link-url { flex: 1; min-width: 0; }
+
 /* ── UPLOAD DE ARQUIVO (áudio/imagem) ── */
 .file-upload-row { display: flex; gap: 0.5rem; }
 .file-upload-row .input { flex: 1; min-width: 0; }

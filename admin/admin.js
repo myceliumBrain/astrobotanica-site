@@ -734,6 +734,7 @@ function collectAll() {
   document.querySelectorAll("[data-article]").forEach(applyArticleField);
   document.querySelectorAll("[data-episode]").forEach(applyEpisodeField);
   document.querySelectorAll("[data-member]").forEach(applyMemberField);
+  collectMemberLinks();
   document.querySelectorAll("[data-site]").forEach((input) => {
     setByPath(contentData.site, input.dataset.site, input.value);
   });
@@ -751,6 +752,7 @@ function collectEpisodeCardFields(i) {
 }
 function collectMemberCardFields(i) {
   document.querySelectorAll(`[data-member="${i}"]`).forEach(applyMemberField);
+  collectMemberLinks();
 }
 
 async function saveAll() {
@@ -1287,6 +1289,56 @@ function memberSlug(i, member) {
   return slugify(raw) || `integrante-${i + 1}`;
 }
 
+// Links de um integrante: lista de tamanho livre ({label, url}), montada e
+// desmontada pelos botões "+ adicionar link"/"Remover" — sem índice fixo,
+// então não dá pra usar o mesmo mecanismo data-member/data-key dos outros
+// campos. Cada linha só existe no DOM até alguém coletar o card (ver
+// collectMemberLinks), igual a qualquer outro campo de texto não salvo.
+function buildMemberLinkRow(link) {
+  const row = el("div", "member-link-row");
+
+  const labelInput = document.createElement("input");
+  labelInput.className = "input member-link-label";
+  labelInput.type = "text";
+  labelInput.placeholder = "Instagram";
+  labelInput.value = link?.label ?? "";
+  row.appendChild(labelInput);
+
+  const urlInput = document.createElement("input");
+  urlInput.className = "input member-link-url";
+  urlInput.type = "url";
+  urlInput.placeholder = "https://instagram.com/...";
+  urlInput.value = link?.url ?? "";
+  row.appendChild(urlInput);
+
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => row.remove());
+  row.appendChild(removeBtn);
+
+  return row;
+}
+
+// Sincroniza os links de TODOS os cartões de integrante na tela pra dentro
+// de contentData — chamado tanto pelo "Salvar alterações" de um card quanto
+// por collectAll() (reordenar/remover/adicionar), já que rebuildar a lista
+// inteira a partir do DOM é mais simples do que rastrear índice por linha.
+function collectMemberLinks() {
+  document.querySelectorAll('.card[id^="member-card-"]').forEach((card) => {
+    const i = Number(card.id.slice("member-card-".length));
+    const record = contentData.members[i];
+    if (!record) return;
+    const links = Array.from(card.querySelectorAll(".member-link-row"))
+      .map((row) => ({
+        label: row.querySelector(".member-link-label").value.trim(),
+        url: row.querySelector(".member-link-url").value.trim(),
+      }))
+      .filter((link) => link.label || link.url);
+    if (links.length > 0) record.links = links;
+    else delete record.links;
+  });
+}
+
 function buildMemberCard(member, i, total) {
   const card = el("div", "card");
   card.id = `member-card-${i}`;
@@ -1326,6 +1378,17 @@ function buildMemberCard(member, i, total) {
   );
   photoField.classList.add("full");
   grid.appendChild(photoField);
+
+  const linksField = el("div", "field full");
+  linksField.appendChild(el("label", "", "Links (Instagram, Lattes, site pessoal, etc.)"));
+  const linksList = el("div", "member-links-list");
+  (member.links || []).forEach((link) => linksList.appendChild(buildMemberLinkRow(link)));
+  linksField.appendChild(linksList);
+  const addLinkBtn = el("button", "btn btn-secondary btn-small", "+ adicionar link");
+  addLinkBtn.type = "button";
+  addLinkBtn.addEventListener("click", () => linksList.appendChild(buildMemberLinkRow()));
+  linksField.appendChild(addLinkBtn);
+  grid.appendChild(linksField);
 
   body.appendChild(grid);
 

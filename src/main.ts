@@ -29,11 +29,17 @@ interface Article {
   featured?: boolean; // marcado no admin: fixa o artigo na Home (ver selectHomeItems)
 }
 
+interface MemberLink {
+  label: string; // ex: "Instagram", "Lattes" — livre, definido pelo admin
+  url: string;
+}
+
 interface Member {
   id: string;
   name: string;
   description: string;
   image?: string; // opcional: caminho da foto, ex: "images/integrantes/nome.jpg"
+  links?: MemberLink[]; // opcional: quantos o admin quiser cadastrar
 }
 
 interface Loaded<T> {
@@ -564,8 +570,24 @@ function buildMemberCard(member: Member): HTMLDivElement {
   }
   card.appendChild(photo);
 
-  card.appendChild(el("div", "card-title", member.name));
-  card.appendChild(el("p", "card-body", member.description));
+  const info = el("div", "member-info");
+  info.appendChild(el("div", "card-title", member.name));
+  info.appendChild(el("p", "card-body", member.description));
+
+  if (member.links && member.links.length > 0) {
+    const links = el("div", "member-links");
+    for (const link of member.links) {
+      const a = document.createElement("a");
+      a.className = "text-link";
+      a.href = link.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = link.label;
+      links.appendChild(a);
+    }
+    info.appendChild(links);
+  }
+  card.appendChild(info);
 
   return card;
 }
