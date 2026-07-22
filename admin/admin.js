@@ -727,7 +727,7 @@ function applyMemberField(input) {
   const key = input.dataset.key;
   const record = contentData.members[i];
   if (!record) return;
-  if (key === "image" && !input.value) { delete record.image; return; }
+  if ((key === "image" || key === "descriptionEn") && !input.value) { delete record[key]; return; }
   record[key] = input.value;
 }
 
@@ -1366,9 +1366,13 @@ function buildMemberCard(member, i, total) {
   grid.appendChild(buildInput("Identificador (id)", "text", member.id, { member: i, key: "id" }));
   grid.appendChild(buildInput("Nome", "text", member.name, { member: i, key: "name" }));
 
+  const descriptionGroup = el("div", "field-group full");
   const description = buildTextarea("Descrição", member.description, { member: i, key: "description" });
-  description.classList.add("full");
-  grid.appendChild(description);
+  descriptionGroup.appendChild(description);
+  const descriptionEn = buildTextarea("Descrição (EN)", member.descriptionEn, { member: i, key: "descriptionEn" });
+  descriptionEn.classList.add("field--en");
+  descriptionGroup.appendChild(descriptionEn);
+  grid.appendChild(descriptionGroup);
 
   const photoField = buildFileUploadField(
     "Foto",

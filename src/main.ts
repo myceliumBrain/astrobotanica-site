@@ -38,6 +38,7 @@ interface Member {
   id: string;
   name: string;
   description: string;
+  descriptionEn?: string; // opcional: tradução da descrição, mantida à mão pelo admin
   image?: string; // opcional: caminho da foto, ex: "images/integrantes/nome.jpg"
   links?: MemberLink[]; // opcional: quantos o admin quiser cadastrar
 }
@@ -570,9 +571,11 @@ function buildMemberCard(member: Member): HTMLDivElement {
   }
   row.appendChild(photo);
 
+  const description = i18next.language === "en" && member.descriptionEn ? member.descriptionEn : member.description;
+
   const info = el("div", "card member-info");
   info.appendChild(el("div", "card-title", member.name));
-  info.appendChild(el("p", "card-body", member.description));
+  info.appendChild(el("p", "card-body", description));
 
   if (member.links && member.links.length > 0) {
     const links = el("div", "member-links");

@@ -501,9 +501,11 @@ function buildMemberCard(member) {
     }
     row.appendChild(photo);
 
+    const description = i18next.language === "en" && member.descriptionEn ? member.descriptionEn : member.description;
+
     const info = el("div", "card member-info");
     info.appendChild(el("div", "card-title", member.name));
-    info.appendChild(el("p", "card-body", member.description));
+    info.appendChild(el("p", "card-body", description));
 
     if (member.links && member.links.length > 0) {
         const links = el("div", "member-links");
