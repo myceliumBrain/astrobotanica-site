@@ -145,7 +145,7 @@ function renderEpisodeDetail(episodes) {
     audio.appendChild(document.createTextNode("Seu navegador não suporta áudio incorporado."));
     player.appendChild(audio);
     root.appendChild(player);
-    const body = el("div", "episode-body");
+    const body = el("div", "episode-description");
     body.appendChild(el("p", "", episode.description));
     root.appendChild(body);
     if (episode.transcript && episode.transcript.length > 0) {
@@ -251,6 +251,14 @@ function renderArticleDetail(articles) {
     }
     document.title = `${article.title} — Astrobotânica`;
 }
+const HOME_MAX_ITEMS = 6;
+function selectHomeItems(items, max) {
+    const featured = items.filter((item) => item.featured);
+    const nonFeatured = items.filter((item) => !item.featured);
+    const fill = nonFeatured.slice(0, Math.max(0, max - featured.length));
+    const selected = new Set([...featured.slice(0, max), ...fill]);
+    return items.filter((item) => selected.has(item));
+}
 function renderHomeHighlights(episodes, articles) {
     const epRoot = document.getElementById("home-episodes");
     if (epRoot) {
@@ -258,7 +266,7 @@ function renderHomeHighlights(episodes, articles) {
             epRoot.appendChild(el("p", "empty-state", "Não foi possível carregar os episódios agora."));
         }
         else {
-            renderEpisodeRows(epRoot, episodes.items.slice(0, 3), "Nenhum episódio publicado ainda.", false);
+            renderEpisodeRows(epRoot, selectHomeItems(episodes.items, HOME_MAX_ITEMS), "Nenhum episódio publicado ainda.", false);
         }
     }
     const artRoot = document.getElementById("home-featured-article");
@@ -267,11 +275,35 @@ function renderHomeHighlights(episodes, articles) {
             artRoot.appendChild(el("p", "empty-state", "Não foi possível carregar os artigos agora."));
         }
         else {
-            renderArticleGrid(artRoot, articles.items.slice(0, 3), "Nenhum artigo publicado ainda.");
+            renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), "Nenhum artigo publicado ainda.");
         }
     }
 }
+function setupHeaderAutoHide() {
+    const header = document.querySelector(".site-header");
+    if (!header) return;
+    const scrollMargin = 12;
+    let lastY = window.scrollY;
+    let ticking = false;
+    function update() {
+        const currentY = window.scrollY;
+        const delta = currentY - lastY;
+        if (Math.abs(delta) > scrollMargin) {
+            const scrollingDown = delta > 0 && currentY > header.offsetHeight;
+            header.classList.toggle("site-header--hidden", scrollingDown);
+            lastY = currentY;
+        }
+        ticking = false;
+    }
+    window.addEventListener("scroll", () => {
+        if (!ticking) {
+            requestAnimationFrame(update);
+            ticking = true;
+        }
+    }, { passive: true });
+}
 document.addEventListener("DOMContentLoaded", async () => {
+    setupHeaderAutoHide();
     const [episodes, articles, site] = await Promise.all([loadEpisodes(), loadArticles(), loadSiteText()]);
     applySiteText(site);
     renderEpisodeList(episodes);

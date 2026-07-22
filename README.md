@@ -90,7 +90,20 @@ hora, sem esperar o botão de salvar.
 
 A ordem dos artigos e episódios nas listas (setas ▲▼) é a mesma ordem em que
 eles aparecem no site público — não há mais reordenação automática por data.
-Um item novo entra no topo da lista por padrão.
+Um item novo entra no topo da lista por padrão (então, por exemplo, ao
+cadastrar o episódio 2 ele já nasce acima do episódio 1, sem precisar mexer
+nas setas).
+
+**Destaque na Home**: cada artigo/episódio tem uma checkbox "Destacar na
+Home". A Home mostra no máximo 6 artigos e 6 episódios, escolhidos assim:
+primeiro entram todos os marcados (até o limite de 6); as vagas que sobrarem
+são preenchidas pelos não marcados mais próximos do topo da lista — ou seja,
+os mais recentes. Isso significa que um item não marcado só sai da Home
+quando surgem marcados/itens novos suficientes para empurrá-lo pra fora das
+6 primeiras vagas; marcar a checkbox fixa o item na Home independente da
+posição dele na lista. O painel trava em 6 marcados por seção (desabilita as
+checkboxes restantes até você desmarcar alguma), pra não ficar ambíguo qual
+sairia se houvesse mais de 6.
 
 Cada pessoa usa **seu próprio token de acesso pessoal do GitHub** — nunca um
 token compartilhado, e nunca em texto puro. O token é criptografado no
@@ -157,7 +170,8 @@ conveniência, não o único jeito. Veja os formatos abaixo se preferir editar
   "body": [
     "Primeiro parágrafo...",
     "Segundo parágrafo..."
-  ]
+  ],
+  "featured": true
 }
 ```
 
@@ -166,7 +180,8 @@ também é opcional (caminho de uma imagem de capa, ex:
 `images/artigos/nome-do-arquivo.jpg`) — sem ela, o cartão mostra só um
 retângulo vazio no lugar do pôster. Assim como o `.mp3` dos episódios, o
 arquivo de imagem em si precisa ser enviado à pasta `images/artigos/` por
-fora (via git); o painel só grava o caminho no JSON.
+fora (via git); o painel só grava o caminho no JSON. `featured` é opcional
+(padrão ausente/`false`) — ver "Destaque na Home" acima.
 
 ### Formato de um episódio
 
@@ -180,6 +195,7 @@ fora (via git); o painel só grava o caminho no JSON.
   "duration": "28:40",
   "audioSrc": "audio/episodio-02.mp3",
   "image": "images/episodios/ep-02.jpg",
+  "featured": true,
   "transcript": [
     "Primeiro parágrafo da transcrição...",
     "Segundo parágrafo..."

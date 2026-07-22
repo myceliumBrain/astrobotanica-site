@@ -13,6 +13,7 @@ interface Episode {
   audioSrc: string; // caminho para o arquivo .mp3, ex: "audio/episodio-01.mp3"
   image?: string; // opcional: caminho da imagem de capa, ex: "images/episodios/ep-01.jpg"
   transcript?: string[]; // opcional: transcrição completa, um parágrafo por item
+  featured?: boolean; // marcado no admin: fixa o episódio na Home (ver selectHomeItems)
 }
 
 interface Article {
@@ -25,6 +26,7 @@ interface Article {
   readingTime: string; // ex: "6 min"
   body: string[]; // um parágrafo por item do array
   image?: string; // opcional: caminho da imagem de capa, ex: "images/artigos/meu-artigo.jpg"
+  featured?: boolean; // marcado no admin: fixa o artigo na Home (ver selectHomeItems)
 }
 
 interface Loaded<T> {
@@ -225,7 +227,7 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
   player.appendChild(audio);
   root.appendChild(player);
 
-  const body = el("div", "episode-body");
+  const body = el("div", "episode-description");
   body.appendChild(el("p", "", episode.description));
   root.appendChild(body);
 
@@ -373,13 +375,29 @@ function renderArticleDetail(articles: Loaded<Article>): void {
 // Home: destaques
 // ----------------------------------------------------------------------------
 
+const HOME_MAX_ITEMS = 6;
+
+// A Home mostra, no máximo, HOME_MAX_ITEMS itens: primeiro todos os
+// marcados como "featured" no admin (até o limite), e as vagas restantes
+// são preenchidas pelos não marcados mais próximos do topo do array (ou
+// seja, os mais recentes — um item novo entra no topo por padrão). A
+// ordem final preserva a ordem original do array, então o resultado é
+// sempre um subconjunto contíguo-por-prioridade da lista completa.
+function selectHomeItems<T extends { featured?: boolean }>(items: T[], max: number): T[] {
+  const featured = items.filter((item) => item.featured);
+  const nonFeatured = items.filter((item) => !item.featured);
+  const fill = nonFeatured.slice(0, Math.max(0, max - featured.length));
+  const selected = new Set([...featured.slice(0, max), ...fill]);
+  return items.filter((item) => selected.has(item));
+}
+
 function renderHomeHighlights(episodes: Loaded<Episode>, articles: Loaded<Article>): void {
   const epRoot = document.getElementById("home-episodes");
   if (epRoot) {
     if (episodes.failed) {
       epRoot.appendChild(el("p", "empty-state", "Não foi possível carregar os episódios agora."));
     } else {
-      renderEpisodeRows(epRoot, episodes.items.slice(0, 3), "Nenhum episódio publicado ainda.", false);
+      renderEpisodeRows(epRoot, selectHomeItems(episodes.items, HOME_MAX_ITEMS), "Nenhum episódio publicado ainda.", false);
     }
   }
 
@@ -388,12 +406,49 @@ function renderHomeHighlights(episodes: Loaded<Episode>, articles: Loaded<Articl
     if (articles.failed) {
       artRoot.appendChild(el("p", "empty-state", "Não foi possível carregar os artigos agora."));
     } else {
-      renderArticleGrid(artRoot, articles.items.slice(0, 3), "Nenhum artigo publicado ainda.");
+      renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), "Nenhum artigo publicado ainda.");
     }
   }
 }
 
+// ----------------------------------------------------------------------------
+// Cabeçalho: recua ao rolar para baixo, reaparece ao rolar para cima
+// (a transição em si é feita via CSS, em .site-header/.site-header--hidden)
+// ----------------------------------------------------------------------------
+
+function setupHeaderAutoHide(): void {
+  const header = document.querySelector<HTMLElement>(".site-header");
+  if (!header) return;
+
+  const scrollMargin = 12; // ignora tremores pequenos (ex: bounce do iOS)
+  let lastY = window.scrollY;
+  let ticking = false;
+
+  function update(): void {
+    const currentY = window.scrollY;
+    const delta = currentY - lastY;
+    if (Math.abs(delta) > scrollMargin) {
+      const scrollingDown = delta > 0 && currentY > (header as HTMLElement).offsetHeight;
+      (header as HTMLElement).classList.toggle("site-header--hidden", scrollingDown);
+      lastY = currentY;
+    }
+    ticking = false;
+  }
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!ticking) {
+        requestAnimationFrame(update);
+        ticking = true;
+      }
+    },
+    { passive: true }
+  );
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
+  setupHeaderAutoHide();
   const [episodes, articles, site] = await Promise.all([loadEpisodes(), loadArticles(), loadSiteText()]);
   applySiteText(site);
   renderEpisodeList(episodes);

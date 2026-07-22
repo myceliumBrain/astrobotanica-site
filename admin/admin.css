@@ -211,6 +211,7 @@ a, button { cursor: pointer; }
 }
 .panel-title { font-family: var(--adm-mono); font-size: 1.4rem; font-weight: 500; color: var(--adm-white); }
 .panel-count { font-family: var(--adm-mono); font-size: 0.72rem; color: var(--adm-muted); }
+.panel-header-counts { display: flex; gap: 0.9rem; align-items: baseline; }
 
 /* ── CARDS (itens de lista com acordeão) ── */
 .card {
@@ -257,6 +258,19 @@ a, button { cursor: pointer; }
 .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
 .fields-grid .full { grid-column: 1 / -1; }
 
+/* ── DESTAQUE NA HOME (checkbox) ── */
+.checkbox-field { justify-content: center; }
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--adm-mono);
+  font-size: 0.8rem;
+  color: var(--adm-off-white);
+}
+.checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--adm-accent); }
+.checkbox-row input[type="checkbox"]:disabled { opacity: 0.4; }
+
 /* ── UPLOAD DE ARQUIVO (áudio/imagem) ── */
 .file-upload-row { display: flex; gap: 0.5rem; }
 .file-upload-row .input { flex: 1; min-width: 0; }
@@ -274,8 +288,9 @@ a, button { cursor: pointer; }
 .file-upload-status[data-kind="err"] { color: var(--adm-danger); }
 .file-upload-status[data-kind="pending"] { color: #e8c547; }
 .file-upload-preview {
-  width: 6rem;
-  aspect-ratio: 1 / 1;
+  width: 100%;
+  max-width: 20rem;
+  aspect-ratio: 16 / 9;
   object-fit: cover;
   border: 1px solid var(--adm-border);
   border-radius: 3px;

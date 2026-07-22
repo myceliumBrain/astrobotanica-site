@@ -30,6 +30,11 @@ const PATHS = {
   site: CONFIG.sitePath,
 };
 
+// Quantos artigos/episódios marcados como "destaque" cabem na Home (ver
+// selectHomeItems em src/main.ts) — mantido em sincronia manualmente com
+// aquela constante, já que este arquivo não passa pelo bundler do site.
+const HOME_MAX_ITEMS = 6;
+
 const LOCKOUT = {
   storageKey: "astrobotanica-admin-attempts",
   maxAttempts: 5,
@@ -676,6 +681,11 @@ function collectAll() {
     const key = input.dataset.key;
     const record = contentData.articles[i];
     if (!record) return;
+    if (input.type === "checkbox") {
+      if (input.checked) record[key] = true;
+      else delete record[key];
+      return;
+    }
     const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
     if ((key === "subtitle" || key === "image") && !value) delete record[key];
     else record[key] = value;
@@ -685,6 +695,11 @@ function collectAll() {
     const key = input.dataset.key;
     const record = contentData.episodes[i];
     if (!record) return;
+    if (input.type === "checkbox") {
+      if (input.checked) record[key] = true;
+      else delete record[key];
+      return;
+    }
     if (key === "number") {
       record.number = Number(input.value);
       return;
@@ -747,6 +762,38 @@ function buildInput(labelText, type, value, dataset, placeholder) {
   if (placeholder) input.placeholder = placeholder;
   Object.entries(dataset).forEach(([k, v]) => { input.dataset[k] = v; });
   return buildField(labelText, input);
+}
+
+// Checkbox "Destacar na Home". `onToggle` recalcula o limite de HOME_MAX_ITEMS
+// marcados naquela seção (ver enforceFeaturedLimit) sempre que ela muda.
+function buildCheckboxField(labelText, checked, dataset, onToggle) {
+  const wrap = el("div", "field checkbox-field");
+  const row = el("label", "checkbox-row");
+  const input = document.createElement("input");
+  input.type = "checkbox";
+  input.checked = !!checked;
+  Object.entries(dataset).forEach(([k, v]) => { input.dataset[k] = v; });
+  row.appendChild(input);
+  row.appendChild(document.createTextNode(labelText));
+  wrap.appendChild(row);
+  if (onToggle) input.addEventListener("change", onToggle);
+  return wrap;
+}
+
+// Trava o marcador de "destaque" em HOME_MAX_ITEMS por seção: ao chegar no
+// limite, desabilita as checkboxes ainda desmarcadas (até alguém desmarcar
+// uma) — evita ambiguidade sobre qual item sairia da Home se o JSON tivesse
+// mais marcados do que cabem nela.
+function enforceFeaturedLimit(section) {
+  const container = document.getElementById(`${section}-list`);
+  if (!container) return;
+  const checkboxes = Array.from(container.querySelectorAll('input[type="checkbox"][data-key="featured"]'));
+  const checkedCount = checkboxes.filter((cb) => cb.checked).length;
+  checkboxes.forEach((cb) => {
+    cb.disabled = !cb.checked && checkedCount >= HOME_MAX_ITEMS;
+  });
+  const counter = document.getElementById(`featured-count-${section}`);
+  if (counter) counter.textContent = `${checkedCount}/${HOME_MAX_ITEMS} na home`;
 }
 
 function buildTextarea(labelText, value, dataset, multilineParagraphs) {
@@ -862,10 +909,12 @@ function renderArticlesList() {
 
   if (items.length === 0) {
     container.appendChild(el("p", "empty-state", "Nenhum artigo cadastrado ainda."));
+    enforceFeaturedLimit("articles");
     return;
   }
 
   items.forEach((article, i) => container.appendChild(buildArticleCard(article, i, items.length)));
+  enforceFeaturedLimit("articles");
 }
 
 function buildArticleCard(article, i, total) {
@@ -907,6 +956,15 @@ function buildArticleCard(article, i, total) {
 
   grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
   grid.appendChild(buildInput("Tempo de leitura", "text", article.readingTime, { article: i, key: "readingTime" }, "6 min"));
+
+  grid.appendChild(
+    buildCheckboxField(
+      "Destacar na Home",
+      article.featured,
+      { article: i, key: "featured" },
+      () => enforceFeaturedLimit("articles")
+    )
+  );
 
   const bodyField = buildTextarea("Corpo — um parágrafo por linha", (article.body || []).join("\n"), { article: i, key: "body" }, true);
   bodyField.classList.add("full");
@@ -983,10 +1041,12 @@ function renderEpisodesList() {
 
   if (items.length === 0) {
     container.appendChild(el("p", "empty-state", "Nenhum episódio cadastrado ainda."));
+    enforceFeaturedLimit("episodes");
     return;
   }
 
   items.forEach((episode, i) => container.appendChild(buildEpisodeCard(episode, i, items.length)));
+  enforceFeaturedLimit("episodes");
 }
 
 // Lê o valor atual do campo "id" direto do DOM (pode ter sido editado e
@@ -1025,6 +1085,15 @@ function buildEpisodeCard(episode, i, total) {
   grid.appendChild(description);
 
   grid.appendChild(buildInput("Data", "date", episode.date, { episode: i, key: "date" }));
+
+  grid.appendChild(
+    buildCheckboxField(
+      "Destacar na Home",
+      episode.featured,
+      { episode: i, key: "featured" },
+      () => enforceFeaturedLimit("episodes")
+    )
+  );
 
   const audioField = buildFileUploadField(
     "Áudio do episódio",
