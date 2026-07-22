@@ -11,7 +11,7 @@
     "copyright": "© 2026 Astrobotânica."
   },
   "nav": {
-    "articles": "Artigos",
+    "articles": "Notícias",
     "podcast": "Podcast",
     "about": "Sobre",
     "contact": "Contato"
@@ -21,14 +21,14 @@
   },
   "home": {
     "metaTitle": "Astrobotânica — divulgação científica e podcast sobre plantas fora da Terra",
-    "metaDescription": "Astrobotânica é um projeto de divulgação científica sobre o reino das plantas e sua jornada para fora da Terra: artigos e, em paralelo, um podcast, com o pesquisador Pedro.",
-    "featuredHeading": "Artigos",
+    "metaDescription": "Astrobotânica é um projeto de divulgação científica sobre o reino das plantas e sua jornada para fora da Terra: notícias e, em paralelo, um podcast, com o pesquisador Pedro.",
+    "featuredHeading": "Notícias",
     "featuredCta": "Ver todos",
     "panelKicker": "Podcast Astrobotânica",
     "loadErrorEpisodes": "Não foi possível carregar os episódios agora.",
     "emptyEpisodes": "Nenhum episódio publicado ainda.",
-    "loadErrorArticles": "Não foi possível carregar os artigos agora.",
-    "emptyArticles": "Nenhum artigo publicado ainda."
+    "loadErrorArticles": "Não foi possível carregar as notícias agora.",
+    "emptyArticles": "Nenhuma notícia publicada ainda."
   },
   "podcast": {
     "metaTitle": "Podcast — Astrobotânica",
@@ -56,21 +56,21 @@
     "noOthers": "Ainda não há outros episódios publicados."
   },
   "artigos": {
-    "metaTitle": "Artigos — Astrobotânica",
-    "metaDescription": "Artigos de divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra.",
-    "tag": "Artigos",
-    "title": "Artigos",
+    "metaTitle": "Notícias — Astrobotânica",
+    "metaDescription": "Notícias de divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra.",
+    "tag": "Notícias",
+    "title": "Notícias",
     "intro": "Divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra.",
-    "loadError": "Não foi possível carregar os artigos agora.",
-    "emptyList": "Nenhum artigo publicado ainda. Volte em breve."
+    "loadError": "Não foi possível carregar as notícias agora.",
+    "emptyList": "Nenhuma notícia publicada ainda. Volte em breve."
   },
   "artigo": {
-    "metaTitle": "Artigo — Astrobotânica",
-    "backLink": "← Voltar aos artigos",
+    "metaTitle": "Notícia — Astrobotânica",
+    "backLink": "← Voltar às notícias",
     "relatedHeading": "Continue lendo",
-    "loadError": "Não foi possível carregar o artigo agora.",
-    "notFound": "Artigo não encontrado.",
-    "noOthers": "Ainda não há outros artigos publicados."
+    "loadError": "Não foi possível carregar a notícia agora.",
+    "notFound": "Notícia não encontrada.",
+    "noOthers": "Ainda não há outras notícias publicadas."
   },
   "sobre": {
     "metaTitle": "Sobre — Astrobotânica",

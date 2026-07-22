@@ -62,7 +62,7 @@ const GENERAL_SCHEMA = [
   {
     heading: "Menu de navegação",
     fields: [
-      { key: "nav.articles", label: "Artigos", type: "text" },
+      { key: "nav.articles", label: "Notícias", type: "text" },
       { key: "nav.podcast", label: "Podcast", type: "text" },
       { key: "nav.about", label: "Sobre", type: "text" },
       { key: "nav.contact", label: "Contato", type: "text" },
@@ -83,7 +83,7 @@ const PAGE_SCHEMA = [
     fields: [
       { key: "home.metaTitle", label: "Título da aba do navegador", type: "text" },
       { key: "home.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "home.featuredHeading", label: "Título \"Artigos em destaque\"", type: "text" },
+      { key: "home.featuredHeading", label: "Título \"Notícias em destaque\"", type: "text" },
       { key: "home.featuredCta", label: "Link \"ver todos\"", type: "text" },
       { key: "home.panelKicker", label: "Selo do painel do podcast", type: "text" },
     ],
@@ -108,7 +108,7 @@ const PAGE_SCHEMA = [
   },
   {
     key: "artigos",
-    label: "Artigos",
+    label: "Notícias",
     fields: [
       { key: "artigos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
       { key: "artigos.tag", label: "Selo", type: "text" },
@@ -118,7 +118,7 @@ const PAGE_SCHEMA = [
   },
   {
     key: "artigo",
-    label: "Artigo",
+    label: "Notícia",
     fields: [
       { key: "artigo.backLink", label: "Link \"voltar\"", type: "text" },
       { key: "artigo.relatedHeading", label: "Título \"continue lendo\"", type: "text" },
@@ -169,6 +169,21 @@ function slugify(text) {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 60);
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Compatibilidade com o formato antigo do corpo da notícia (array de
+// parágrafos em texto puro, sem formatação) — migra para HTML na hora de
+// abrir o editor; o formato salvo a partir de agora já é sempre uma string.
+function articleBodyToHtml(body) {
+  if (typeof body === "string") return body;
+  if (Array.isArray(body)) return body.map((p) => `<p>${escapeHtml(p)}</p>`).join("");
+  return "";
 }
 
 function linesToParagraphs(text) {
@@ -683,6 +698,19 @@ async function loadContent() {
   }
 }
 
+// O corpo (contenteditable) não tem .value — e as imagens inseridas nele
+// ficam com um src temporário (blob local) até o upload de fato acontecer,
+// então salvar precisa trocar esse src pelo caminho definitivo primeiro
+// (ver data-final-src em buildRichTextField/confirmBodyImages).
+function finalizeRichTextHtml(container) {
+  const clone = container.cloneNode(true);
+  clone.querySelectorAll("img[data-final-src]").forEach((img) => {
+    img.setAttribute("src", img.getAttribute("data-final-src"));
+    img.removeAttribute("data-final-src");
+  });
+  return clone.innerHTML;
+}
+
 function applyArticleField(input) {
   const i = Number(input.dataset.article);
   const key = input.dataset.key;
@@ -691,6 +719,10 @@ function applyArticleField(input) {
   if (input.type === "checkbox") {
     if (input.checked) record[key] = true;
     else delete record[key];
+    return;
+  }
+  if (input.dataset.richtext === "html") {
+    record[key] = finalizeRichTextHtml(input);
     return;
   }
   const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
@@ -929,6 +961,118 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   return wrap;
 }
 
+// Campo de corpo com formatação: negrito, parágrafos (Enter/contenteditable)
+// e imagens inseridas no meio do texto. O conteúdo é salvo como HTML puro e
+// desenhado direto no site via innerHTML (ver renderArticleDetail em
+// src/main.ts) — mesmo modelo de confiança do resto do painel: só quem tem
+// acesso ao GitHub edita esse conteúdo.
+//
+// Imagem inserida no corpo segue o mesmo fluxo de "pendente até confirmar,
+// enviado só no Salvar no GitHub" do buildFileUploadField: ao escolher um
+// arquivo, ele entra no editor com um src temporário (blob local, só para
+// pré-visualização) e o caminho definitivo guardado em data-final-src;
+// wrap.confirmBodyImages() (chamado pelo "Salvar alterações" do card) é que
+// de fato enfileira o arquivo em pendingUploads, e finalizeRichTextHtml()
+// troca o src temporário pelo definitivo na hora de gravar no JSON.
+function buildRichTextField(labelText, value, dataset, opts) {
+  const wrap = el("div", "field rich-text-field");
+  wrap.appendChild(el("label", "", labelText));
+
+  const toolbar = el("div", "rich-text-toolbar");
+
+  const boldBtn = el("button", "rich-text-btn", "Negrito");
+  boldBtn.type = "button";
+  boldBtn.title = "Negrito";
+  boldBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  boldBtn.addEventListener("click", () => document.execCommand("bold"));
+  toolbar.appendChild(boldBtn);
+
+  const imageBtn = el("button", "rich-text-btn", "+ imagem");
+  imageBtn.type = "button";
+  imageBtn.title = "Inserir imagem no corpo";
+  const imageInput = document.createElement("input");
+  imageInput.type = "file";
+  imageInput.accept = "image/*";
+  imageInput.hidden = true;
+  imageBtn.appendChild(imageInput);
+  toolbar.appendChild(imageBtn);
+
+  wrap.appendChild(toolbar);
+
+  const editor = document.createElement("div");
+  editor.className = "input rich-text-editor";
+  editor.contentEditable = "true";
+  editor.innerHTML = value || "";
+  Object.entries(dataset).forEach(([k, v]) => { editor.dataset[k] = v; });
+  editor.dataset.richtext = "html";
+  editor.addEventListener("focus", () => {
+    try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch { /* navegador sem suporte */ }
+  });
+  wrap.appendChild(editor);
+
+  // Clicar no botão de imagem tira o foco do editor (é um <button>), então
+  // sem guardar a seleção de texto a imagem sempre cairia no fim do
+  // conteúdo em vez de no cursor.
+  let savedRange = null;
+  function saveSelection() {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+      savedRange = sel.getRangeAt(0).cloneRange();
+    }
+  }
+  editor.addEventListener("keyup", saveSelection);
+  editor.addEventListener("mouseup", saveSelection);
+
+  imageBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  imageBtn.addEventListener("click", () => imageInput.click());
+
+  imageInput.addEventListener("change", () => {
+    const file = imageInput.files[0];
+    if (!file) return;
+    const path = opts.buildImagePath(file);
+
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    img.dataset.finalSrc = path;
+    img.pendingFile = file;
+
+    editor.focus();
+    const sel = window.getSelection();
+    if (savedRange) {
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    }
+    if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(img);
+      range.setStartAfter(img);
+      range.setEndAfter(img);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      editor.appendChild(img);
+    }
+    saveSelection();
+    imageInput.value = "";
+  });
+
+  wrap.confirmBodyImages = function confirmBodyImages() {
+    editor.querySelectorAll("img[data-final-src]").forEach((img) => {
+      if (img.pendingFile) {
+        pendingUploads.push({
+          path: img.dataset.finalSrc,
+          file: img.pendingFile,
+          message: opts.buildImageMessage(img.dataset.finalSrc),
+        });
+        img.pendingFile = null;
+      }
+    });
+  };
+
+  return wrap;
+}
+
 // Botão "Salvar alterações" de um card: é o único gatilho que sincroniza
 // os campos daquele bloco pra dentro de contentData e marca a seção como
 // suja — digitar/marcar checkbox/escolher arquivo, sozinhos, não fazem
@@ -962,7 +1106,7 @@ function buildReorderButtons(idx, total, onUp, onDown) {
 }
 
 // ----------------------------------------------------------------------------
-// Artigos
+// Notícias
 // ----------------------------------------------------------------------------
 
 function renderArticlesList() {
@@ -970,16 +1114,24 @@ function renderArticlesList() {
   container.innerHTML = "";
   const items = contentData.articles;
   document.getElementById("nav-count-articles").textContent = items.length || "";
-  document.getElementById("count-articles").textContent = `${items.length} ${items.length === 1 ? "artigo" : "artigos"}`;
+  document.getElementById("count-articles").textContent = `${items.length} ${items.length === 1 ? "notícia" : "notícias"}`;
 
   if (items.length === 0) {
-    container.appendChild(el("p", "empty-state", "Nenhum artigo cadastrado ainda."));
+    container.appendChild(el("p", "empty-state", "Nenhuma notícia cadastrada ainda."));
     enforceFeaturedLimit("articles");
     return;
   }
 
   items.forEach((article, i) => container.appendChild(buildArticleCard(article, i, items.length)));
   enforceFeaturedLimit("articles");
+}
+
+// Lê o valor atual do campo "id" direto do DOM (pode ter sido editado e
+// ainda não persistido em contentData) para nomear os arquivos enviados.
+function articleSlug(i, article) {
+  const idInput = document.querySelector(`[data-article="${i}"][data-key="id"]`);
+  const raw = (idInput && idInput.value.trim()) || article.id || `noticia-${i + 1}`;
+  return slugify(raw) || `noticia-${i + 1}`;
 }
 
 function buildArticleCard(article, i, total) {
@@ -1005,17 +1157,23 @@ function buildArticleCard(article, i, total) {
   grid.appendChild(buildInput("Título", "text", article.title, { article: i, key: "title" }));
   grid.appendChild(buildInput("Subtítulo (opcional)", "text", article.subtitle, { article: i, key: "subtitle" }));
 
-  const imageField = buildInput(
+  const imageField = buildFileUploadField(
     "Imagem de capa (opcional)",
-    "text",
     article.image,
     { article: i, key: "image" },
-    "images/artigos/nome-do-arquivo.jpg"
+    {
+      accept: "image/*",
+      buttonText: "Enviar imagem",
+      placeholder: "images/noticias/nome-da-noticia.jpg",
+      preview: true,
+      buildPath: (file) => `images/noticias/${articleSlug(i, article)}.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia imagem da notícia "${article.title || article.id}" (${path})`,
+    }
   );
   imageField.classList.add("full");
   grid.appendChild(imageField);
 
-  const excerpt = buildTextarea("Resumo (só na página do artigo)", article.excerpt, { article: i, key: "excerpt" });
+  const excerpt = buildTextarea("Resumo (só na página da notícia)", article.excerpt, { article: i, key: "excerpt" });
   excerpt.classList.add("full");
   grid.appendChild(excerpt);
 
@@ -1031,21 +1189,31 @@ function buildArticleCard(article, i, total) {
     )
   );
 
-  const bodyField = buildTextarea("Corpo — um parágrafo por linha", (article.body || []).join("\n"), { article: i, key: "body" }, true);
+  const bodyField = buildRichTextField(
+    "Corpo",
+    articleBodyToHtml(article.body),
+    { article: i, key: "body" },
+    {
+      buildImagePath: (file) =>
+        `images/noticias/${articleSlug(i, article)}-corpo-${Date.now()}.${fileExtension(file.name, "jpg")}`,
+      buildImageMessage: (path) => `admin: envia imagem do corpo da notícia "${article.title || article.id}" (${path})`,
+    }
+  );
   bodyField.classList.add("full");
-  bodyField.querySelector("textarea").rows = 8;
   grid.appendChild(bodyField);
 
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
   const saveBtn = buildSaveCardButton(() => {
+    imageField.confirmFileUpload();
+    bodyField.confirmBodyImages();
     collectArticleCardFields(i);
     markDirty("articles");
-    toast('Alterações do artigo prontas — clique em "Salvar no GitHub" para enviar.', "ok");
+    toast('Alterações da notícia prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
-  const removeBtn = el("button", "btn btn-danger btn-small", "Remover artigo");
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover notícia");
   removeBtn.type = "button";
   removeBtn.addEventListener("click", () => removeArticle(i));
   actions.appendChild(removeBtn);
@@ -1068,19 +1236,19 @@ function moveArticle(from, to) {
 
 function removeArticle(i) {
   const article = contentData.articles[i];
-  if (!confirm(`Remover o artigo "${article.title || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  if (!confirm(`Remover a notícia "${article.title || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
   collectAll();
   contentData.articles.splice(i, 1);
   renderArticlesList();
   markDirty("articles");
-  toast('Artigo removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Notícia removida — clique em "Salvar no GitHub" para confirmar.', "ok");
 }
 
 function addArticle() {
   collectAll();
-  const id = uniqueSlug(contentData.articles.map((a) => a.id), "novo-artigo");
-  // Insere no início: a home e a lista pública mostram os artigos na ordem
-  // do array, então um artigo novo já aparece em primeiro sem precisar
+  const id = uniqueSlug(contentData.articles.map((a) => a.id), "nova-noticia");
+  // Insere no início: a home e a lista pública mostram as notícias na ordem
+  // do array, então uma notícia nova já aparece em primeiro sem precisar
   // reordenar manualmente.
   contentData.articles.unshift({
     id,
@@ -1089,7 +1257,7 @@ function addArticle() {
     excerpt: "",
     date: new Date().toISOString().slice(0, 10),
     readingTime: "",
-    body: [],
+    body: "",
   });
   renderArticlesList();
   markDirty("articles");

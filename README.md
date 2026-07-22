@@ -1,7 +1,7 @@
 # Astrobotânica — site do podcast
 
 Site estático (HTML + CSS + TypeScript), multi-página. O foco principal do
-site é divulgação científica em **Artigos**; em paralelo, o **Podcast** trata
+site é divulgação científica em **Notícias**; em paralelo, o **Podcast** trata
 dos mesmos temas em áudio. Todo o conteúdo é editado pelo painel em `/admin`.
 
 ## Estrutura
@@ -9,8 +9,8 @@ dos mesmos temas em áudio. Todo o conteúdo é editado pelo painel em `/admin`.
 ```
 site/
 ├── index.html          → Home
-├── artigos.html         → lista de artigos (conteúdo principal)
-├── artigo.html           → detalhe de um artigo (?id=...)
+├── artigos.html         → lista de notícias (conteúdo principal)
+├── artigo.html           → detalhe de uma notícia (?id=...)
 ├── podcast.html          → lista de episódios
 ├── episodio.html          → detalhe de um episódio (?id=ep-01), inclui a transcrição
 ├── sobre.html
@@ -19,7 +19,7 @@ site/
 ├── css/style.css        → todo o visual (paleta, tipografia, layout)
 ├── data/
 │   ├── episodes.json      → CONTEÚDO: episódios
-│   ├── articles.json       → CONTEÚDO: artigos
+│   ├── articles.json       → CONTEÚDO: notícias
 │   ├── site.json            → todo o texto fixo do site em português (nav, rodapé, títulos, textos de cada página) — editável pelo painel
 │   ├── site.en.json          → tradução em inglês do mesmo conteúdo (ver "Idioma" abaixo) — não editável pelo painel, só manualmente
 │   └── auth.json            → acessos do painel (tokens criptografados, não em texto puro)
@@ -31,7 +31,7 @@ site/
 └── tsconfig.json
 ```
 
-O conteúdo (episódios e artigos) vive em `data/*.json`, carregado pelo
+O conteúdo (episódios e notícias) vive em `data/*.json`, carregado pelo
 navegador em tempo real via `fetch()`. Só é preciso rodar `npx tsc` se você
 alterar a **lógica** do site em `src/main.ts` — editar o conteúdo (pelo
 painel ou direto no JSON) nunca exige recompilar.
@@ -50,7 +50,7 @@ JSON por causa de uma restrição de segurança do navegador.
 
 ### Textos fixos do site (`data/site.json`)
 
-Todo o texto que não é um episódio nem um artigo — nome do site, itens de
+Todo o texto que não é um episódio nem uma notícia — nome do site, itens de
 menu, textos do rodapé, título/introdução de cada página, os 3 cartões da
 página Sobre, o email de contato, etc. — vem de `data/site.json`, editável
 pelo painel (seções "Marca & navegação" e "Páginas" — ver abaixo).
@@ -76,7 +76,7 @@ localmente nem passo de build para isso.
   painel não edita esse arquivo). As duas chaves precisam ficar em sincronia;
   se uma chave existir só em português, o texto em inglês simplesmente não
   aparece (o `data-text` mantém o texto em português já presente no HTML).
-- **Conteúdo de artigos/episódios** (título, corpo, transcrição etc., em
+- **Conteúdo de notícias/episódios** (título, corpo, transcrição etc., em
   `data/episodes.json`/`data/articles.json`) **não é traduzido** — só a
   interface fixa (menu, rodapé, títulos de página, mensagens de
   carregamento/vazio/erro).
@@ -97,17 +97,17 @@ tanto rodando localmente quanto no site já publicado. Não existe link para
 
 **Layout**: barra lateral com o conteúdo agrupado —
 
-- **Conteúdo**: Artigos, Episódios (listas com card por item, expansível)
+- **Conteúdo**: Notícias, Episódios (listas com card por item, expansível)
 - **Geral**: Marca & navegação (nome do site, menu, rodapé, textos de
   "em breve" das plataformas)
-- **Páginas**: um item por página (Home, Podcast, Episódio, Artigos, Artigo,
+- **Páginas**: um item por página (Home, Podcast, Episódio, Notícias, Notícia,
   Sobre, Contato) com os textos fixos daquela página
 - **Sistema**: Acessos
 
 **Como funciona**: o painel não tem servidor próprio, e edita em memória —
 `data/episodes.json`, `data/articles.json` e `data/site.json` só são
 gravados no GitHub quando você clica em **"Salvar no GitHub"**, no topo da
-tela. Reordenar (setas ▲▼), adicionar e remover artigo/episódio já contam
+tela. Reordenar (setas ▲▼), adicionar e remover notícia/episódio já contam
 como alteração na hora. Já **editar campos de um card** (texto, checkbox,
 upload de áudio/imagem) não conta como nada até você clicar em **"Salvar
 alterações"**, no fim daquele card — só esse clique sincroniza o que está
@@ -126,14 +126,14 @@ cada JSON como um commit no repositório `myceliumBrain/astrobotanica-site`,
 branch `main`. **Acessos** é a exceção: adicionar/revogar ali já commita na
 hora, sem esperar nenhum desses botões.
 
-A ordem dos artigos e episódios nas listas (setas ▲▼) é a mesma ordem em que
+A ordem das notícias e episódios nas listas (setas ▲▼) é a mesma ordem em que
 eles aparecem no site público — não há mais reordenação automática por data.
 Um item novo entra no topo da lista por padrão (então, por exemplo, ao
 cadastrar o episódio 2 ele já nasce acima do episódio 1, sem precisar mexer
 nas setas).
 
-**Destaque na Home**: cada artigo/episódio tem uma checkbox "Destacar na
-Home". A Home mostra no máximo 6 artigos e 6 episódios, escolhidos assim:
+**Destaque na Home**: cada notícia/episódio tem uma checkbox "Destacar na
+Home". A Home mostra no máximo 6 notícias e 6 episódios, escolhidos assim:
 primeiro entram todos os marcados (até o limite de 6); as vagas que sobrarem
 são preenchidas pelos não marcados mais próximos do topo da lista — ou seja,
 os mais recentes. Isso significa que um item não marcado só sai da Home
@@ -194,32 +194,33 @@ sobrescrever o que foi editado pelo painel.
 conveniência, não o único jeito. Veja os formatos abaixo se preferir editar
 `data/episodes.json`/`data/articles.json` direto (ou fazer edições em lote).
 
-### Formato de um artigo
+### Formato de uma notícia
 
 ```json
 {
-  "id": "artigo-01",
+  "id": "noticia-01",
   "category": "Fisiologia vegetal",
-  "title": "Título do artigo",
+  "title": "Título da notícia",
   "subtitle": "Subtítulo opcional",
   "excerpt": "Resumo curto usado na listagem.",
   "date": "2026-08-10",
   "readingTime": "6 min",
-  "body": [
-    "Primeiro parágrafo...",
-    "Segundo parágrafo..."
-  ],
+  "body": "<p>Primeiro parágrafo...</p><p>Segundo parágrafo com <strong>negrito</strong>.</p>",
   "featured": true
 }
 ```
 
-`category` aparece como etiqueta no cartão; `subtitle` é opcional. `image`
-também é opcional (caminho de uma imagem de capa, ex:
-`images/artigos/nome-do-arquivo.jpg`) — sem ela, o cartão mostra só um
-retângulo vazio no lugar do pôster. Assim como o `.mp3` dos episódios, o
-arquivo de imagem em si precisa ser enviado à pasta `images/artigos/` por
-fora (via git); o painel só grava o caminho no JSON. `featured` é opcional
-(padrão ausente/`false`) — ver "Destaque na Home" acima.
+`category` aparece como etiqueta no cartão; `subtitle` é opcional. `body` é
+HTML (parágrafos, `<strong>` para negrito, `<img>` para imagens no meio do
+texto) gerado pelo editor de formatação do painel — não precisa (e não deve)
+ser escrito à mão com conteúdo não confiável, já que é inserido direto na
+página via `innerHTML`. `image` também é opcional (caminho de uma imagem de
+capa, ex: `images/noticias/nome-da-noticia.jpg`) — sem ela, o cartão mostra
+só um retângulo vazio no lugar do pôster. Assim como no episódio, a imagem de
+capa e as imagens inseridas no corpo **podem ser enviadas direto pelo
+painel** (ver "Formato de um episódio" abaixo para como esse envio funciona).
+`featured` é opcional (padrão ausente/`false`) — ver "Destaque na Home"
+acima.
 
 ### Formato de um episódio
 
@@ -246,14 +247,15 @@ primeiras linhas, com "▼ Ver transcrição completa" pra abrir o resto).
 `image` também é opcional: um banner (16:9, mostrado a metade da altura)
 no topo da página do episódio, com a etiqueta/título/data sobrepostos nele.
 
-Diferente dos artigos, o `.mp3` e a imagem de um episódio **podem ser
-enviados direto pelo painel** — o campo de cada um tem um botão de envio de
-arquivo; o caminho ao lado é só leitura (mostra o que está salvo, não dá
-pra digitar nele). Escolher um arquivo não envia nada ainda — só fica
-"selecionado" até você clicar em "Salvar alterações" do card (vira "na
-fila"), e só é de fato commitado para `audio/` ou `images/episodios/` (via
-Git Data API do GitHub, já que a Contents API não serve para arquivos
-grandes) quando você clica em "Salvar no GitHub".
+O `.mp3` e a imagem de um episódio (e, do mesmo jeito, a imagem de capa e as
+imagens do corpo de uma notícia) **podem ser enviados direto pelo painel** —
+o campo de cada um tem um botão de envio de arquivo; o caminho ao lado é só
+leitura (mostra o que está salvo, não dá pra digitar nele). Escolher um
+arquivo não envia nada ainda — só fica "selecionado" até você clicar em
+"Salvar alterações" do card (vira "na fila"), e só é de fato commitado para
+`audio/`, `images/episodios/` ou `images/noticias/` (via Git Data API do
+GitHub, já que a Contents API não serve para arquivos grandes) quando você
+clica em "Salvar no GitHub".
 
 ## Como recompilar depois de editar `src/main.ts`
 
@@ -329,7 +331,7 @@ desde que o serviço sirva os arquivos por HTTP (todos esses servem).
   sistema ou pela escolha salva em `localStorage.theme`; um script inline no
   `<head>` de cada página aplica isso antes da primeira pintura, evitando
   flash do tema errado.
-- **Grade de artigos**: cartões de altura uniforme (pôster + título + data),
+- **Grade de notícias**: cartões de altura uniforme (pôster + título + data),
   usada igual na Home, em `/artigos` e em "Continue lendo" — classes
   `.article-grid` / `.article-card` em `css/style.css`, geradas por
   `buildArticleCard()` em `src/main.ts`.

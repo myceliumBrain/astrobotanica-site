@@ -428,9 +428,7 @@ function renderArticleDetail(articles) {
     root.appendChild(meta);
 
     const body = el("div", "article-body");
-    for (const paragraph of article.body) {
-        body.appendChild(el("p", "", paragraph));
-    }
+    body.innerHTML = article.body;
     root.appendChild(body);
 
     const related = document.getElementById("artigo-related");

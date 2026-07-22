@@ -24,8 +24,8 @@ interface Article {
   excerpt: string; // resumo curto (usado só na página de detalhe)
   date: string; // formato AAAA-MM-DD
   readingTime: string; // ex: "6 min"
-  body: string[]; // um parágrafo por item do array
-  image?: string; // opcional: caminho da imagem de capa, ex: "images/artigos/meu-artigo.jpg"
+  body: string; // HTML gerado pelo editor do painel (negrito, parágrafos, imagens)
+  image?: string; // opcional: caminho da imagem de capa, ex: "images/noticias/minha-noticia.jpg"
   featured?: boolean; // marcado no admin: fixa o artigo na Home (ver selectHomeItems)
 }
 
@@ -498,9 +498,7 @@ function renderArticleDetail(articles: Loaded<Article>): void {
   root.appendChild(meta);
 
   const body = el("div", "article-body");
-  for (const paragraph of article.body) {
-    body.appendChild(el("p", "", paragraph));
-  }
+  body.innerHTML = article.body;
   root.appendChild(body);
 
   const related = document.getElementById("artigo-related");
