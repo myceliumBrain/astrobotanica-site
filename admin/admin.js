@@ -771,6 +771,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   textInput.className = "input";
   textInput.type = "text";
   textInput.value = currentValue ?? "";
+  textInput.readOnly = true;
   if (opts.placeholder) textInput.placeholder = opts.placeholder;
   Object.entries(dataset).forEach(([k, v]) => { textInput.dataset[k] = v; });
   row.appendChild(textInput);

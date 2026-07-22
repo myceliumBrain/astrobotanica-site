@@ -260,6 +260,8 @@ a, button { cursor: pointer; }
 /* ── UPLOAD DE ARQUIVO (áudio/imagem) ── */
 .file-upload-row { display: flex; gap: 0.5rem; }
 .file-upload-row .input { flex: 1; min-width: 0; }
+.file-upload-row .input[readonly] { color: var(--adm-off-white); cursor: default; }
+.file-upload-row .input[readonly]:focus { border-color: var(--adm-border); }
 .file-upload-btn { flex: none; white-space: nowrap; }
 .file-upload-btn.disabled { opacity: 0.5; pointer-events: none; }
 .file-upload-status {
