@@ -12,19 +12,27 @@
 <header class="site-header">
   <div class="wrap header-stack">
     <a href="/" class="brand-mark" data-text="brand.name">astrobotânica</a>
-    <nav class="primary-nav">
-      <a href="/" data-text="nav.home">Home</a>
-      <a href="/artigos" aria-current="page" data-text="nav.articles">Artigos</a>
-      <a href="/podcast" data-text="nav.podcast">Podcast</a>
-      <a href="/sobre" data-text="nav.about">Sobre</a>
-      <a href="/contato" data-text="nav.contact">Contato</a>
-    </nav>
+    <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="nav-overlay">
+      <span class="nav-toggle-bar"></span>
+      <span class="nav-toggle-bar"></span>
+      <span class="nav-toggle-bar"></span>
+      <span class="visually-hidden">Abrir menu</span>
+    </button>
   </div>
 </header>
 
+<div class="nav-overlay" id="nav-overlay">
+  <nav class="nav-overlay-panel">
+    <button type="button" class="nav-overlay-close" aria-label="Fechar menu">✕</button>
+    <a href="/artigos" aria-current="page" data-text="nav.articles">Artigos</a>
+    <a href="/podcast" data-text="nav.podcast">Podcast</a>
+    <a href="/sobre" data-text="nav.about">Sobre</a>
+    <a href="/contato" data-text="nav.contact">Contato</a>
+  </nav>
+</div>
+
 <main>
   <section class="page-header wrap">
-    <span class="tag tag-accent" data-text="artigos.tag">Artigos</span>
     <h1 data-text="artigos.title">Artigos</h1>
     <p data-text="artigos.intro">Divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra.</p>
   </section>

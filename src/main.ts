@@ -442,6 +442,46 @@ function renderHomeHighlights(episodes: Loaded<Episode>, articles: Loaded<Articl
 }
 
 // ----------------------------------------------------------------------------
+// Menu: overlay de navegação aberto pelo botão hamburguer (.nav-toggle)
+// ----------------------------------------------------------------------------
+
+function setupNavOverlay(): void {
+  const toggle = document.querySelector<HTMLButtonElement>(".nav-toggle");
+  const overlay = document.getElementById("nav-overlay");
+  if (!toggle || !overlay) return;
+
+  const closeBtn = overlay.querySelector<HTMLButtonElement>(".nav-overlay-close");
+
+  function open(): void {
+    overlay!.classList.add("is-open");
+    toggle!.setAttribute("aria-expanded", "true");
+    document.body.classList.add("nav-open");
+  }
+
+  function close(): void {
+    overlay!.classList.remove("is-open");
+    toggle!.setAttribute("aria-expanded", "false");
+    document.body.classList.remove("nav-open");
+  }
+
+  toggle.addEventListener("click", () => {
+    const isOpen = toggle.getAttribute("aria-expanded") === "true";
+    if (isOpen) close();
+    else open();
+  });
+
+  closeBtn?.addEventListener("click", close);
+
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay) close();
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") close();
+  });
+}
+
+// ----------------------------------------------------------------------------
 // Cabeçalho: recua ao rolar para baixo, reaparece ao rolar para cima
 // (a transição em si é feita via CSS, em .site-header/.site-header--hidden)
 // ----------------------------------------------------------------------------
@@ -479,6 +519,7 @@ function setupHeaderAutoHide(): void {
 
 document.addEventListener("DOMContentLoaded", async () => {
   setupHeaderAutoHide();
+  setupNavOverlay();
   const [episodes, articles, site] = await Promise.all([loadEpisodes(), loadArticles(), loadSiteText()]);
   applySiteText(site);
   renderEpisodeList(episodes);

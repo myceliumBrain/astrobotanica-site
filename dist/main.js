@@ -328,8 +328,37 @@ function setupHeaderAutoHide() {
         }
     }, { passive: true });
 }
+function setupNavOverlay() {
+    const toggle = document.querySelector(".nav-toggle");
+    const overlay = document.getElementById("nav-overlay");
+    if (!toggle || !overlay) return;
+    const closeBtn = overlay.querySelector(".nav-overlay-close");
+    function open() {
+        overlay.classList.add("is-open");
+        toggle.setAttribute("aria-expanded", "true");
+        document.body.classList.add("nav-open");
+    }
+    function close() {
+        overlay.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+        document.body.classList.remove("nav-open");
+    }
+    toggle.addEventListener("click", () => {
+        const isOpen = toggle.getAttribute("aria-expanded") === "true";
+        if (isOpen) close();
+        else open();
+    });
+    closeBtn?.addEventListener("click", close);
+    overlay.addEventListener("click", (event) => {
+        if (event.target === overlay) close();
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") close();
+    });
+}
 document.addEventListener("DOMContentLoaded", async () => {
     setupHeaderAutoHide();
+    setupNavOverlay();
     const [episodes, articles, site] = await Promise.all([loadEpisodes(), loadArticles(), loadSiteText()]);
     applySiteText(site);
     renderEpisodeList(episodes);
