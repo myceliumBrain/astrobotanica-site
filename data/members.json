@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "id": "integrante-pedro",
+    "name": "Pedro Henrique Tenorio Alvarenga",
+    "description": "Pedro é um apaixonado por biologia, especialmente plantas e microbiologia. Desde antes da graduação, sempre flertou com a cosmologia, e a oportunidade de juntar todos os blocos veio com a entrada no Laboratório de Biologia Molecular de Plantas e Fungos da UNIRIO, onde passou a atuar em pesquisas de astrobotânica na área de Space Farming.",
+    "image": "images/integrantes/integrante-pedro.jpeg"
+  }
+]
