@@ -123,17 +123,27 @@ function renderEpisodeDetail(episodes) {
         root.appendChild(el("p", "empty-state", "Episódio não encontrado."));
         return;
     }
+    const tag = el("span", "tag tag-accent", `Episódio ${episode.number}`);
+    const heading = el("h1", "", episode.title);
+    const meta = el("p", "episode-detail-meta", `${formatDate(episode.date)} · ${episode.duration}`);
     if (episode.image) {
         const cover = el("div", "episode-cover");
         const img = document.createElement("img");
         img.src = episode.image;
         img.alt = "";
         cover.appendChild(img);
+        const overlay = el("div", "episode-cover-overlay");
+        overlay.appendChild(tag);
+        overlay.appendChild(heading);
+        overlay.appendChild(meta);
+        cover.appendChild(overlay);
         root.appendChild(cover);
     }
-    root.appendChild(el("span", "tag tag-accent", `Episódio ${episode.number}`));
-    root.appendChild(el("h1", "", episode.title));
-    root.appendChild(el("p", "episode-detail-meta", `${formatDate(episode.date)} · ${episode.duration}`));
+    else {
+        root.appendChild(tag);
+        root.appendChild(heading);
+        root.appendChild(meta);
+    }
     const player = el("div", "player-panel");
     const audio = document.createElement("audio");
     audio.controls = true;

@@ -270,6 +270,7 @@ button { font-family: inherit; }
 }
 
 .episode-cover {
+  position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
   background: var(--accent-100);
@@ -277,6 +278,18 @@ button { font-family: inherit; }
   margin-bottom: var(--space-3);
 }
 .episode-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Título/etiqueta/meta ficam sobrepostos no canto inferior esquerdo da
+   imagem (em vez de abaixo dela) para o player vir logo em seguida. */
+.episode-cover-overlay {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: var(--space-3);
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0) 85%);
+}
+.episode-cover-overlay .tag-accent { margin-bottom: var(--space-1); }
+.episode-cover-overlay h1 { color: #fff; }
+.episode-cover-overlay .episode-detail-meta { color: rgba(255, 255, 255, 0.8); margin-bottom: 0; }
 
 .player-panel {
   border: 1px solid var(--line);

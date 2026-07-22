@@ -200,20 +200,29 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
     return;
   }
 
+  const tag = el("span", "tag tag-accent", `Episódio ${episode.number}`);
+  const heading = el("h1", "", episode.title);
+  const meta = el("p", "episode-detail-meta", `${formatDate(episode.date)} · ${episode.duration}`);
+
   if (episode.image) {
+    // Com imagem: título/etiqueta/meta ficam sobrepostos nela (canto
+    // inferior esquerdo), então o player vem logo em seguida.
     const cover = el("div", "episode-cover");
     const img = document.createElement("img");
     img.src = episode.image;
     img.alt = "";
     cover.appendChild(img);
+    const overlay = el("div", "episode-cover-overlay");
+    overlay.appendChild(tag);
+    overlay.appendChild(heading);
+    overlay.appendChild(meta);
+    cover.appendChild(overlay);
     root.appendChild(cover);
+  } else {
+    root.appendChild(tag);
+    root.appendChild(heading);
+    root.appendChild(meta);
   }
-
-  root.appendChild(el("span", "tag tag-accent", `Episódio ${episode.number}`));
-  root.appendChild(el("h1", "", episode.title));
-  root.appendChild(
-    el("p", "episode-detail-meta", `${formatDate(episode.date)} · ${episode.duration}`)
-  );
 
   const player = el("div", "player-panel");
   const audio = document.createElement("audio");
