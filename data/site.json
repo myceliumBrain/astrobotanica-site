@@ -82,17 +82,11 @@
     "metaTitle": "Sobre — Astrobotânica",
     "metaDescription": "Astrobotânica é conduzido por Pedro, pesquisador na área, cobrindo pesquisa de bancada e a jornada das plantas para fora da Terra.",
     "tag": "Sobre",
-    "title": "Registro de bordo",
-    "intro": "Astrobotânica é conduzido por Pedro, pesquisador na área, cobrindo desde a pesquisa de bancada — rizobactérias promotoras de crescimento, óxido de grafeno, cultivo em regolito lunar — até a história e o futuro de levar plantas para fora da Terra. O projeto é, em primeiro lugar, um espaço de divulgação científica em texto; em paralelo, os mesmos temas viram conversa longa no podcast.",
-    "card1Kicker": "Método",
-    "card1Title": "Pesquisa de bancada",
-    "card1Body": "Cada artigo parte de temas que atravessam a pesquisa em astrobotânica — não de especulação solta.",
-    "card2Kicker": "Fontes",
-    "card2Title": "Fonte citada",
-    "card2Body": "O que é ciência estabelecida e o que é especulação fica sempre marcado, sem misturar os dois.",
-    "card3Kicker": "Formato",
-    "card3Title": "Artigos e podcast",
-    "card3Body": "Os artigos são o principal; o podcast aprofunda os mesmos temas em conversa longa."
+    "title": "Sobre",
+    "intro": "Astrobotânica é um projeto de divulgação científica sobre pesquisas espaciais envolvendo plantas — da agricultura fora da Terra à fisiologia vegetal em ambientes extremos.",
+    "membersHeading": "Integrantes",
+    "loadErrorMembers": "Não foi possível carregar os integrantes agora.",
+    "noMembers": "Em breve."
   },
   "contato": {
     "metaTitle": "Contato — Astrobotânica",

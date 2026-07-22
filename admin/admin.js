@@ -21,12 +21,14 @@ const CONFIG = {
   authPath: "data/auth.json",
   episodesPath: "data/episodes.json",
   articlesPath: "data/articles.json",
+  membersPath: "data/members.json",
   sitePath: "data/site.json",
 };
 
 const PATHS = {
   articles: CONFIG.articlesPath,
   episodes: CONFIG.episodesPath,
+  members: CONFIG.membersPath,
   site: CONFIG.sitePath,
 };
 
@@ -137,15 +139,7 @@ const PAGE_SCHEMA = [
       { key: "sobre.tag", label: "Selo", type: "text" },
       { key: "sobre.title", label: "Título", type: "text" },
       { key: "sobre.intro", label: "Texto de introdução", type: "textarea" },
-      { key: "sobre.card1Kicker", label: "Cartão 1 — selo", type: "text" },
-      { key: "sobre.card1Title", label: "Cartão 1 — título", type: "text" },
-      { key: "sobre.card1Body", label: "Cartão 1 — texto", type: "textarea" },
-      { key: "sobre.card2Kicker", label: "Cartão 2 — selo", type: "text" },
-      { key: "sobre.card2Title", label: "Cartão 2 — título", type: "text" },
-      { key: "sobre.card2Body", label: "Cartão 2 — texto", type: "textarea" },
-      { key: "sobre.card3Kicker", label: "Cartão 3 — selo", type: "text" },
-      { key: "sobre.card3Title", label: "Cartão 3 — título", type: "text" },
-      { key: "sobre.card3Body", label: "Cartão 3 — texto", type: "textarea" },
+      { key: "sobre.membersHeading", label: "Título da seção \"Integrantes\"", type: "text" },
     ],
   },
   {
@@ -612,6 +606,7 @@ async function enterApp() {
   document.getElementById("save-btn").addEventListener("click", saveAll);
   document.getElementById("add-article-btn").addEventListener("click", addArticle);
   document.getElementById("add-episode-btn").addEventListener("click", addEpisode);
+  document.getElementById("add-member-btn").addEventListener("click", addMember);
   document.getElementById("access-submit").addEventListener("click", addAccess);
 
   await loadContent();
@@ -623,7 +618,7 @@ async function enterApp() {
 // Conteúdo: carregar, salvar, marcar sujo
 // ----------------------------------------------------------------------------
 
-let contentData = { articles: null, episodes: null, site: null };
+let contentData = { articles: null, episodes: null, members: null, site: null };
 const dirty = new Set();
 
 // Uploads de áudio/imagem confirmados (via "Salvar alterações" de um card),
@@ -655,20 +650,35 @@ function markDirty(section) {
   setSaveStatus("alterações pendentes", "pending");
 }
 
+// Busca um arquivo de conteúdo que pode ainda não existir no repositório
+// (ex: data/members.json antes do primeiro "Salvar no GitHub" desta feature)
+// — trata 404 como "lista vazia" em vez de derrubar o carregamento inteiro.
+async function getFileOrEmpty(path, fallback) {
+  try {
+    return await getFile(path);
+  } catch (err) {
+    if (err.status !== 404) throw err;
+    return { content: fallback, sha: undefined };
+  }
+}
+
 async function loadContent() {
   setSaveStatus("carregando…");
   try {
-    const [articles, episodes, site] = await Promise.all([
+    const [articles, episodes, members, site] = await Promise.all([
       getFile(CONFIG.articlesPath),
       getFile(CONFIG.episodesPath),
+      getFileOrEmpty(CONFIG.membersPath, []),
       getFile(CONFIG.sitePath),
     ]);
     contentData.articles = articles.content;
     contentData.episodes = episodes.content;
+    contentData.members = members.content || [];
     contentData.site = site.content;
     dirty.clear();
     renderArticlesList();
     renderEpisodesList();
+    renderMembersList();
     renderGeneralForm();
     setSaveStatus("dados carregados ✓", "ok");
     document.getElementById("save-btn").disabled = true;
@@ -717,12 +727,22 @@ function applyEpisodeField(input) {
   record[key] = input.value;
 }
 
+function applyMemberField(input) {
+  const i = Number(input.dataset.member);
+  const key = input.dataset.key;
+  const record = contentData.members[i];
+  if (!record) return;
+  if (key === "image" && !input.value) { delete record.image; return; }
+  record[key] = input.value;
+}
+
 // collectAll(): sincroniza TUDO que está na tela pra dentro de contentData —
 // usado antes de reordenar/remover/adicionar (e no salvamento final), pra
 // não perder edição em outros cards quando a lista é redesenhada do zero.
 function collectAll() {
   document.querySelectorAll("[data-article]").forEach(applyArticleField);
   document.querySelectorAll("[data-episode]").forEach(applyEpisodeField);
+  document.querySelectorAll("[data-member]").forEach(applyMemberField);
   document.querySelectorAll("[data-site]").forEach((input) => {
     setByPath(contentData.site, input.dataset.site, input.value);
   });
@@ -738,6 +758,9 @@ function collectArticleCardFields(i) {
 function collectEpisodeCardFields(i) {
   document.querySelectorAll(`[data-episode="${i}"]`).forEach(applyEpisodeField);
 }
+function collectMemberCardFields(i) {
+  document.querySelectorAll(`[data-member="${i}"]`).forEach(applyMemberField);
+}
 
 async function saveAll() {
   if (dirty.size === 0 && pendingUploads.length === 0) return;
@@ -750,7 +773,10 @@ async function saveAll() {
     }
     pendingUploads.length = 0;
     for (const section of dirty) {
-      const fresh = await getFile(PATHS[section]);
+      // sha undefined (arquivo ainda não existe no repositório, ex: primeiro
+      // salvamento de data/members.json) faz o PUT criar o arquivo em vez de
+      // atualizar um existente — ver getFileOrEmpty.
+      const fresh = await getFileOrEmpty(PATHS[section], null);
       await putFile(PATHS[section], contentData[section], fresh.sha, `admin: atualiza ${section}`);
     }
     dirty.clear();
@@ -1240,6 +1266,124 @@ function addEpisode() {
   renderEpisodesList();
   markDirty("episodes");
   const card = document.getElementById("episode-card-0");
+  if (card) card.classList.add("open");
+}
+
+// ----------------------------------------------------------------------------
+// Integrantes
+// ----------------------------------------------------------------------------
+
+function renderMembersList() {
+  const container = document.getElementById("members-list");
+  container.innerHTML = "";
+  const items = contentData.members;
+  document.getElementById("nav-count-members").textContent = items.length || "";
+  document.getElementById("count-members").textContent = `${items.length} ${items.length === 1 ? "integrante" : "integrantes"}`;
+
+  if (items.length === 0) {
+    container.appendChild(el("p", "empty-state", "Nenhum integrante cadastrado ainda."));
+    return;
+  }
+
+  items.forEach((member, i) => container.appendChild(buildMemberCard(member, i, items.length)));
+}
+
+// Lê o valor atual do campo "id" direto do DOM (pode ter sido editado e
+// ainda não persistido em contentData) para nomear o arquivo de foto enviado.
+function memberSlug(i, member) {
+  const idInput = document.querySelector(`[data-member="${i}"][data-key="id"]`);
+  const raw = (idInput && idInput.value.trim()) || member.id || `integrante-${i + 1}`;
+  return slugify(raw) || `integrante-${i + 1}`;
+}
+
+function buildMemberCard(member, i, total) {
+  const card = el("div", "card");
+  card.id = `member-card-${i}`;
+
+  const header = el("div", "card-header");
+  const left = el("div", "card-header-left");
+  left.appendChild(buildReorderButtons(i, total, () => moveMember(i, i - 1), () => moveMember(i, i + 1)));
+  left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
+  left.appendChild(el("span", "card-name", member.name || "(sem nome)"));
+  header.appendChild(left);
+  header.appendChild(el("span", "card-chevron", "▼"));
+  header.addEventListener("click", () => card.classList.toggle("open"));
+  card.appendChild(header);
+
+  const body = el("div", "card-body");
+  const grid = el("div", "fields-grid");
+
+  grid.appendChild(buildInput("Identificador (id)", "text", member.id, { member: i, key: "id" }));
+  grid.appendChild(buildInput("Nome", "text", member.name, { member: i, key: "name" }));
+
+  const description = buildTextarea("Descrição", member.description, { member: i, key: "description" });
+  description.classList.add("full");
+  grid.appendChild(description);
+
+  const photoField = buildFileUploadField(
+    "Foto",
+    member.image,
+    { member: i, key: "image" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar foto",
+      placeholder: "images/integrantes/nome.jpg",
+      preview: true,
+      buildPath: (file) => `images/integrantes/${memberSlug(i, member)}.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia foto do integrante "${member.name || member.id}" (${path})`,
+    }
+  );
+  photoField.classList.add("full");
+  grid.appendChild(photoField);
+
+  body.appendChild(grid);
+
+  const actions = el("div", "card-actions");
+  const saveBtn = buildSaveCardButton(() => {
+    photoField.confirmFileUpload();
+    collectMemberCardFields(i);
+    markDirty("members");
+    toast('Alterações do integrante prontas — clique em "Salvar no GitHub" para enviar.', "ok");
+  });
+  actions.appendChild(saveBtn);
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover integrante");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => removeMember(i));
+  actions.appendChild(removeBtn);
+  body.appendChild(actions);
+
+  card.appendChild(body);
+
+  return card;
+}
+
+function moveMember(from, to) {
+  if (to < 0 || to >= contentData.members.length) return;
+  collectAll();
+  const [item] = contentData.members.splice(from, 1);
+  contentData.members.splice(to, 0, item);
+  renderMembersList();
+  markDirty("members");
+  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
+
+function removeMember(i) {
+  const member = contentData.members[i];
+  if (!confirm(`Remover o integrante "${member.name || "(sem nome)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  collectAll();
+  contentData.members.splice(i, 1);
+  renderMembersList();
+  markDirty("members");
+  toast('Integrante removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
+
+function addMember() {
+  collectAll();
+  const id = uniqueSlug(contentData.members.map((m) => m.id), "novo-integrante");
+  contentData.members.unshift({ id, name: "", description: "" });
+  renderMembersList();
+  markDirty("members");
+  const card = document.getElementById("member-card-0");
   if (card) card.classList.add("open");
 }
 

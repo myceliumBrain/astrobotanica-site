@@ -82,17 +82,11 @@
     "metaTitle": "About — Astrobotanica",
     "metaDescription": "Astrobotanica is run by Pedro, a researcher in the field, covering bench research and the journey of plants beyond Earth.",
     "tag": "About",
-    "title": "Ship's log",
-    "intro": "Astrobotanica is run by Pedro, a researcher in the field, covering everything from bench research — plant growth-promoting rhizobacteria, graphene oxide, cultivation in lunar regolith — to the history and future of taking plants beyond Earth. The project is, first and foremost, a written science communication space; alongside it, the same topics turn into long-form conversation on the podcast.",
-    "card1Kicker": "Method",
-    "card1Title": "Bench research",
-    "card1Body": "Every article starts from topics that run through astrobotany research — not loose speculation.",
-    "card2Kicker": "Sources",
-    "card2Title": "Cited sources",
-    "card2Body": "What is established science and what is speculation is always marked, never mixed together.",
-    "card3Kicker": "Format",
-    "card3Title": "Articles and podcast",
-    "card3Body": "Articles are the main format; the podcast dives deeper into the same topics in long-form conversation."
+    "title": "About",
+    "intro": "Astrobotanica is a science communication project about space research involving plants — from off-Earth agriculture to plant physiology in extreme environments.",
+    "membersHeading": "Team",
+    "loadErrorMembers": "Couldn't load the team right now.",
+    "noMembers": "Coming soon."
   },
   "contato": {
     "metaTitle": "Contact — Astrobotanica",

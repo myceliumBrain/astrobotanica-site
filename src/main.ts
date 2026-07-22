@@ -29,6 +29,13 @@ interface Article {
   featured?: boolean; // marcado no admin: fixa o artigo na Home (ver selectHomeItems)
 }
 
+interface Member {
+  id: string;
+  name: string;
+  description: string;
+  image?: string; // opcional: caminho da foto, ex: "images/integrantes/nome.jpg"
+}
+
 interface Loaded<T> {
   items: T[];
   failed: boolean;
@@ -88,6 +95,7 @@ async function loadJSON<T>(path: string): Promise<Loaded<T>> {
 
 const loadEpisodes = () => loadJSON<Episode>("data/episodes.json");
 const loadArticles = () => loadJSON<Article>("data/articles.json");
+const loadMembers = () => loadJSON<Member>("data/members.json");
 
 // ----------------------------------------------------------------------------
 // Idioma: pt/en via i18next. Os textos fixos do site vivem em data/site.json
@@ -540,6 +548,48 @@ function renderHomeHighlights(episodes: Loaded<Episode>, articles: Loaded<Articl
 }
 
 // ----------------------------------------------------------------------------
+// Sobre: integrantes (cadastrados pelo painel /admin, ver data/members.json)
+// ----------------------------------------------------------------------------
+
+function buildMemberCard(member: Member): HTMLDivElement {
+  const card = el("div", "card member-card");
+
+  const photo = el("div", "member-photo");
+  if (member.image) {
+    const img = document.createElement("img");
+    img.src = member.image;
+    img.alt = "";
+    img.loading = "lazy";
+    photo.appendChild(img);
+  }
+  card.appendChild(photo);
+
+  card.appendChild(el("div", "card-title", member.name));
+  card.appendChild(el("p", "card-body", member.description));
+
+  return card;
+}
+
+function renderMembersList(members: Loaded<Member>): void {
+  const list = document.getElementById("members-list");
+  if (!list) return;
+  list.innerHTML = "";
+  list.classList.add("members-grid");
+
+  if (members.failed) {
+    list.appendChild(el("p", "empty-state", i18next.t("sobre.loadErrorMembers")));
+    return;
+  }
+  if (members.items.length === 0) {
+    list.appendChild(el("p", "empty-state", i18next.t("sobre.noMembers")));
+    return;
+  }
+  for (const member of members.items) {
+    list.appendChild(buildMemberCard(member));
+  }
+}
+
+// ----------------------------------------------------------------------------
 // Tema claro/escuro: a escolha (ou preferência do sistema) já é aplicada em
 // <html data-theme="..."> por um script inline no <head> de cada página,
 // antes da primeira pintura (evita flash do tema errado). Aqui só cuidamos
@@ -645,7 +695,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   await initI18n();
   applyTranslations();
 
-  const [episodes, articles] = await Promise.all([loadEpisodes(), loadArticles()]);
+  const [episodes, articles, members] = await Promise.all([loadEpisodes(), loadArticles(), loadMembers()]);
 
   function renderAll(): void {
     renderEpisodeList(episodes);
@@ -653,6 +703,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderArticleList(articles);
     renderArticleDetail(articles);
     renderHomeHighlights(episodes, articles);
+    renderMembersList(members);
   }
 
   renderAll();
