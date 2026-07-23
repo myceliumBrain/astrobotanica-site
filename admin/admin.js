@@ -1099,6 +1099,7 @@ function buildTextarea(labelText, value, dataset, multilineParagraphs) {
 function buildFileUploadField(labelText, currentValue, dataset, opts) {
   const wrap = el("div", "field file-upload-field");
   wrap.appendChild(el("label", "", labelText));
+  if (opts.hint) wrap.appendChild(el("span", "field-hint", opts.hint));
 
   const row = el("div", "file-upload-row");
   const textInput = document.createElement("input");
@@ -1837,6 +1838,7 @@ function buildArticleCard(article, i, total) {
       buttonText: "Enviar imagem",
       preview: true,
       allowClear: true,
+      hint: "Tamanho recomendado: 1600×900px (proporção 16:9)",
       buildPath: (file) => `images/noticias/${article.id}-imagem-principal.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia imagem da notícia "${article.title || article.id}" (${path})`,
     }
@@ -1856,6 +1858,7 @@ function buildArticleCard(article, i, total) {
       preview: true,
       previewClass: "file-upload-preview--vertical",
       allowClear: true,
+      hint: "Tamanho recomendado: 900×1200px (proporção 3:4)",
       buildPath: (file) => `images/noticias/${article.id}-imagem-vertical.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia imagem vertical da notícia "${article.title || article.id}" (${path})`,
     }
