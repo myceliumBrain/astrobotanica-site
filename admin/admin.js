@@ -1568,6 +1568,27 @@ function buildSaveCardButton(onSave) {
   return btn;
 }
 
+// Abre/fecha o acordeão de um card (artigo/episódio/integrante) via
+// max-height + overflow:hidden (CSS, ver .card-body). Só que overflow:hidden
+// num ancestral quebra `position: sticky` (a barra de botões do corpo da
+// notícia, ver .rich-text-toolbar) — o sticky passa a calcular a posição em
+// relação a essa caixa, que nunca rola de verdade, em vez da página, e
+// nunca gruda. Por isso libera o overflow assim que a abertura termina de
+// transicionar, e trava de novo antes de fechar (senão o conteúdo vaza
+// durante a transição de encolhimento).
+function wireCardAccordion(card, header, body) {
+  header.addEventListener("click", () => {
+    const opening = !card.classList.contains("open");
+    if (!opening) body.style.overflow = "";
+    card.classList.toggle("open");
+  });
+  body.addEventListener("transitionend", (e) => {
+    if (e.propertyName === "max-height" && card.classList.contains("open")) {
+      body.style.overflow = "visible";
+    }
+  });
+}
+
 function buildReorderButtons(idx, total, onUp, onDown) {
   const wrap = el("div", "reorder-btns");
   const up = el("button", "reorder-btn", "▲");
@@ -1774,10 +1795,10 @@ function buildArticleCard(article, i, total) {
   left.appendChild(el("span", "card-meta", `${article.category || ""} · ${article.date || ""}`));
   header.appendChild(left);
   header.appendChild(el("span", "card-chevron", "▼"));
-  header.addEventListener("click", () => card.classList.toggle("open"));
   card.appendChild(header);
 
   const body = el("div", "card-body");
+  wireCardAccordion(card, header, body);
   const grid = el("div", "fields-grid");
 
   grid.appendChild(buildReadOnlyField("Identificador (id)", article.id));
@@ -1975,10 +1996,10 @@ function buildEpisodeCard(episode, i, total) {
   left.appendChild(el("span", "card-meta", `${episode.date || ""} · ${episode.duration || ""}`));
   header.appendChild(left);
   header.appendChild(el("span", "card-chevron", "▼"));
-  header.addEventListener("click", () => card.classList.toggle("open"));
   card.appendChild(header);
 
   const body = el("div", "card-body");
+  wireCardAccordion(card, header, body);
   const grid = el("div", "fields-grid");
 
   grid.appendChild(buildReadOnlyField("Identificador (id)", episode.id));
@@ -2240,10 +2261,10 @@ function buildMemberCard(member, i, total) {
   left.appendChild(el("span", "card-name", member.name || "(sem nome)"));
   header.appendChild(left);
   header.appendChild(el("span", "card-chevron", "▼"));
-  header.addEventListener("click", () => card.classList.toggle("open"));
   card.appendChild(header);
 
   const body = el("div", "card-body");
+  wireCardAccordion(card, header, body);
   const grid = el("div", "fields-grid");
 
   // Só editável enquanto o integrante ainda não foi salvo no GitHub (ver

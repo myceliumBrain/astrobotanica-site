@@ -223,12 +223,18 @@ a, button { cursor: pointer; }
 .panel-header-counts { display: flex; gap: 0.9rem; align-items: baseline; }
 
 /* ── CARDS (itens de lista com acordeão) ── */
+/* Sem overflow:hidden aqui de propósito: qualquer ancestral com overflow
+   diferente de visible quebra `position: sticky` dos descendentes (o
+   elemento passa a grudar relativo a essa caixa, que nunca rola de verdade,
+   em vez da página) — é o que impedia a barra de botões do corpo da
+   notícia de acompanhar o scroll. .card-header/.card-body não têm fundo
+   próprio (mostram o da .card por baixo), então não há costura visível nos
+   cantos arredondados sem o clipping. */
 .card {
   background: var(--adm-surface);
   border: 1px solid var(--adm-border);
   border-radius: 3px;
   margin-bottom: 0.9rem;
-  overflow: hidden;
 }
 .card-header {
   display: flex;
@@ -237,6 +243,10 @@ a, button { cursor: pointer; }
   padding: 0.85rem 1.15rem;
   user-select: none;
   gap: 0.75rem;
+  /* Sem overflow:hidden no .card (ver acima), o hover (que tem fundo
+     diferente do .card) precisa arredondar os próprios cantos de cima pra
+     não sobrar canto quadrado por cima do canto arredondado do card. */
+  border-radius: 3px 3px 0 0;
 }
 .card-header:hover { background: var(--adm-surface-2); }
 .card-header-left { display: flex; align-items: center; gap: 0.7rem; min-width: 0; flex: 1; }
