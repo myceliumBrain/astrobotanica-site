@@ -10,7 +10,7 @@ dos mesmos temas em áudio. Todo o conteúdo é editado pelo painel em `/admin`.
 site/
 ├── index.html          → Home
 ├── artigos.html         → lista de notícias (conteúdo principal)
-├── artigo.html           → detalhe de uma notícia (?id=...)
+├── noticia.html          → detalhe de uma notícia (?id=...)
 ├── podcast.html          → lista de episódios
 ├── episodio.html          → detalhe de um episódio (?id=ep-01), inclui a transcrição
 ├── sobre.html

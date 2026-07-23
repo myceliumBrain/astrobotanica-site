@@ -769,15 +769,42 @@ async function loadContent() {
   }
 }
 
+// Caminhos de imagem no corpo são salvos relativos à raiz do site (ex:
+// "images/noticias/x.jpg"), porque é de lá que as páginas públicas (noticia.html
+// etc.) os carregam. Mas o próprio painel vive em /admin/, um nível abaixo —
+// então, exibido cru dentro do editor, esse mesmo src resolveria para
+// /admin/images/noticias/x.jpg (404, ícone quebrado). toEditorPreviewHtml
+// corrige só a exibição (soma um "../"); finalizeRichTextHtml desfaz antes de
+// gravar, pra nunca persistir o "../" no JSON.
+function toEditorPreviewHtml(html) {
+  if (!html) return "";
+  const div = document.createElement("div");
+  div.innerHTML = html;
+  div.querySelectorAll("img[src]").forEach((img) => {
+    const src = img.getAttribute("src");
+    if (src && !/^(https?:|blob:|\.\.\/|\/)/i.test(src)) {
+      img.setAttribute("src", `../${src}`);
+    }
+  });
+  return div.innerHTML;
+}
+
 // O corpo (contenteditable) não tem .value — e as imagens inseridas nele
 // ficam com um src temporário (blob local) até o upload de fato acontecer,
 // então salvar precisa trocar esse src pelo caminho definitivo primeiro
-// (ver data-final-src em buildRichTextField/confirmBodyImages).
+// (ver data-final-src em buildRichTextField/confirmBodyImages). Além disso
+// desfaz o "../" de preview (ver toEditorPreviewHtml) nas imagens já salvas.
 function finalizeRichTextHtml(container) {
   const clone = container.cloneNode(true);
   clone.querySelectorAll("img[data-final-src]").forEach((img) => {
     img.setAttribute("src", img.getAttribute("data-final-src"));
     img.removeAttribute("data-final-src");
+  });
+  clone.querySelectorAll("img[src]").forEach((img) => {
+    const src = img.getAttribute("src");
+    if (src && src.startsWith("../")) {
+      img.setAttribute("src", src.slice(3));
+    }
   });
   return clone.innerHTML;
 }
@@ -1222,7 +1249,7 @@ function buildRichTextField(labelText, value, dataset, opts) {
   const editor = document.createElement("div");
   editor.className = "input rich-text-editor";
   editor.contentEditable = "true";
-  editor.innerHTML = value || "";
+  editor.innerHTML = toEditorPreviewHtml(value);
   Object.entries(dataset).forEach(([k, v]) => { editor.dataset[k] = v; });
   editor.dataset.richtext = "html";
   editor.addEventListener("focus", () => {

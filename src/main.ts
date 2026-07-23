@@ -417,7 +417,7 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
 function buildArticleCard(article: Article): HTMLAnchorElement {
   const card = document.createElement("a");
   card.className = "article-card";
-  card.href = `/artigo?id=${article.id}`;
+  card.href = `/noticia?id=${article.id}`;
 
   const image = el("div", "article-card-image");
   if (article.image) {
@@ -471,7 +471,7 @@ function renderArticleList(articles: Loaded<Article>): void {
 }
 
 // ----------------------------------------------------------------------------
-// Artigo: detalhe (artigo.html?id=...)
+// Artigo: detalhe (noticia.html?id=...)
 // ----------------------------------------------------------------------------
 
 function renderArticleDetail(articles: Loaded<Article>): void {
