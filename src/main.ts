@@ -434,6 +434,9 @@ function buildArticleCard(article: Article): HTMLAnchorElement {
   card.appendChild(
     el("div", "article-card-meta", `${formatDate(article.date)} · ${article.readingTime}`)
   );
+  if (article.author) {
+    card.appendChild(el("div", "article-card-author", i18next.t("artigo.byLine", { author: article.author })));
+  }
 
   return card;
 }
@@ -515,25 +518,16 @@ function renderArticleDetail(articles: Loaded<Article>): void {
     overlay.appendChild(meta);
     cover.appendChild(overlay);
     root.appendChild(cover);
-    if (article.author) {
-      root.appendChild(el("p", "article-author", i18next.t("artigo.byLine", { author: article.author })));
-    }
     if (article.subtitle) {
       root.appendChild(el("p", "article-subtitle", article.subtitle));
     }
   } else {
     root.appendChild(tag);
     root.appendChild(heading);
-    if (article.author) {
-      root.appendChild(el("p", "article-author", i18next.t("artigo.byLine", { author: article.author })));
-    }
     if (article.subtitle) {
       root.appendChild(el("p", "article-subtitle", article.subtitle));
     }
     root.appendChild(meta);
-    if (article.author) {
-      root.appendChild(el("p", "article-author", i18next.t("artigo.byLine", { author: article.author })));
-    }
   }
 
   const body = el("div", "article-body");

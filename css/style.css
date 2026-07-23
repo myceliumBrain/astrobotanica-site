@@ -577,6 +577,14 @@ body.nav-open { overflow: hidden; }
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
 .article-card-meta { font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-faint); margin-top: 4px; }
+.article-card-author {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin-top: 4px;
+}
 
 .card {
   display: flex;
