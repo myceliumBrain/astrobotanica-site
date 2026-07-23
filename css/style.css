@@ -817,6 +817,11 @@ body.nav-open { overflow: hidden; }
 .footer-tagline { font-size: 0.85rem; color: var(--ink-faint); margin-top: 0.4rem; }
 .footer-cols { display: flex; gap: var(--space-4); flex-wrap: wrap; }
 .footer-col { display: flex; flex-direction: column; gap: var(--space-1); }
+/* #footer-social é um wrapper só pra facilitar limpar/repopular via JS (ver
+   renderFooterSocial) — display:contents tira ele do fluxo de caixa, então
+   os links dentro empilham direto no flex-column do .footer-col, igual aos
+   links de "Navegação". Sem isso, eles caem em linha corrida (inline). */
+#footer-social { display: contents; }
 .footer-heading {
   font-family: var(--font-mono);
   font-size: 0.68rem;
