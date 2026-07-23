@@ -936,6 +936,16 @@ async function saveAll() {
       await deleteBinaryFile(deletion.path, deletion.message);
     }
     pendingDeletions.length = 0;
+    // Some antes de serializar: _isNew é só uma marca em memória (ver
+    // addMember) pra liberar a edição do id enquanto o integrante ainda não
+    // tinha sido salvo — nunca deve ir pro JSON do GitHub.
+    let savedNewMembers = false;
+    if (dirty.has("members")) {
+      contentData.members.forEach((m) => {
+        if (m._isNew) savedNewMembers = true;
+        delete m._isNew;
+      });
+    }
     for (const section of dirty) {
       // sha undefined (arquivo ainda não existe no repositório, ex: primeiro
       // salvamento de data/members.json) faz o PUT criar o arquivo em vez de
@@ -944,6 +954,9 @@ async function saveAll() {
       await putFile(PATHS[section], contentData[section], fresh.sha, `admin: atualiza ${section}`);
     }
     dirty.clear();
+    // Redesenha os cards de integrante pra travar o id dos que acabaram de
+    // ser salvos pela primeira vez (some o campo editável, aparece o travado).
+    if (savedNewMembers) renderMembersList();
     setSaveStatus("salvo ✓", "ok");
     toast("Salvo no GitHub!", "ok");
   } catch (err) {
@@ -1001,12 +1014,15 @@ function buildSpinnerNumberField(labelText, value, dataset) {
 // sozinho na criação do item (ver nextIdNumber) e não deve mudar depois:
 // os nomes dos arquivos enviados (imagem/áudio) são derivados dele, então
 // editá-lo à mão desalinharia o id do que já foi commitado no GitHub.
+// `disabled` (não `readOnly`) de propósito: nem dá pra clicar/focar no campo,
+// mesmo comportamento do caminho de arquivo em buildFileUploadField — reforça
+// visualmente que não é editável, em vez de só bloquear a digitação.
 function buildReadOnlyField(labelText, value) {
   const input = document.createElement("input");
   input.className = "input";
   input.type = "text";
   input.value = value ?? "";
-  input.readOnly = true;
+  input.disabled = true;
   return buildField(labelText, input);
 }
 
@@ -1079,7 +1095,6 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   textInput.type = "text";
   textInput.value = currentValue ?? "";
   textInput.disabled = true;
-  if (opts.placeholder) textInput.placeholder = opts.placeholder;
   Object.entries(dataset).forEach(([k, v]) => { textInput.dataset[k] = v; });
   row.appendChild(textInput);
 
@@ -1120,13 +1135,22 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   // mesma regra: nada sai do navegador sem confirmação explícita.
   let pending = null;
   // Idem para remoção: marcar "Remover" só agenda a exclusão do arquivo já
-  // salvo (currentValue) — só é efetivada em confirmFileUpload/saveAll. O
-  // botão fica sempre clicável (mesmo sem nada salvo ainda) de propósito: o
-  // texto exibido quando vazio é só o placeholder (caminho sugerido), não um
-  // valor real, e não dá pra distinguir isso visualmente — desabilitar o
-  // botão nesse caso mais confunde do que ajuda. Clicar sem nada pra remover
-  // é inofensivo (não faz nada).
+  // salvo (currentValue) — só é efetivada em confirmFileUpload/saveAll.
   let pendingClear = false;
+
+  // Só nos campos com "Remover" (allowClear): "Enviar" fica desabilitado
+  // enquanto já existir uma imagem (salva ou só selecionada, ainda não
+  // confirmada) — pra trocar, primeiro precisa esvaziar pelo "Remover". Sem
+  // allowClear (ex: áudio do episódio), mantém o comportamento antigo: dá
+  // pra escolher um novo arquivo direto por cima do já salvo.
+  function updateButtonStates() {
+    if (!opts.allowClear) return;
+    const hasContent = !!textInput.value || !!pending;
+    fileInput.disabled = hasContent;
+    fileLabel.classList.toggle("disabled", hasContent);
+    if (clearBtn) clearBtn.disabled = !hasContent;
+  }
+  updateButtonStates();
 
   fileInput.addEventListener("change", () => {
     const file = fileInput.files[0];
@@ -1141,6 +1165,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
       preview.style.display = "";
     }
     fileInput.value = "";
+    updateButtonStates();
   });
 
   if (clearBtn) {
@@ -1153,6 +1178,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
         : "";
       status.dataset.kind = currentValue ? "pending" : "";
       if (preview) preview.style.display = "none";
+      updateButtonStates();
     });
   }
 
@@ -1182,6 +1208,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     status.textContent = `Na fila — será enviado ao clicar em "Salvar no GitHub".`;
     status.dataset.kind = "ok";
     pending = null;
+    updateButtonStates();
   };
 
   // Aponta o campo pra um caminho já existente (ex: foto de um integrante já
@@ -1202,6 +1229,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
         preview.style.display = "none";
       }
     }
+    updateButtonStates();
   };
 
   wrap.getValue = function getValue() {
@@ -1487,89 +1515,80 @@ function buildArticleAuthorSourceField(article, authorField, authorInput, avatar
 
   // Se autor/foto batem exatamente com um integrante cadastrado, assume que
   // vieram de lá; senão, se há texto de autor, assume manual. Sem nenhum dos
-  // dois, fica neutro (nenhum botão travado, nenhum campo travado).
+  // dois, fica neutro (nenhum campo mostrado, nenhum botão travado).
   const matched = article.author
     ? contentData.members.find((m) => m.name === article.author && (m.image || "") === (article.authorAvatar || ""))
     : undefined;
-  let lockedMode = matched ? "member" : article.author ? "manual" : null;
   if (matched) select.value = matched.id;
 
+  // Qual conjunto de campos está visível no momento — só decide o que
+  // mostrar, não trava nada por si só (ver hasManualData/hasMemberData: o
+  // travamento do outro botão vem sempre do dado de verdade nos campos,
+  // nunca de qual botão foi clicado por último).
+  let activePanel = matched ? "member" : article.author ? "manual" : null;
   let panelOpen = false;
-  let subOpen = lockedMode !== null;
 
-  function applyPanel() {
+  function hasManualData() {
+    return authorInput.value.trim() !== "" || !!avatarField.getValue();
+  }
+  function hasMemberData() {
+    return select.value !== "";
+  }
+
+  function applyPanelOpen() {
     summary.classList.toggle("open", panelOpen);
     setSmoothCollapse(panel, panelOpen);
   }
 
-  function applyLock() {
-    memberBtn.classList.toggle("active", lockedMode === "member");
-    manualBtn.classList.toggle("active", lockedMode === "manual");
-    // Trava o botão do OUTRO modo — nunca o do modo já escolhido, pra dar
-    // pra reabrir/trocar a seleção dentro do mesmo modo livremente.
-    memberBtn.disabled = lockedMode === "manual";
-    manualBtn.disabled = lockedMode === "member";
-    setSmoothCollapse(selectWrap, subOpen && lockedMode === "member");
+  // Recalcula tudo a partir do dado real dos campos (nunca do último clique)
+  // — é isso que evita o bug de travar o botão do outro modo mesmo com os
+  // campos vazios: o travamento só existe enquanto HÁ dado de fato ali.
+  function refresh() {
+    const manualLocked = hasManualData();
+    const memberLocked = hasMemberData();
+    memberBtn.classList.toggle("active", activePanel === "member");
+    manualBtn.classList.toggle("active", activePanel === "manual");
+    memberBtn.disabled = manualLocked;
+    manualBtn.disabled = memberLocked;
+    setSmoothCollapse(selectWrap, panelOpen && activePanel === "member");
     // authorField/avatarField vivem fora de `panel` (são células próprias no
     // grid do card, não filhas deste componente) — por isso, ao contrário de
     // selectWrap, precisam checar panelOpen explicitamente: senão ficariam
     // visíveis mesmo com a setinha fechada.
-    setSmoothCollapse(authorField, panelOpen && subOpen && lockedMode === "manual");
-    setSmoothCollapse(avatarField, panelOpen && subOpen && lockedMode === "manual");
+    setSmoothCollapse(authorField, panelOpen && activePanel === "manual");
+    setSmoothCollapse(avatarField, panelOpen && activePanel === "manual");
+    hint.textContent = authorInput.value;
   }
 
-  applyPanel();
-  applyLock();
+  applyPanelOpen();
+  refresh();
 
   summary.addEventListener("click", () => {
     panelOpen = !panelOpen;
-    applyPanel();
-    applyLock();
+    applyPanelOpen();
+    refresh();
   });
 
   memberBtn.addEventListener("click", () => {
     if (memberBtn.disabled) return;
-    lockedMode = "member";
-    subOpen = true;
-    applyLock();
+    activePanel = "member";
+    refresh();
   });
   manualBtn.addEventListener("click", () => {
     if (manualBtn.disabled) return;
-    lockedMode = "manual";
-    subOpen = true;
-    applyLock();
+    activePanel = "manual";
+    refresh();
   });
 
-  // Depois de qualquer mudança nos campos do modo manual, verifica se os
-  // dois esvaziaram (nome e foto) — se sim, destrava o modo "integrante" de
-  // novo e recolhe, voltando ao estado neutro inicial.
-  function checkManualCleared() {
-    if (lockedMode !== "manual") return;
-    if (authorInput.value.trim() === "" && !avatarField.getValue()) {
-      lockedMode = null;
-      subOpen = false;
-      applyLock();
-      hint.textContent = "";
-    } else {
-      hint.textContent = authorInput.value;
-    }
-  }
-  authorInput.addEventListener("input", checkManualCleared);
+  authorInput.addEventListener("input", refresh);
   const avatarClearBtn = avatarField.querySelector(".file-upload-row button");
-  if (avatarClearBtn) avatarClearBtn.addEventListener("click", checkManualCleared);
+  if (avatarClearBtn) avatarClearBtn.addEventListener("click", refresh);
 
   select.addEventListener("change", () => {
     const member = contentData.members.find((m) => m.id === select.value);
     authorInput.value = member ? member.name || "" : "";
     avatarField.setValue(member ? member.image || "" : "");
-    hint.textContent = authorInput.value;
-    // Voltando pra "— selecione —" sem nenhum integrante: esvazia e destrava
-    // o outro modo, mesma regra do modo manual.
-    if (!member) {
-      lockedMode = null;
-      subOpen = false;
-      applyLock();
-    }
+    refresh();
   });
 
   return wrap;
@@ -1629,7 +1648,6 @@ function buildArticleCard(article, i, total) {
     {
       accept: "image/*",
       buttonText: "Enviar foto",
-      placeholder: `images/equipe/${article.id}-autor.jpg`,
       preview: true,
       previewClass: "file-upload-preview--avatar",
       allowClear: true,
@@ -1649,8 +1667,8 @@ function buildArticleCard(article, i, total) {
     {
       accept: "image/*",
       buttonText: "Enviar imagem",
-      placeholder: `images/noticias/${article.id}-imagem-principal.jpg`,
       preview: true,
+      allowClear: true,
       buildPath: (file) => `images/noticias/${article.id}-imagem-principal.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia imagem da notícia "${article.title || article.id}" (${path})`,
     }
@@ -1825,7 +1843,7 @@ function buildEpisodeCard(episode, i, total) {
     {
       accept: "audio/mpeg,.mp3",
       buttonText: "Enviar .mp3",
-      placeholder: `audio/${episode.id}.mp3`,
+      allowClear: true,
       buildPath: () => `audio/${episode.id}.mp3`,
       buildMessage: (path) => `admin: envia áudio do episódio "${episode.title || episode.id}" (${path})`,
     }
@@ -1840,8 +1858,8 @@ function buildEpisodeCard(episode, i, total) {
     {
       accept: "image/*",
       buttonText: "Enviar imagem",
-      placeholder: `images/episodios/${episode.id}-imagem-principal.jpg`,
       preview: true,
+      allowClear: true,
       buildPath: (file) => `images/episodios/${episode.id}-imagem-principal.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia imagem do episódio "${episode.title || episode.id}" (${path})`,
     }
@@ -2063,7 +2081,16 @@ function buildMemberCard(member, i, total) {
   const body = el("div", "card-body");
   const grid = el("div", "fields-grid");
 
-  grid.appendChild(buildInput("Identificador (id)", "text", member.id, { member: i, key: "id" }));
+  // Só editável enquanto o integrante ainda não foi salvo no GitHub (ver
+  // _isNew em addMember/saveAll) — depois disso trava pra sempre, igual ao id
+  // de artigo/episódio (buildReadOnlyField), pelo mesmo motivo: renomear um id
+  // já em uso desalinha o caminho da foto e qualquer notícia que já tenha
+  // selecionado esse integrante como autor.
+  grid.appendChild(
+    member._isNew
+      ? buildInput("Identificador (id)", "text", member.id, { member: i, key: "id" })
+      : buildReadOnlyField("Identificador (id)", member.id)
+  );
   grid.appendChild(buildInput("Nome", "text", member.name, { member: i, key: "name" }));
 
   const descriptionGroup = el("div", "field-group full");
@@ -2081,8 +2108,8 @@ function buildMemberCard(member, i, total) {
     {
       accept: "image/*",
       buttonText: "Enviar foto",
-      placeholder: "images/integrantes/nome.jpg",
       preview: true,
+      allowClear: true,
       buildPath: (file) => `images/integrantes/${memberSlug(i, member)}.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia foto do integrante "${member.name || member.id}" (${path})`,
     }
@@ -2145,7 +2172,13 @@ function removeMember(i) {
 function addMember() {
   collectAll();
   const id = uniqueSlug(contentData.members.map((m) => m.id), "novo-integrante");
-  contentData.members.unshift({ id, name: "", description: "" });
+  // _isNew é só uma marca em memória (nunca vai pro JSON, ver saveAll): libera
+  // o id pra edição enquanto o integrante ainda não foi salvo de verdade no
+  // GitHub. Depois do primeiro "Salvar no GitHub" bem-sucedido, a marca some e
+  // o id trava pra sempre (ver buildMemberCard) — como já é o caso de artigo e
+  // episódio, e pelo mesmo motivo: outras coisas passam a depender dele
+  // (caminho da foto, correspondência por nome no seletor de autor da notícia).
+  contentData.members.unshift({ id, name: "", description: "", _isNew: true });
   renderMembersList();
   markDirty("members");
   const card = document.getElementById("member-card-0");

@@ -77,6 +77,15 @@ a, button { cursor: pointer; }
 }
 .input:focus, .field input:focus, .field textarea:focus { border-color: var(--adm-accent); }
 .field textarea { resize: vertical; min-height: 5rem; line-height: 1.5; }
+/* Fundo cinza em qualquer campo que não se edita pelo teclado (identificadores,
+   caminho de arquivo enviado) — sinal visual rápido de "não é pra escrever aqui". */
+.input:disabled,
+.input[readonly],
+.field input:disabled,
+.field input[readonly] {
+  background: var(--adm-border);
+  cursor: not-allowed;
+}
 
 .btn {
   display: inline-flex;
