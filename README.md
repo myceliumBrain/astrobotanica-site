@@ -9,7 +9,7 @@ dos mesmos temas em áudio. Todo o conteúdo é editado pelo painel em `/admin`.
 ```
 site/
 ├── index.html          → Home
-├── artigos.html         → lista de notícias (conteúdo principal)
+├── noticias.html        → lista de notícias (conteúdo principal)
 ├── noticia.html          → detalhe de uma notícia (?id=...)
 ├── podcast.html          → lista de episódios
 ├── episodio.html          → detalhe de um episódio (?id=ep-01), inclui a transcrição
@@ -346,6 +346,6 @@ desde que o serviço sirva os arquivos por HTTP (todos esses servem).
   `<head>` de cada página aplica isso antes da primeira pintura, evitando
   flash do tema errado.
 - **Grade de notícias**: cartões de altura uniforme (pôster + título + data),
-  usada igual na Home, em `/artigos` e em "Continue lendo" — classes
+  usada igual na Home, em `/noticias` e em "Continue lendo" — classes
   `.article-grid` / `.article-card` em `css/style.css`, geradas por
   `buildArticleCard()` em `src/main.ts`.
