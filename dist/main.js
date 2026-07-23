@@ -429,6 +429,8 @@ function renderArticleDetail(articles) {
         img.alt = "";
         cover.appendChild(img);
         const overlay = el("div", "article-cover-overlay");
+        if (article.titleColor === "dark")
+            overlay.classList.add("title-dark");
         overlay.appendChild(tag);
         overlay.appendChild(heading);
         overlay.appendChild(meta);

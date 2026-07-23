@@ -641,6 +641,7 @@ body.nav-open { overflow: hidden; }
 .article-cover-overlay .tag-accent { margin-bottom: var(--space-1); }
 .article-cover-overlay h1 { color: #fff; }
 .article-cover-overlay .card-meta { color: rgba(255, 255, 255, 0.8); }
+.article-cover-overlay.title-dark h1 { color: #000; }
 
 /* ---- painel de destaque (home) ---- */
 .feature-panel {

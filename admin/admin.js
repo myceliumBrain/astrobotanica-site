@@ -807,6 +807,14 @@ function applyArticleField(input) {
     else delete record[key];
     return;
   }
+  if (input.type === "radio") {
+    if (!input.checked) return;
+    // "light" (branco) é o default histórico — não grava a chave pra não
+    // sujar artigos antigos/sem capa com um campo irrelevante.
+    if (input.value === "light") delete record[key];
+    else record[key] = input.value;
+    return;
+  }
   if (input.dataset.richtext === "html") {
     const newHtml = finalizeRichTextHtml(input);
     // Imagem que estava no HTML salvo antes e não está mais no novo —
@@ -1008,6 +1016,31 @@ function buildCheckboxField(labelText, checked, dataset, onToggle) {
   row.appendChild(document.createTextNode(labelText));
   wrap.appendChild(row);
   if (onToggle) input.addEventListener("change", onToggle);
+  return wrap;
+}
+
+// Grupo de radio buttons (ex: cor do título sobre a capa). `options` é uma
+// lista de { value, label }; o primeiro valor é o default quando `value`
+// não bate com nenhuma opção.
+function buildRadioField(labelText, options, value, dataset) {
+  const wrap = el("div", "field radio-field");
+  wrap.appendChild(el("label", "", labelText));
+  const group = el("div", "radio-group");
+  const name = `radio-${Math.random().toString(36).slice(2, 9)}`;
+  const selected = options.some((opt) => opt.value === value) ? value : options[0].value;
+  options.forEach((opt) => {
+    const row = el("label", "radio-row");
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = name;
+    input.value = opt.value;
+    input.checked = opt.value === selected;
+    Object.entries(dataset).forEach(([k, v]) => { input.dataset[k] = v; });
+    row.appendChild(input);
+    row.appendChild(document.createTextNode(opt.label));
+    group.appendChild(row);
+  });
+  wrap.appendChild(group);
   return wrap;
 }
 
@@ -1378,6 +1411,18 @@ function buildArticleCard(article, i, total) {
   );
   imageField.classList.add("full");
   grid.appendChild(imageField);
+
+  grid.appendChild(
+    buildRadioField(
+      "Cor do título (sobre a imagem de capa)",
+      [
+        { value: "light", label: "Branca" },
+        { value: "dark", label: "Preta" },
+      ],
+      article.titleColor || "light",
+      { article: i, key: "titleColor" }
+    )
+  );
 
   grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
   grid.appendChild(buildInput("Tempo de leitura", "text", article.readingTime, { article: i, key: "readingTime" }, "6 min"));

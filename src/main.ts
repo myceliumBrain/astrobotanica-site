@@ -27,6 +27,7 @@ interface Article {
   body: string; // HTML gerado pelo editor do painel (negrito, parágrafos, imagens)
   image?: string; // opcional: caminho da imagem de capa, ex: "images/noticias/minha-noticia.jpg"
   featured?: boolean; // marcado no admin: fixa o artigo na Home (ver selectHomeItems)
+  titleColor?: "light" | "dark"; // cor do título sobreposto à capa; default "light" (branco)
 }
 
 interface MemberLink {
@@ -502,6 +503,7 @@ function renderArticleDetail(articles: Loaded<Article>): void {
     img.alt = "";
     cover.appendChild(img);
     const overlay = el("div", "article-cover-overlay");
+    if (article.titleColor === "dark") overlay.classList.add("title-dark");
     overlay.appendChild(tag);
     overlay.appendChild(heading);
     overlay.appendChild(meta);
