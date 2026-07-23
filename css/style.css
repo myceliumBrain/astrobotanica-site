@@ -618,6 +618,7 @@ body.nav-open { overflow: hidden; }
   color: var(--ink-faint);
   margin: var(--space-1) 0 0;
 }
+.article-author-end { margin-top: var(--space-4); }
 
 .article-references {
   max-width: var(--measure);

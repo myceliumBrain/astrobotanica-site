@@ -460,6 +460,9 @@ function renderArticleDetail(articles) {
     const body = el("div", "article-body");
     body.innerHTML = article.body;
     root.appendChild(body);
+    if (article.author) {
+        root.appendChild(el("p", "article-author article-author-end", i18next.t("artigo.byLine", { author: article.author })));
+    }
     if (article.references && article.references.length > 0) {
         const refsSection = el("div", "article-references");
         refsSection.appendChild(el("h2", "article-references-heading", i18next.t("artigo.referencesHeading")));
