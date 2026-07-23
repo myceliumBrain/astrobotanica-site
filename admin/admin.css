@@ -326,6 +326,34 @@ a, button { cursor: pointer; }
   border-radius: 50%;
 }
 
+/* ── AUTOR: integrante cadastrado x texto livre ── */
+.author-source-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--adm-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--adm-off-white);
+  cursor: pointer;
+}
+.author-source-chevron { display: inline-block; transition: transform 0.2s ease; }
+.author-source-summary.open .author-source-chevron { transform: rotate(90deg); }
+.author-source-hint {
+  font-family: var(--adm-sans);
+  font-size: 0.8rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--adm-white);
+}
+.author-source-toggle { display: flex; gap: 0.5rem; }
+.toggle-btn.active { background: var(--adm-accent); color: #0c0c0c; border-color: var(--adm-accent); }
+.toggle-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
 /* ── CORPO COM FORMATAÇÃO (negrito, itálico, tamanho, parágrafos, imagens) ── */
 .rich-text-toolbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.4rem; }
 .rich-text-btn {

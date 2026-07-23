@@ -1090,6 +1090,13 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   if (opts.accept) fileInput.accept = opts.accept;
   fileLabel.appendChild(fileInput);
   row.appendChild(fileLabel);
+
+  let clearBtn;
+  if (opts.allowClear) {
+    clearBtn = el("button", "btn btn-secondary btn-small", "Remover");
+    clearBtn.type = "button";
+    row.appendChild(clearBtn);
+  }
   wrap.appendChild(row);
 
   const status = el("span", "file-upload-status");
@@ -1112,10 +1119,19 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   // "Salvar no GitHub" (ver saveAll). Isso mantém arquivo e texto com a
   // mesma regra: nada sai do navegador sem confirmação explícita.
   let pending = null;
+  // Idem para remoção: marcar "Remover" só agenda a exclusão do arquivo já
+  // salvo (currentValue) — só é efetivada em confirmFileUpload/saveAll. O
+  // botão fica sempre clicável (mesmo sem nada salvo ainda) de propósito: o
+  // texto exibido quando vazio é só o placeholder (caminho sugerido), não um
+  // valor real, e não dá pra distinguir isso visualmente — desabilitar o
+  // botão nesse caso mais confunde do que ajuda. Clicar sem nada pra remover
+  // é inofensivo (não faz nada).
+  let pendingClear = false;
 
   fileInput.addEventListener("change", () => {
     const file = fileInput.files[0];
     if (!file) return;
+    pendingClear = false;
     const path = opts.buildPath(file);
     pending = { path, file, message: opts.buildMessage(path) };
     status.textContent = `Selecionado: ${path} — clique em "Salvar alterações" para confirmar.`;
@@ -1127,7 +1143,30 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     fileInput.value = "";
   });
 
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      pending = null;
+      pendingClear = !!currentValue;
+      textInput.value = "";
+      status.textContent = currentValue
+        ? `Marcado para remover — clique em "Salvar alterações" para confirmar.`
+        : "";
+      status.dataset.kind = currentValue ? "pending" : "";
+      if (preview) preview.style.display = "none";
+    });
+  }
+
   wrap.confirmFileUpload = function confirmFileUpload() {
+    if (pendingClear) {
+      pendingDeletions.push({
+        path: currentValue,
+        message: `admin: remove arquivo (${currentValue})`,
+      });
+      pendingClear = false;
+      status.textContent = `Removido — será excluído ao clicar em "Salvar no GitHub".`;
+      status.dataset.kind = "ok";
+      return;
+    }
     if (!pending) return;
     // Se já existia um arquivo salvo com caminho diferente do novo (ex:
     // extensão trocou, jpg por png), o antigo fica órfão no repositório —
@@ -1143,6 +1182,30 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     status.textContent = `Na fila — será enviado ao clicar em "Salvar no GitHub".`;
     status.dataset.kind = "ok";
     pending = null;
+  };
+
+  // Aponta o campo pra um caminho já existente (ex: foto de um integrante já
+  // cadastrado) sem passar por upload — usado pelo seletor de autor (ver
+  // buildArticleAuthorSourceField). Cancela qualquer upload/remoção pendente,
+  // já que o valor está sendo trocado por outro meio.
+  wrap.setValue = function setValue(path) {
+    pending = null;
+    pendingClear = false;
+    textInput.value = path || "";
+    status.textContent = "";
+    delete status.dataset.kind;
+    if (preview) {
+      if (path) {
+        preview.src = /^https?:\/\//i.test(path) ? path : `../${path}`;
+        preview.style.display = "";
+      } else {
+        preview.style.display = "none";
+      }
+    }
+  };
+
+  wrap.getValue = function getValue() {
+    return textInput.value;
   };
 
   return wrap;
@@ -1347,6 +1410,171 @@ function buildReorderButtons(idx, total, onUp, onDown) {
   return wrap;
 }
 
+// Expande/recolhe um elemento com transição suave de altura. Usa um teto
+// generoso (em vez do scrollHeight exato) porque o conteúdo de dentro pode
+// mudar de tamanho depois (ex: preview de foto carregando) sem que isso
+// precise recalcular nada.
+function setSmoothCollapse(el, open) {
+  el.style.overflow = "hidden";
+  el.style.transition = "max-height 0.22s ease, opacity 0.22s ease, margin-top 0.22s ease";
+  if (open) {
+    el.style.maxHeight = "40rem";
+    el.style.opacity = "1";
+    el.style.marginTop = "0.6rem";
+  } else {
+    el.style.maxHeight = "0px";
+    el.style.opacity = "0";
+    el.style.marginTop = "0";
+  }
+}
+
+// Escolha de como preencher autor/foto de uma notícia: "integrante" busca
+// nome e foto de um item já cadastrado em contentData.members (ver
+// renderMembersList); "manual" mantém o comportamento antigo (texto livre +
+// upload próprio, ver authorField/avatarField em buildArticleCard). A opção
+// escolhida aqui não é salva por si — ela só decide qual controle fica
+// visível; o que de fato vai pro JSON é sempre author/authorAvatar, exatos
+// como se tivessem sido digitados/enviados à mão.
+//
+// Some coisas de propósito:
+// - O acordeão sempre abre fechado (nenhum dos 2 botões pré-selecionado),
+//   mesmo que a notícia já tenha autor definido — só um resumo ao lado da
+//   setinha mostra quem é, sem precisar expandir.
+// - Só um modo pode ter dado por vez: assim que um dos dois (nome manual OU
+//   integrante selecionado) tem valor, o botão do outro modo fica desabilitado.
+//   Ele só volta a ficar disponível quando esse valor for esvaziado de novo
+//   (nome apagado + foto removida, ou integrante voltando pra "— selecione —"),
+//   porque author/authorAvatar são campos únicos — os dois modos escrevem no
+//   mesmo lugar, então não faz sentido os dois preenchidos ao mesmo tempo.
+function buildArticleAuthorSourceField(article, authorField, authorInput, avatarField) {
+  const wrap = el("div", "field full author-source-field");
+
+  const summary = el("button", "author-source-summary");
+  summary.type = "button";
+  const chevron = el("span", "author-source-chevron", "▸");
+  summary.appendChild(chevron);
+  summary.appendChild(el("span", "", "Autor"));
+  const hint = el("span", "author-source-hint", article.author || "");
+  summary.appendChild(hint);
+  wrap.appendChild(summary);
+
+  const panel = el("div", "author-source-panel");
+  const toggle = el("div", "author-source-toggle");
+  const memberBtn = el("button", "btn btn-secondary btn-small toggle-btn", "Selecionar integrante");
+  memberBtn.type = "button";
+  const manualBtn = el("button", "btn btn-secondary btn-small toggle-btn", "Digitar manualmente");
+  manualBtn.type = "button";
+  toggle.appendChild(memberBtn);
+  toggle.appendChild(manualBtn);
+  panel.appendChild(toggle);
+
+  const selectWrap = el("div", "author-source-select-wrap");
+  const select = document.createElement("select");
+  select.className = "input";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "— selecione um integrante —";
+  select.appendChild(blank);
+  for (const member of contentData.members) {
+    const opt = document.createElement("option");
+    opt.value = member.id;
+    opt.textContent = member.name || member.id;
+    select.appendChild(opt);
+  }
+  selectWrap.appendChild(select);
+  panel.appendChild(selectWrap);
+  wrap.appendChild(panel);
+
+  // Se autor/foto batem exatamente com um integrante cadastrado, assume que
+  // vieram de lá; senão, se há texto de autor, assume manual. Sem nenhum dos
+  // dois, fica neutro (nenhum botão travado, nenhum campo travado).
+  const matched = article.author
+    ? contentData.members.find((m) => m.name === article.author && (m.image || "") === (article.authorAvatar || ""))
+    : undefined;
+  let lockedMode = matched ? "member" : article.author ? "manual" : null;
+  if (matched) select.value = matched.id;
+
+  let panelOpen = false;
+  let subOpen = lockedMode !== null;
+
+  function applyPanel() {
+    summary.classList.toggle("open", panelOpen);
+    setSmoothCollapse(panel, panelOpen);
+  }
+
+  function applyLock() {
+    memberBtn.classList.toggle("active", lockedMode === "member");
+    manualBtn.classList.toggle("active", lockedMode === "manual");
+    // Trava o botão do OUTRO modo — nunca o do modo já escolhido, pra dar
+    // pra reabrir/trocar a seleção dentro do mesmo modo livremente.
+    memberBtn.disabled = lockedMode === "manual";
+    manualBtn.disabled = lockedMode === "member";
+    setSmoothCollapse(selectWrap, subOpen && lockedMode === "member");
+    // authorField/avatarField vivem fora de `panel` (são células próprias no
+    // grid do card, não filhas deste componente) — por isso, ao contrário de
+    // selectWrap, precisam checar panelOpen explicitamente: senão ficariam
+    // visíveis mesmo com a setinha fechada.
+    setSmoothCollapse(authorField, panelOpen && subOpen && lockedMode === "manual");
+    setSmoothCollapse(avatarField, panelOpen && subOpen && lockedMode === "manual");
+  }
+
+  applyPanel();
+  applyLock();
+
+  summary.addEventListener("click", () => {
+    panelOpen = !panelOpen;
+    applyPanel();
+    applyLock();
+  });
+
+  memberBtn.addEventListener("click", () => {
+    if (memberBtn.disabled) return;
+    lockedMode = "member";
+    subOpen = true;
+    applyLock();
+  });
+  manualBtn.addEventListener("click", () => {
+    if (manualBtn.disabled) return;
+    lockedMode = "manual";
+    subOpen = true;
+    applyLock();
+  });
+
+  // Depois de qualquer mudança nos campos do modo manual, verifica se os
+  // dois esvaziaram (nome e foto) — se sim, destrava o modo "integrante" de
+  // novo e recolhe, voltando ao estado neutro inicial.
+  function checkManualCleared() {
+    if (lockedMode !== "manual") return;
+    if (authorInput.value.trim() === "" && !avatarField.getValue()) {
+      lockedMode = null;
+      subOpen = false;
+      applyLock();
+      hint.textContent = "";
+    } else {
+      hint.textContent = authorInput.value;
+    }
+  }
+  authorInput.addEventListener("input", checkManualCleared);
+  const avatarClearBtn = avatarField.querySelector(".file-upload-row button");
+  if (avatarClearBtn) avatarClearBtn.addEventListener("click", checkManualCleared);
+
+  select.addEventListener("change", () => {
+    const member = contentData.members.find((m) => m.id === select.value);
+    authorInput.value = member ? member.name || "" : "";
+    avatarField.setValue(member ? member.image || "" : "");
+    hint.textContent = authorInput.value;
+    // Voltando pra "— selecione —" sem nenhum integrante: esvazia e destrava
+    // o outro modo, mesma regra do modo manual.
+    if (!member) {
+      lockedMode = null;
+      subOpen = false;
+      applyLock();
+    }
+  });
+
+  return wrap;
+}
+
 // ----------------------------------------------------------------------------
 // Notícias
 // ----------------------------------------------------------------------------
@@ -1390,7 +1618,9 @@ function buildArticleCard(article, i, total) {
   grid.appendChild(buildInput("Categoria", "text", article.category, { article: i, key: "category" }, "Fisiologia vegetal"));
   grid.appendChild(buildInput("Título", "text", article.title, { article: i, key: "title" }));
   grid.appendChild(buildInput("Subtítulo (opcional)", "text", article.subtitle, { article: i, key: "subtitle" }));
-  grid.appendChild(buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro"));
+
+  const authorField = buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro");
+  const authorInput = authorField.querySelector("input");
 
   const avatarField = buildFileUploadField(
     "Foto do autor (opcional)",
@@ -1402,10 +1632,14 @@ function buildArticleCard(article, i, total) {
       placeholder: `images/equipe/${article.id}-autor.jpg`,
       preview: true,
       previewClass: "file-upload-preview--avatar",
+      allowClear: true,
       buildPath: (file) => `images/equipe/${article.id}-autor.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia foto do autor da notícia "${article.title || article.id}" (${path})`,
     }
   );
+
+  grid.appendChild(buildArticleAuthorSourceField(article, authorField, authorInput, avatarField));
+  grid.appendChild(authorField);
   grid.appendChild(avatarField);
 
   const imageField = buildFileUploadField(
@@ -1466,6 +1700,7 @@ function buildArticleCard(article, i, total) {
 
   const actions = el("div", "card-actions");
   const saveBtn = buildSaveCardButton(() => {
+    avatarField.confirmFileUpload();
     imageField.confirmFileUpload();
     bodyField.confirmBodyImages();
     collectArticleCardFields(i);
