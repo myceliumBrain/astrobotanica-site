@@ -380,17 +380,28 @@ a, button { cursor: pointer; }
 .toggle-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ── CORPO COM FORMATAÇÃO (negrito, itálico, tamanho, parágrafos, imagens) ── */
-/* Fica grudada no topo (abaixo da .adm-topbar, sticky em top:0/56px de
-   altura) enquanto o campo rola por baixo dela — assim os botões continuam
-   ao lado de onde o usuário está digitando, sem precisar voltar pro topo da
-   página. Some por padrão; só some visível/clicável enquanto o foco está em
-   algum lugar dentro do campo (editor ou os próprios controles da barra),
-   via :focus-within — não depende de rastrear foco/blur manualmente. */
+/* Editor à esquerda, barra de botões à direita (ver .rich-text-layout) — a
+   barra é sticky (gruda abaixo da .adm-topbar, top:56px) então acompanha o
+   scroll conforme o corpo é mais alto que a tela: fica sempre alcançável do
+   lado do texto, mesmo editando perto do fim de um corpo longo. Some por
+   padrão; só fica visível/clicável enquanto o foco está em algum lugar
+   dentro do campo (editor ou os próprios controles da barra), via
+   :focus-within — não depende de rastrear foco/blur manualmente. */
+.rich-text-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+.rich-text-layout .rich-text-editor {
+  flex: 1;
+  min-width: 0;
+}
 .rich-text-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.4rem;
-  margin-bottom: 0.4rem;
+  flex: none;
+  width: 7.5rem;
   position: sticky;
   top: 56px;
   z-index: 5;
@@ -399,14 +410,14 @@ a, button { cursor: pointer; }
   border-radius: 3px;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-4px);
+  transform: translateX(4px);
   transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
   pointer-events: none;
 }
 .rich-text-field:focus-within .rich-text-toolbar {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: translateX(0);
   pointer-events: auto;
 }
 .rich-text-btn {
@@ -524,6 +535,10 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
   .adm-layout { flex-direction: column; }
   .adm-sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--adm-border); }
   .fields-grid { grid-template-columns: 1fr; }
+  /* Barra lateral não cabe ao lado do texto numa tela estreita — volta a
+     ficar em cima, ocupando a largura toda, como uma barra normal. */
+  .rich-text-layout { flex-direction: column; }
+  .rich-text-toolbar { flex-direction: row; flex-wrap: wrap; width: 100%; top: 0; }
   .adm-topbar { padding: 0 1rem; }
   .adm-save-status { display: none; }
 }

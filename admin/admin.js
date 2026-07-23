@@ -1398,8 +1398,6 @@ function buildRichTextField(labelText, value, dataset, opts) {
   imageBtn.appendChild(imageInput);
   toolbar.appendChild(imageBtn);
 
-  wrap.appendChild(toolbar);
-
   const editor = document.createElement("div");
   editor.className = "input rich-text-editor";
   editor.contentEditable = "true";
@@ -1409,7 +1407,16 @@ function buildRichTextField(labelText, value, dataset, opts) {
   editor.addEventListener("focus", () => {
     try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch { /* navegador sem suporte */ }
   });
-  wrap.appendChild(editor);
+
+  // Editor à esquerda, barra de botões à direita (ver .rich-text-layout no
+  // CSS) — a barra é sticky, então acompanha o scroll conforme o corpo é
+  // mais alto que a tela, ficando sempre alcançável mesmo editando perto do
+  // fim de um texto longo (sem isso, editar o final exigia rolar de volta
+  // pro topo do campo pra alcançar os botões).
+  const layout = el("div", "rich-text-layout");
+  layout.appendChild(editor);
+  layout.appendChild(toolbar);
+  wrap.appendChild(layout);
 
   // Clicar no botão de imagem tira o foco do editor (é um <button>), então
   // sem guardar a seleção de texto a imagem sempre cairia no fim do
