@@ -28,7 +28,8 @@
       }
     ],
     "author": "Pedro Henrique Tenorio Alvarenga",
-    "authorAvatar": "images/integrantes/integrante-pedro.jpeg"
+    "authorAvatar": "images/integrantes/integrante-pedro.jpeg",
+    "imageVertical": "images/noticias/noticia-2-imagem-vertical.jpg"
   },
   {
     "id": "noticia-1",
@@ -46,6 +47,7 @@
         "url": "https://www.science.org/doi/10.1126/science.adu4373"
       }
     ],
-    "authorAvatar": "images/integrantes/integrante-pedro.jpeg"
+    "authorAvatar": "images/integrantes/integrante-pedro.jpeg",
+    "imageVertical": "images/noticias/noticia-1-imagem-vertical.png"
   }
 ]
