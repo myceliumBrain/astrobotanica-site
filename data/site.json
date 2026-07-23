@@ -10,6 +10,12 @@
     "footerTagline": "Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.",
     "copyright": "© 2026 Astrobotânica."
   },
+  "social": {
+    "bluesky": "",
+    "facebook": "",
+    "x": "",
+    "linkedin": ""
+  },
   "nav": {
     "articles": "Notícias",
     "podcast": "Podcast",
@@ -18,7 +24,7 @@
   },
   "footer": {
     "navHeading": "Navegação",
-    "socialHeading": "Redes sociais"
+    "socialHeading": "Redes Sociais"
   },
   "home": {
     "metaTitle": "Astrobotânica — divulgação científica e podcast sobre plantas fora da Terra",
@@ -69,8 +75,6 @@
     "metaTitle": "Notícia — Astrobotânica",
     "backLink": "← Voltar às notícias",
     "byLine": "Por: {{author}}",
-    "shareLabel": "Compartilhe",
-    "shareOn": "Compartilhar no {{network}}",
     "referencesHeading": "Referências",
     "latestHeading": "Mais recentes",
     "relatedHeading": "Continue lendo",
@@ -97,5 +101,19 @@
     "emailKicker": "Email",
     "email": "seu-email@substituir.com",
     "emailNote": "Para pautas, correções e propostas de entrevista."
-  }
+  },
+  "socialLinks": [
+    {
+      "label": "Youtube",
+      "url": "www.youtube.com"
+    },
+    {
+      "label": "Facebook",
+      "url": "www.facebook.com"
+    },
+    {
+      "label": "Bluesky",
+      "url": "www.bluesky.com"
+    }
+  ]
 }
