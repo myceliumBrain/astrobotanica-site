@@ -526,6 +526,34 @@ function buildArticleMetaRow(article: Article): HTMLElement {
   return row;
 }
 
+// Barra lateral "mais recentes" ao lado do corpo do texto (ver
+// .article-layout) — mesmas notícias que iriam pra "Continue lendo", só que
+// resumidas (miniatura + título) e limitadas às N mais novas, não todas.
+const ARTICLE_SIDEBAR_MAX_ITEMS = 3;
+
+function buildArticleSidebar(items: Article[]): HTMLElement {
+  const aside = el("aside", "article-sidebar");
+  aside.appendChild(el("span", "article-sidebar-heading", i18next.t("artigo.latestHeading")));
+  const list = el("div", "article-sidebar-list");
+  for (const item of items.slice(0, ARTICLE_SIDEBAR_MAX_ITEMS)) {
+    const a = document.createElement("a");
+    a.className = "article-sidebar-item";
+    a.href = `/noticia?id=${item.id}`;
+    if (item.image) {
+      const img = document.createElement("img");
+      img.className = "article-sidebar-thumb";
+      img.src = item.image;
+      img.alt = "";
+      img.loading = "lazy";
+      a.appendChild(img);
+    }
+    a.appendChild(el("span", "article-sidebar-title", item.title));
+    list.appendChild(a);
+  }
+  aside.appendChild(list);
+  return aside;
+}
+
 function renderArticleDetail(articles: Loaded<Article>): void {
   const root = document.getElementById("artigo-content");
   if (!root) return;
@@ -566,9 +594,14 @@ function renderArticleDetail(articles: Loaded<Article>): void {
     }
   }
 
+  const others = articles.items.filter((a) => a.id !== article.id);
+
+  const layout = el("div", "article-layout");
+  const main = el("div", "article-main");
+
   const body = el("div", "article-body");
   body.innerHTML = article.body;
-  root.appendChild(body);
+  main.appendChild(body);
 
   if (article.references && article.references.length > 0) {
     const refsSection = el("div", "article-references");
@@ -590,12 +623,17 @@ function renderArticleDetail(articles: Loaded<Article>): void {
       list.appendChild(li);
     }
     refsSection.appendChild(list);
-    root.appendChild(refsSection);
+    main.appendChild(refsSection);
   }
+  layout.appendChild(main);
+
+  if (others.length > 0) {
+    layout.appendChild(buildArticleSidebar(others));
+  }
+  root.appendChild(layout);
 
   const related = document.getElementById("artigo-related");
   if (related) {
-    const others = articles.items.filter((a) => a.id !== article.id);
     renderArticleGrid(related, others, i18next.t("artigo.noOthers"));
   }
 

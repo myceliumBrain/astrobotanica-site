@@ -70,6 +70,7 @@
     "byLine": "Por {{author}}",
     "shareOn": "Compartilhar no {{network}}",
     "referencesHeading": "Referências",
+    "latestHeading": "Mais recentes",
     "relatedHeading": "Continue lendo",
     "loadError": "Não foi possível carregar a notícia agora.",
     "notFound": "Notícia não encontrada.",

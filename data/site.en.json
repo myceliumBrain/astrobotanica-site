@@ -70,6 +70,7 @@
     "byLine": "By {{author}}",
     "shareOn": "Share on {{network}}",
     "referencesHeading": "References",
+    "latestHeading": "Latest",
     "relatedHeading": "Keep reading",
     "loadError": "Couldn't load the article right now.",
     "notFound": "Article not found.",

@@ -122,6 +122,7 @@ const PAGE_SCHEMA = [
     fields: [
       { key: "artigo.backLink", label: "Link \"voltar\"", type: "text" },
       { key: "artigo.byLine", label: "Texto do autor (use {{author}})", type: "text" },
+      { key: "artigo.latestHeading", label: "Título da barra lateral \"mais recentes\"", type: "text" },
       { key: "artigo.relatedHeading", label: "Título \"continue lendo\"", type: "text" },
     ],
   },
