@@ -503,7 +503,6 @@ body.nav-open { overflow: hidden; }
 .episode-description {
   font-size: 0.9rem;
   line-height: 1.65;
-  max-width: var(--measure);
   color: var(--ink-dim);
   background: color-mix(in srgb, var(--ink) 5%, transparent);
   padding: var(--space-2) var(--space-3);
@@ -513,7 +512,6 @@ body.nav-open { overflow: hidden; }
 .episode-body {
   font-size: 1.05rem;
   line-height: 1.75;
-  max-width: var(--measure);
 }
 .episode-body p + p { margin-top: var(--space-3); }
 
@@ -607,7 +605,6 @@ body.nav-open { overflow: hidden; }
 .article-body {
   font-size: 1.05rem;
   line-height: 1.75;
-  max-width: var(--measure);
 }
 .article-body p + p { margin-top: var(--space-3); }
 .article-body img { max-width: 100%; height: auto; display: block; border-radius: 4px; margin: var(--space-3) 0; }
@@ -662,7 +659,6 @@ body.nav-open { overflow: hidden; }
 }
 
 .article-references {
-  max-width: var(--measure);
   margin-top: var(--space-4);
   padding-top: var(--space-3);
   border-top: 1px solid var(--line);
