@@ -253,7 +253,12 @@ a, button { cursor: pointer; }
   border-top: 1px solid transparent;
   transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1), padding 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.2s;
 }
-.card.open .card-body { max-height: 4000px; padding: 1.15rem; border-top-color: var(--adm-border); }
+/* O teto alto (em vez de max-height: none) é só pra permitir a transição
+   animada — CSS não anima até "none"/auto. 4000px já tinha sido visto
+   cortando o card de notícias grandes (corpo longo + imagens), escondendo os
+   botões "Salvar alterações"/"Remover" que vêm depois; 100000px cobre
+   qualquer notícia realista sem cortar nada. */
+.card.open .card-body { max-height: 100000px; padding: 1.15rem; border-top-color: var(--adm-border); }
 
 .card-actions {
   display: flex;
