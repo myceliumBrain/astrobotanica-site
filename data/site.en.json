@@ -18,7 +18,7 @@
   },
   "footer": {
     "navHeading": "Navigation",
-    "socialHeading": "Social media"
+    "socialHeading": "Social Media"
   },
   "home": {
     "metaTitle": "Astrobotanica — science communication and podcast about plants beyond Earth",
@@ -69,8 +69,6 @@
     "metaTitle": "Article — Astrobotanica",
     "backLink": "← Back to articles",
     "byLine": "By: {{author}}",
-    "shareLabel": "Share",
-    "shareOn": "Share on {{network}}",
     "referencesHeading": "References",
     "latestHeading": "Latest",
     "relatedHeading": "Keep reading",
