@@ -296,6 +296,12 @@ a, button { cursor: pointer; }
 .member-link-row .member-link-label { flex: 0 0 30%; }
 .member-link-row .member-link-url { flex: 1; min-width: 0; }
 
+/* ── REFERÊNCIAS DE NOTÍCIA (lista de tamanho livre) ── */
+.article-references-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.6rem; }
+.article-reference-row { display: flex; gap: 0.5rem; }
+.article-reference-row .article-reference-text { flex: 1 1 60%; min-width: 0; }
+.article-reference-row .article-reference-url { flex: 1 1 30%; min-width: 0; }
+
 /* ── UPLOAD DE ARQUIVO (áudio/imagem) ── */
 .file-upload-row { display: flex; gap: 0.5rem; }
 .file-upload-row .input { flex: 1; min-width: 0; }

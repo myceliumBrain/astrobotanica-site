@@ -68,6 +68,7 @@
     "metaTitle": "Notícia — Astrobotânica",
     "backLink": "← Voltar às notícias",
     "byLine": "Por {{author}}",
+    "referencesHeading": "Referências",
     "relatedHeading": "Continue lendo",
     "loadError": "Não foi possível carregar a notícia agora.",
     "notFound": "Notícia não encontrada.",

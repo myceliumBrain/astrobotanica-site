@@ -206,7 +206,12 @@ conveniência, não o único jeito. Veja os formatos abaixo se preferir editar
   "date": "2026-08-10",
   "readingTime": "6 min",
   "body": "<p>Primeiro parágrafo...</p><p>Segundo parágrafo com <strong>negrito</strong>.</p>",
-  "featured": true
+  "featured": true,
+  "titleColor": "dark",
+  "references": [
+    { "text": "Sobrenome, N. et al. (2026). Título do trabalho. Revista.", "url": "https://doi.org/..." },
+    { "text": "Referência sem link, só o texto da citação." }
+  ]
 }
 ```
 
@@ -224,7 +229,12 @@ só um retângulo vazio no lugar do pôster. Assim como no episódio, a imagem d
 capa e as imagens inseridas no corpo **podem ser enviadas direto pelo
 painel** (ver "Formato de um episódio" abaixo para como esse envio funciona).
 `featured` é opcional (padrão ausente/`false`) — ver "Destaque na Home"
-acima.
+acima. `titleColor` é opcional (`"light"`/padrão ausente = branco, `"dark"` =
+preto) — controla a cor do título sobreposto à imagem de capa, escolhida no
+painel por radio button (útil quando a capa é clara e o título branco fica
+ilegível). `references` é opcional: lista de `{ text, url? }` exibida após o
+corpo da notícia, antes de "Continue lendo" — `url` é opcional; sem ele, a
+referência aparece como texto simples, sem link.
 
 ### Formato de um episódio
 

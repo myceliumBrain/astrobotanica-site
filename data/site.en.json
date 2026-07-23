@@ -68,6 +68,7 @@
     "metaTitle": "Article — Astrobotanica",
     "backLink": "← Back to articles",
     "byLine": "By {{author}}",
+    "referencesHeading": "References",
     "relatedHeading": "Keep reading",
     "loadError": "Couldn't load the article right now.",
     "notFound": "Article not found.",

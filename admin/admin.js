@@ -873,6 +873,7 @@ function applyMemberField(input) {
 // não perder edição em outros cards quando a lista é redesenhada do zero.
 function collectAll() {
   document.querySelectorAll("[data-article]").forEach(applyArticleField);
+  collectArticleReferences();
   document.querySelectorAll("[data-episode]").forEach(applyEpisodeField);
   document.querySelectorAll("[data-member]").forEach(applyMemberField);
   collectMemberLinks();
@@ -890,6 +891,7 @@ function collectAll() {
 // alteração pendente (ver buildSaveCardButton).
 function collectArticleCardFields(i) {
   document.querySelectorAll(`[data-article="${i}"]`).forEach(applyArticleField);
+  collectArticleReferences();
 }
 function collectEpisodeCardFields(i) {
   document.querySelectorAll(`[data-episode="${i}"]`).forEach(applyEpisodeField);
@@ -1449,6 +1451,17 @@ function buildArticleCard(article, i, total) {
   bodyField.classList.add("full");
   grid.appendChild(bodyField);
 
+  const referencesField = el("div", "field full");
+  referencesField.appendChild(el("label", "", 'Referências (aparecem após o corpo, antes de "Continue lendo")'));
+  const referencesList = el("div", "article-references-list");
+  (article.references || []).forEach((ref) => referencesList.appendChild(buildArticleReferenceRow(ref)));
+  referencesField.appendChild(referencesList);
+  const addReferenceBtn = el("button", "btn btn-secondary btn-small", "+ adicionar referência");
+  addReferenceBtn.type = "button";
+  addReferenceBtn.addEventListener("click", () => referencesList.appendChild(buildArticleReferenceRow()));
+  referencesField.appendChild(addReferenceBtn);
+  grid.appendChild(referencesField);
+
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
@@ -1749,6 +1762,52 @@ function collectMemberLinks() {
       .filter((link) => link.label || link.url);
     if (links.length > 0) record.links = links;
     else delete record.links;
+  });
+}
+
+// Referências de uma notícia: mesma lógica de tamanho livre dos links de
+// integrante (ver buildMemberLinkRow/collectMemberLinks) — exibidas no site
+// após o corpo da notícia, antes de "Continue lendo" (ver renderArticleDetail
+// em src/main.ts).
+function buildArticleReferenceRow(reference) {
+  const row = el("div", "article-reference-row");
+
+  const textInput = document.createElement("input");
+  textInput.className = "input article-reference-text";
+  textInput.type = "text";
+  textInput.placeholder = "Sobrenome, N. et al. (2026). Título do trabalho. Revista.";
+  textInput.value = reference?.text ?? "";
+  row.appendChild(textInput);
+
+  const urlInput = document.createElement("input");
+  urlInput.className = "input article-reference-url";
+  urlInput.type = "url";
+  urlInput.placeholder = "https://doi.org/... (opcional)";
+  urlInput.value = reference?.url ?? "";
+  row.appendChild(urlInput);
+
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => row.remove());
+  row.appendChild(removeBtn);
+
+  return row;
+}
+
+function collectArticleReferences() {
+  document.querySelectorAll('.card[id^="article-card-"]').forEach((card) => {
+    const i = Number(card.id.slice("article-card-".length));
+    const record = contentData.articles[i];
+    if (!record) return;
+    const references = Array.from(card.querySelectorAll(".article-reference-row"))
+      .map((row) => ({
+        text: row.querySelector(".article-reference-text").value.trim(),
+        url: row.querySelector(".article-reference-url").value.trim(),
+      }))
+      .filter((ref) => ref.text || ref.url)
+      .map((ref) => (ref.url ? ref : { text: ref.text }));
+    if (references.length > 0) record.references = references;
+    else delete record.references;
   });
 }
 

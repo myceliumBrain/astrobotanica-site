@@ -28,6 +28,12 @@ interface Article {
   image?: string; // opcional: caminho da imagem de capa, ex: "images/noticias/minha-noticia.jpg"
   featured?: boolean; // marcado no admin: fixa o artigo na Home (ver selectHomeItems)
   titleColor?: "light" | "dark"; // cor do título sobreposto à capa; default "light" (branco)
+  references?: ArticleReference[]; // opcional: lista exibida após o corpo, antes de "Continue lendo"
+}
+
+interface ArticleReference {
+  text: string; // citação/descrição da referência
+  url?: string; // opcional: link para a fonte
 }
 
 interface MemberLink {
@@ -533,6 +539,29 @@ function renderArticleDetail(articles: Loaded<Article>): void {
   const body = el("div", "article-body");
   body.innerHTML = article.body;
   root.appendChild(body);
+
+  if (article.references && article.references.length > 0) {
+    const refsSection = el("div", "article-references");
+    refsSection.appendChild(el("h2", "article-references-heading", i18next.t("artigo.referencesHeading")));
+    const list = document.createElement("ol");
+    list.className = "article-references-list";
+    for (const ref of article.references) {
+      const li = document.createElement("li");
+      if (ref.url) {
+        const a = document.createElement("a");
+        a.href = ref.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = ref.text;
+        li.appendChild(a);
+      } else {
+        li.textContent = ref.text;
+      }
+      list.appendChild(li);
+    }
+    refsSection.appendChild(list);
+    root.appendChild(refsSection);
+  }
 
   const related = document.getElementById("artigo-related");
   if (related) {

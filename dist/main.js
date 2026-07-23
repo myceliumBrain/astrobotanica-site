@@ -460,7 +460,29 @@ function renderArticleDetail(articles) {
     const body = el("div", "article-body");
     body.innerHTML = article.body;
     root.appendChild(body);
-
+    if (article.references && article.references.length > 0) {
+        const refsSection = el("div", "article-references");
+        refsSection.appendChild(el("h2", "article-references-heading", i18next.t("artigo.referencesHeading")));
+        const list = document.createElement("ol");
+        list.className = "article-references-list";
+        for (const ref of article.references) {
+            const li = document.createElement("li");
+            if (ref.url) {
+                const a = document.createElement("a");
+                a.href = ref.url;
+                a.target = "_blank";
+                a.rel = "noopener noreferrer";
+                a.textContent = ref.text;
+                li.appendChild(a);
+            }
+            else {
+                li.textContent = ref.text;
+            }
+            list.appendChild(li);
+        }
+        refsSection.appendChild(list);
+        root.appendChild(refsSection);
+    }
     const related = document.getElementById("artigo-related");
     if (related) {
         const others = articles.items.filter((a) => a.id !== article.id);
