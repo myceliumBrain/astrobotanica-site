@@ -26,8 +26,9 @@ interface Article {
   date: string; // formato AAAA-MM-DD
   readingTime: string; // ex: "6 min"
   body: string; // HTML gerado pelo editor do painel (negrito, parágrafos, imagens)
-  image?: string; // opcional: caminho da imagem de capa, ex: "images/noticias/minha-noticia.jpg"
+  image?: string; // opcional: caminho da imagem de capa (horizontal), ex: "images/noticias/minha-noticia.jpg"
   imageCaption?: string; // opcional: legenda exibida abaixo da imagem de capa
+  imageVertical?: string; // opcional: caminho da imagem vertical usada nos cartões de prévia (ver buildArticleCard); sem ela, cai para `image`
   featured?: boolean; // marcado no admin: fixa o artigo na Home (ver selectHomeItems)
   references?: ArticleReference[]; // opcional: lista exibida após o corpo, antes de "Continue lendo"
 }
@@ -449,9 +450,10 @@ function buildArticleCard(article: Article): HTMLAnchorElement {
   card.href = `/noticia?id=${article.id}`;
 
   const image = el("div", "article-card-image");
-  if (article.image) {
+  const cardImageSrc = article.imageVertical || article.image;
+  if (cardImageSrc) {
     const img = document.createElement("img");
-    img.src = article.image;
+    img.src = cardImageSrc;
     img.alt = "";
     img.loading = "lazy";
     image.appendChild(img);

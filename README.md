@@ -208,6 +208,7 @@ conveniência, não o único jeito. Veja os formatos abaixo se preferir editar
   "body": "<p>Primeiro parágrafo...</p><p>Segundo parágrafo com <strong>negrito</strong>.</p>",
   "featured": true,
   "titleColor": "dark",
+  "imageVertical": "images/noticias/noticia-1-imagem-vertical.jpg",
   "references": [
     { "text": "Sobrenome, N. et al. (2026). Título do trabalho. Revista.", "url": "https://doi.org/..." },
     { "text": "Referência sem link, só o texto da citação." }
@@ -225,8 +226,13 @@ não precisa (e não deve) ser escrito à mão com conteúdo não confiável, j�
 que é inserido direto na página via `innerHTML`. `image` também é opcional
 (caminho de uma imagem de capa, ex:
 `images/noticias/noticia-1-imagem-principal.jpg`) — sem ela, o cartão mostra
-só um retângulo vazio no lugar do pôster. Assim como no episódio, a imagem de
-capa e as imagens inseridas no corpo **podem ser enviadas direto pelo
+só um retângulo vazio no lugar do pôster. `imageVertical` é opcional: uma
+segunda imagem, em formato vertical (3:4), usada só no pôster dos cartões
+(lista de notícias, destaques da Home, "Continue lendo") — sem ela, o cartão
+cai para `image` (que costuma ser horizontal e por isso corta mal nesse
+formato). O banner no topo da página da notícia continua sempre usando
+`image`. Assim como no episódio, a imagem de capa, a imagem vertical e as
+imagens inseridas no corpo **podem ser enviadas direto pelo
 painel** (ver "Formato de um episódio" abaixo para como esse envio funciona).
 `featured` é opcional (padrão ausente/`false`) — ver "Destaque na Home"
 acima. `titleColor` é opcional (`"light"`/padrão ausente = branco, `"dark"` =

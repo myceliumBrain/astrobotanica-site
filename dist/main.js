@@ -375,9 +375,10 @@ function buildArticleCard(article) {
     card.href = `/noticia?id=${article.id}`;
 
     const image = el("div", "article-card-image");
-    if (article.image) {
+    const cardImageSrc = article.imageVertical || article.image;
+    if (cardImageSrc) {
         const img = document.createElement("img");
-        img.src = article.image;
+        img.src = cardImageSrc;
         img.alt = "";
         img.loading = "lazy";
         image.appendChild(img);

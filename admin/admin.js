@@ -853,7 +853,7 @@ function applyArticleField(input) {
     return;
   }
   const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
-  if ((key === "subtitle" || key === "image" || key === "author" || key === "authorAvatar" || key === "imageCaption") && !value) delete record[key];
+  if ((key === "subtitle" || key === "image" || key === "author" || key === "authorAvatar" || key === "imageCaption" || key === "imageVertical") && !value) delete record[key];
   else record[key] = value;
 }
 
@@ -1250,6 +1250,77 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   return wrap;
 }
 
+// Divide o parágrafo no cursor sempre do mesmo jeito ao apertar Enter no
+// corpo — o Enter nativo do contenteditable é inconsistente: dependendo de
+// como a formatação (negrito/tamanho de fonte) estava aplicada na linha,
+// às vezes cria o parágrafo novo sem um <p> ao redor (texto "solto" direto
+// no editor). Como o espaçamento do site vem só de `.article-body p + p`
+// (ver css/style.css), texto solto sem <p> fica sem essa margem e o
+// espaço visual passa a depender só da altura de linha (que muda com o
+// tamanho da fonte) — daí o espaçamento inconsistente. Esta função sempre
+// produz um <p> novo dos dois lados do corte, então o Enter fica
+// previsível independente do que veio antes; de brinde, autocorrige texto
+// solto antigo (sem <p>) assim que o usuário edita perto dele.
+function splitEditorParagraphAtCursor(editor) {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return;
+  const range = sel.getRangeAt(0);
+  if (!editor.contains(range.startContainer)) return;
+  range.deleteContents();
+
+  function placeCursor(node) {
+    const newRange = document.createRange();
+    newRange.setStart(node, 0);
+    newRange.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+  }
+
+  // Cursor solto direto no editor (entre blocos, ou editor vazio) — não há
+  // nó pra dividir, só insere o parágrafo novo na posição.
+  if (range.startContainer === editor) {
+    const newP = document.createElement("p");
+    newP.appendChild(document.createElement("br"));
+    editor.insertBefore(newP, editor.childNodes[range.startOffset] || null);
+    placeCursor(newP);
+    return;
+  }
+
+  let topNode = range.startContainer;
+  while (topNode.parentNode !== editor) {
+    topNode = topNode.parentNode;
+  }
+
+  const afterRange = document.createRange();
+  afterRange.setStart(range.startContainer, range.startOffset);
+  afterRange.setEnd(topNode, topNode.nodeType === Node.TEXT_NODE ? topNode.length : topNode.childNodes.length);
+  const afterFragment = afterRange.extractContents();
+
+  const isEmpty = (node) => node.textContent.trim() === "" && !node.querySelector?.("img");
+
+  const newP = document.createElement("p");
+  if (isEmpty(afterFragment)) newP.appendChild(document.createElement("br"));
+  else newP.appendChild(afterFragment);
+  editor.insertBefore(newP, topNode.nextSibling);
+
+  // Garante que o lado "antes" do corte também seja um <p> — se já era
+  // (caso normal), só reaproveita; se era texto solto (bug antigo), envolve
+  // agora, corrigindo o espaçamento dali pra frente.
+  let before = topNode;
+  if (!(before.nodeType === Node.ELEMENT_NODE && before.tagName === "P")) {
+    const wrapP = document.createElement("p");
+    editor.insertBefore(wrapP, before);
+    wrapP.appendChild(before);
+    before = wrapP;
+  }
+  if (isEmpty(before)) {
+    before.innerHTML = "";
+    before.appendChild(document.createElement("br"));
+  }
+
+  placeCursor(newP);
+}
+
 // Campo de corpo com formatação: negrito, parágrafos (Enter/contenteditable)
 // e imagens inseridas no meio do texto. O conteúdo é salvo como HTML puro e
 // desenhado direto no site via innerHTML (ver renderArticleDetail em
@@ -1338,6 +1409,17 @@ function buildRichTextField(labelText, value, dataset, opts) {
   }
   editor.addEventListener("keyup", saveSelection);
   editor.addEventListener("mouseup", saveSelection);
+
+  // Enter (sem Shift) sempre quebra o parágrafo do mesmo jeito, em vez de
+  // deixar o comportamento nativo do contenteditable decidir (ver
+  // splitEditorParagraphAtCursor acima). Shift+Enter continua nativo
+  // (quebra de linha simples dentro do mesmo parágrafo).
+  editor.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" || e.shiftKey) return;
+    e.preventDefault();
+    splitEditorParagraphAtCursor(editor);
+    saveSelection();
+  });
 
   // Abrir o <select> também tira o foco do editor — guarda a seleção antes
   // de abrir (mousedown) e restaura na hora de aplicar (change), mesma
@@ -1689,6 +1771,23 @@ function buildArticleCard(article, i, total) {
 
   grid.appendChild(buildInput("Legenda da imagem de capa (opcional)", "text", article.imageCaption, { article: i, key: "imageCaption" }));
 
+  const imageVerticalField = buildFileUploadField(
+    "Imagem vertical para prévia (opcional)",
+    article.imageVertical,
+    { article: i, key: "imageVertical" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar imagem",
+      preview: true,
+      previewClass: "file-upload-preview--vertical",
+      allowClear: true,
+      buildPath: (file) => `images/noticias/${article.id}-imagem-vertical.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia imagem vertical da notícia "${article.title || article.id}" (${path})`,
+    }
+  );
+  imageVerticalField.classList.add("full");
+  grid.appendChild(imageVerticalField);
+
   grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
   grid.appendChild(buildInput("Tempo de leitura", "text", article.readingTime, { article: i, key: "readingTime" }, "6 min"));
 
@@ -1731,6 +1830,7 @@ function buildArticleCard(article, i, total) {
   const saveBtn = buildSaveCardButton(() => {
     avatarField.confirmFileUpload();
     imageField.confirmFileUpload();
+    imageVerticalField.confirmFileUpload();
     bodyField.confirmBodyImages();
     collectArticleCardFields(i);
     markDirty("articles");

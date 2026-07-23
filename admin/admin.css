@@ -345,6 +345,11 @@ a, button { cursor: pointer; }
   aspect-ratio: 1 / 1;
   border-radius: 50%;
 }
+.file-upload-preview--vertical {
+  width: 12rem;
+  max-width: 12rem;
+  aspect-ratio: 3 / 4;
+}
 
 /* ── AUTOR: integrante cadastrado x texto livre ── */
 .author-source-summary {
