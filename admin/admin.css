@@ -297,6 +297,12 @@ a, button { cursor: pointer; }
 .member-link-row .member-link-label { flex: 0 0 30%; }
 .member-link-row .member-link-url { flex: 1; min-width: 0; }
 
+/* ── REDES SOCIAIS DO RODAPÉ (lista de tamanho livre) ── */
+.site-social-links-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.6rem; }
+.site-social-link-row { display: flex; gap: 0.5rem; }
+.site-social-link-row .site-social-link-label { flex: 0 0 30%; }
+.site-social-link-row .site-social-link-url { flex: 1; min-width: 0; }
+
 /* ── REFERÊNCIAS DE NOTÍCIA (lista de tamanho livre) ── */
 .article-references-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.6rem; }
 .article-reference-row { display: flex; gap: 0.5rem; }

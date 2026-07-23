@@ -132,6 +132,34 @@ function applyTranslations() {
     });
 }
 
+// Coluna "Redes sociais" do rodapé (ao lado de "Navegação") — lista de
+// tamanho livre (nome + link) cadastrada no admin em Marca & navegação (ver
+// contentData.site.socialLinks/renderSiteSocialLinks em admin/admin.js).
+// Sem link nenhum cadastrado, a coluna inteira fica escondida (ver `hidden`
+// no HTML de cada página) em vez de aparecer com o título e nada embaixo.
+function renderFooterSocial() {
+    const col = document.getElementById("footer-social-col");
+    const container = document.getElementById("footer-social");
+    if (!col || !container) return;
+    container.innerHTML = "";
+    const links = i18next.t("socialLinks", { returnObjects: true });
+    const list = Array.isArray(links) ? links : [];
+    const valid = list.filter((link) => link.label && link.url);
+    if (valid.length === 0) {
+        col.hidden = true;
+        return;
+    }
+    col.hidden = false;
+    for (const link of valid) {
+        const a = document.createElement("a");
+        a.href = link.url;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = link.label;
+        container.appendChild(a);
+    }
+}
+
 function setupLangSwitch(onChange) {
     const buttons = document.querySelectorAll(".lang-btn");
     if (buttons.length === 0) return;
@@ -400,16 +428,13 @@ function renderArticleList(articles) {
 // Artigo: detalhe (noticia.html?id=...)
 // ----------------------------------------------------------------------------
 
-// Redes sociais do próprio Astrobotânica (não é "compartilhar esta
-// notícia" — é o mesmo link em toda página, configurado uma vez em
-// data/site.json via o admin, ver GENERAL_SCHEMA em admin/admin.js).
-// Abreviação (2-3 letras) em vez de logo colorido, pra combinar com o resto
-// da identidade visual (mono/PT-EN). Sem URL configurada, o ícone não aparece.
-const SOCIAL_NETWORKS = [
-    { name: "Bluesky", abbr: "BS", key: "social.bluesky" },
-    { name: "Facebook", abbr: "FB", key: "social.facebook" },
-    { name: "X", abbr: "X", key: "social.x" },
-    { name: "LinkedIn", abbr: "in", key: "social.linkedin" },
+// Redes exibidas na linha de compartilhar — nome por extenso no próprio
+// botão (ver .article-share-link), não é mais abreviação/logo.
+const SHARE_NETWORKS = [
+    { name: "Bluesky", buildUrl: (url, title) => `https://bsky.app/intent/compose?text=${encodeURIComponent(`${title} ${url}`)}` },
+    { name: "Facebook", buildUrl: (url) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
+    { name: "X", buildUrl: (url, title) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}` },
+    { name: "LinkedIn", buildUrl: (url) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}` },
 ];
 
 function buildArticleMetaRow(article) {
@@ -444,16 +469,15 @@ function buildArticleMetaRow(article) {
     row.appendChild(byline);
 
     const share = el("div", "article-share");
-    for (const network of SOCIAL_NETWORKS) {
-        const url = i18next.t(network.key);
-        if (!url) continue;
+    share.appendChild(el("span", "article-share-label", i18next.t("artigo.shareLabel")));
+    for (const network of SHARE_NETWORKS) {
         const a = document.createElement("a");
         a.className = "article-share-link";
-        a.href = url;
+        a.href = network.buildUrl(location.href, article.title);
         a.target = "_blank";
         a.rel = "noopener noreferrer";
-        a.setAttribute("aria-label", network.name);
-        a.textContent = network.abbr;
+        a.setAttribute("aria-label", i18next.t("artigo.shareOn", { network: network.name }));
+        a.textContent = network.name;
         share.appendChild(a);
     }
     row.appendChild(share);
@@ -783,6 +807,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     await initI18n();
     applyTranslations();
+    renderFooterSocial();
 
     const [episodes, articles, members] = await Promise.all([loadEpisodes(), loadArticles(), loadMembers()]);
 

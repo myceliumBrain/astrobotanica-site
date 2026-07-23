@@ -72,15 +72,7 @@ const GENERAL_SCHEMA = [
     heading: "Rodapé",
     fields: [
       { key: "footer.navHeading", label: "Título da coluna de navegação", type: "text" },
-    ],
-  },
-  {
-    heading: "Redes sociais (ícones no topo das notícias)",
-    fields: [
-      { key: "social.bluesky", label: "Bluesky", type: "text", singleLang: true },
-      { key: "social.facebook", label: "Facebook", type: "text", singleLang: true },
-      { key: "social.x", label: "X (Twitter)", type: "text", singleLang: true },
-      { key: "social.linkedin", label: "LinkedIn", type: "text", singleLang: true },
+      { key: "footer.socialHeading", label: "Título da coluna de redes sociais", type: "text" },
     ],
   },
 ];
@@ -765,6 +757,7 @@ async function loadContent() {
     renderEpisodesList();
     renderMembersList();
     renderGeneralForm();
+    renderSiteSocialLinks();
     if (fixedArticles || fixedEpisodes) {
       document.getElementById("save-btn").disabled = false;
       setSaveStatus("alterações pendentes", "pending");
@@ -912,6 +905,7 @@ function collectAll() {
   document.querySelectorAll("[data-site-en]").forEach((input) => {
     setByPath(contentData.siteEn, input.dataset.siteEn, input.value);
   });
+  collectSiteSocialLinks();
 }
 
 // Collectors por card: só sincronizam os campos daquele artigo/episódio
@@ -932,6 +926,13 @@ function collectMemberCardFields(i) {
 
 async function saveAll() {
   if (dirty.size === 0 && pendingUploads.length === 0 && pendingDeletions.length === 0) return;
+  // Sem isso, campos de "Marca & navegação"/"Páginas" (data-site/data-site-en)
+  // e as listas de tamanho livre (links de integrante, redes sociais do
+  // rodapé) só entravam em contentData quando alguém reordenava/adicionava/
+  // removia um item em outra seção (o que já chama collectAll) — clicar
+  // direto em "Salvar no GitHub" depois de só editar um desses campos
+  // salvava a versão antiga, sem a edição.
+  collectAll();
   const saveBtn = document.getElementById("save-btn");
   saveBtn.disabled = true;
   setSaveStatus("salvando…", "pending");
@@ -2215,10 +2216,6 @@ function buildSiteField(fieldDef) {
       : buildInput(fieldDef.label, "text", value, { site: fieldDef.key });
   wrap.appendChild(ptField);
 
-  // Campos sem variação por idioma (ex: link de rede social) não ganham a
-  // versão (EN) — não haveria o que traduzir, só duplicaria o campo.
-  if (fieldDef.singleLang) return wrap;
-
   const valueEn = getByPath(contentData.siteEn, fieldDef.key) ?? "";
   const enField =
     fieldDef.type === "textarea"
@@ -2250,6 +2247,67 @@ function renderGeneralForm() {
   }
   container.addEventListener("input", handleSiteFieldChange);
   container.addEventListener("change", handleSiteFieldChange);
+}
+
+// Redes sociais do rodapé: mesma lógica de tamanho livre dos links de
+// integrante (ver buildMemberLinkRow) — nome e link livres, quantos o admin
+// quiser, guardados em contentData.site.socialLinks. Sem versão (EN): é a
+// mesma URL/nome em qualquer idioma, não haveria o que traduzir.
+function buildSiteSocialLinkRow(link) {
+  const row = el("div", "site-social-link-row");
+
+  const labelInput = document.createElement("input");
+  labelInput.className = "input site-social-link-label";
+  labelInput.type = "text";
+  labelInput.placeholder = "Bluesky";
+  labelInput.value = link?.label ?? "";
+  row.appendChild(labelInput);
+
+  const urlInput = document.createElement("input");
+  urlInput.className = "input site-social-link-url";
+  urlInput.type = "url";
+  urlInput.placeholder = "https://bsky.app/profile/...";
+  urlInput.value = link?.url ?? "";
+  row.appendChild(urlInput);
+
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => {
+    row.remove();
+    markDirty("site");
+  });
+  row.appendChild(removeBtn);
+
+  return row;
+}
+
+// Sincroniza a lista de redes sociais do rodapé pra dentro de contentData —
+// chamada por collectAll() (ver comentário em saveAll), igual aos outros
+// campos de tamanho livre (referências de notícia, links de integrante).
+function collectSiteSocialLinks() {
+  const list = document.getElementById("site-social-links-list");
+  if (!list) return;
+  const links = Array.from(list.querySelectorAll(".site-social-link-row"))
+    .map((row) => ({
+      label: row.querySelector(".site-social-link-label").value.trim(),
+      url: row.querySelector(".site-social-link-url").value.trim(),
+    }))
+    .filter((link) => link.label || link.url);
+  if (links.length > 0) contentData.site.socialLinks = links;
+  else delete contentData.site.socialLinks;
+}
+
+function renderSiteSocialLinks() {
+  const list = document.getElementById("site-social-links-list");
+  const addBtn = document.getElementById("add-social-link-btn");
+  if (!list || !addBtn) return;
+  list.innerHTML = "";
+  (contentData.site.socialLinks || []).forEach((link) => list.appendChild(buildSiteSocialLinkRow(link)));
+  list.addEventListener("input", () => markDirty("site"));
+  addBtn.addEventListener("click", () => {
+    list.appendChild(buildSiteSocialLinkRow());
+    markDirty("site");
+  });
 }
 
 function renderPageForms() {

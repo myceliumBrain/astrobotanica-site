@@ -643,16 +643,22 @@ body.nav-open { overflow: hidden; }
 }
 .article-byline-name:hover { color: var(--accent-700); }
 .article-byline-meta { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-faint); }
-.article-share { display: flex; align-items: center; gap: var(--space-1); }
+.article-share { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); }
+.article-share-label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-faint);
+  margin-right: 2px;
+}
 .article-share-link {
   font-family: var(--font-mono);
-  font-size: 0.68rem;
-  letter-spacing: 0.03em;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
   height: 2rem;
+  padding: 0 0.65rem;
   border-radius: var(--radius);
   border: 1px solid var(--line);
   color: var(--ink-dim);
