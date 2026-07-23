@@ -21,13 +21,14 @@ interface Article {
   category: string; // ex: "Fisiologia vegetal", "Agricultura espacial"
   title: string;
   subtitle?: string;
-  author?: string; // opcional: mostrado abaixo do título na página de detalhe
+  author?: string; // opcional: mostrado no topo, ao lado da data
+  authorAvatar?: string; // opcional: foto do autor, ex: "images/equipe/pedro.jpg"
   date: string; // formato AAAA-MM-DD
   readingTime: string; // ex: "6 min"
   body: string; // HTML gerado pelo editor do painel (negrito, parágrafos, imagens)
   image?: string; // opcional: caminho da imagem de capa, ex: "images/noticias/minha-noticia.jpg"
+  imageCaption?: string; // opcional: legenda exibida abaixo da imagem de capa
   featured?: boolean; // marcado no admin: fixa o artigo na Home (ver selectHomeItems)
-  titleColor?: "light" | "dark"; // cor do título sobreposto à capa; default "light" (branco)
   references?: ArticleReference[]; // opcional: lista exibida após o corpo, antes de "Continue lendo"
 }
 
@@ -477,6 +478,54 @@ function renderArticleList(articles: Loaded<Article>): void {
 // Artigo: detalhe (noticia.html?id=...)
 // ----------------------------------------------------------------------------
 
+// Redes exibidas na linha de compartilhar; abreviação (2-3 letras) em vez de
+// logo colorido, pra combinar com o resto da identidade visual (mono/PT-EN).
+const SHARE_NETWORKS: { name: string; abbr: string; buildUrl: (url: string, title: string) => string }[] = [
+  { name: "Bluesky", abbr: "BS", buildUrl: (url, title) => `https://bsky.app/intent/compose?text=${encodeURIComponent(`${title} ${url}`)}` },
+  { name: "Facebook", abbr: "FB", buildUrl: (url) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
+  { name: "X", abbr: "X", buildUrl: (url, title) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}` },
+  { name: "LinkedIn", abbr: "in", buildUrl: (url) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}` },
+];
+
+function buildArticleMetaRow(article: Article): HTMLElement {
+  const row = el("div", "article-meta-row");
+
+  const byline = el("div", "article-byline");
+  if (article.authorAvatar) {
+    const avatar = document.createElement("img");
+    avatar.className = "article-avatar";
+    avatar.src = article.authorAvatar;
+    avatar.alt = "";
+    byline.appendChild(avatar);
+  }
+  const bylineText = el("div", "article-byline-text");
+  if (article.author) {
+    bylineText.appendChild(el("span", "article-byline-name", i18next.t("artigo.byLine", { author: article.author })));
+  }
+  const bylineMeta = el("span", "article-byline-meta");
+  bylineMeta.appendChild(document.createTextNode(formatDate(article.date)));
+  bylineMeta.appendChild(document.createTextNode(" · "));
+  bylineMeta.appendChild(document.createTextNode(article.readingTime));
+  bylineText.appendChild(bylineMeta);
+  byline.appendChild(bylineText);
+  row.appendChild(byline);
+
+  const share = el("div", "article-share");
+  for (const network of SHARE_NETWORKS) {
+    const a = document.createElement("a");
+    a.className = "article-share-link";
+    a.href = network.buildUrl(location.href, article.title);
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.setAttribute("aria-label", i18next.t("artigo.shareOn", { network: network.name }));
+    a.textContent = network.abbr;
+    share.appendChild(a);
+  }
+  row.appendChild(share);
+
+  return row;
+}
+
 function renderArticleDetail(articles: Loaded<Article>): void {
   const root = document.getElementById("artigo-content");
   if (!root) return;
@@ -495,48 +544,31 @@ function renderArticleDetail(articles: Loaded<Article>): void {
     return;
   }
 
-  const tag = el("span", "tag tag-accent", article.category);
-  const heading = el("h1", "", article.title);
-  const meta = el("div", "card-meta");
-  meta.appendChild(el("span", "", formatDate(article.date)));
-  meta.appendChild(el("span", "", "·"));
-  meta.appendChild(el("span", "", article.readingTime));
+  // Ordem fixa, sem sobrepor texto na imagem: etiqueta, título, subtítulo,
+  // depois a linha de autor/data + compartilhar, e só então a capa (com
+  // legenda opcional logo abaixo).
+  root.appendChild(el("span", "tag tag-accent", article.category));
+  root.appendChild(el("h1", "", article.title));
+  if (article.subtitle) {
+    root.appendChild(el("p", "article-subtitle", article.subtitle));
+  }
+  root.appendChild(buildArticleMetaRow(article));
 
   if (article.image) {
-    // Com imagem: etiqueta/título/data ficam sobrepostos nela (canto
-    // inferior esquerdo, corte de metade da altura de um banner 16:9) —
-    // mesmo tratamento da capa do episódio (ver .episode-cover).
     const cover = el("div", "article-cover");
     const img = document.createElement("img");
     img.src = article.image;
     img.alt = "";
     cover.appendChild(img);
-    const overlay = el("div", "article-cover-overlay");
-    if (article.titleColor === "dark") overlay.classList.add("title-dark");
-    overlay.appendChild(tag);
-    overlay.appendChild(heading);
-    overlay.appendChild(meta);
-    cover.appendChild(overlay);
     root.appendChild(cover);
-    if (article.subtitle) {
-      root.appendChild(el("p", "article-subtitle", article.subtitle));
+    if (article.imageCaption) {
+      root.appendChild(el("p", "article-cover-caption", article.imageCaption));
     }
-  } else {
-    root.appendChild(tag);
-    root.appendChild(heading);
-    if (article.subtitle) {
-      root.appendChild(el("p", "article-subtitle", article.subtitle));
-    }
-    root.appendChild(meta);
   }
 
   const body = el("div", "article-body");
   body.innerHTML = article.body;
   root.appendChild(body);
-
-  if (article.author) {
-    root.appendChild(el("p", "article-author article-author-end", i18next.t("artigo.byLine", { author: article.author })));
-  }
 
   if (article.references && article.references.length > 0) {
     const refsSection = el("div", "article-references");

@@ -834,14 +834,6 @@ function applyArticleField(input) {
     else delete record[key];
     return;
   }
-  if (input.type === "radio") {
-    if (!input.checked) return;
-    // "light" (branco) é o default histórico — não grava a chave pra não
-    // sujar artigos antigos/sem capa com um campo irrelevante.
-    if (input.value === "light") delete record[key];
-    else record[key] = input.value;
-    return;
-  }
   if (input.dataset.richtext === "html") {
     const newHtml = finalizeRichTextHtml(input);
     // Imagem que estava no HTML salvo antes e não está mais no novo —
@@ -858,7 +850,7 @@ function applyArticleField(input) {
     return;
   }
   const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
-  if ((key === "subtitle" || key === "image" || key === "author") && !value) delete record[key];
+  if ((key === "subtitle" || key === "image" || key === "author" || key === "authorAvatar" || key === "imageCaption") && !value) delete record[key];
   else record[key] = value;
 }
 
@@ -1048,31 +1040,6 @@ function buildCheckboxField(labelText, checked, dataset, onToggle) {
   return wrap;
 }
 
-// Grupo de radio buttons (ex: cor do título sobre a capa). `options` é uma
-// lista de { value, label }; o primeiro valor é o default quando `value`
-// não bate com nenhuma opção.
-function buildRadioField(labelText, options, value, dataset) {
-  const wrap = el("div", "field radio-field");
-  wrap.appendChild(el("label", "", labelText));
-  const group = el("div", "radio-group");
-  const name = `radio-${Math.random().toString(36).slice(2, 9)}`;
-  const selected = options.some((opt) => opt.value === value) ? value : options[0].value;
-  options.forEach((opt) => {
-    const row = el("label", "radio-row");
-    const input = document.createElement("input");
-    input.type = "radio";
-    input.name = name;
-    input.value = opt.value;
-    input.checked = opt.value === selected;
-    Object.entries(dataset).forEach(([k, v]) => { input.dataset[k] = v; });
-    row.appendChild(input);
-    row.appendChild(document.createTextNode(opt.label));
-    group.appendChild(row);
-  });
-  wrap.appendChild(group);
-  return wrap;
-}
-
 // Trava o marcador de "destaque" em HOME_MAX_ITEMS por seção: ao chegar no
 // limite, desabilita as checkboxes ainda desmarcadas (até alguém desmarcar
 // uma) — evita ambiguidade sobre qual item sairia da Home se o JSON tivesse
@@ -1131,7 +1098,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   let preview;
   if (opts.preview) {
     preview = document.createElement("img");
-    preview.className = "file-upload-preview";
+    preview.className = opts.previewClass ? `file-upload-preview ${opts.previewClass}` : "file-upload-preview";
     preview.style.display = currentValue ? "" : "none";
     // O painel vive em /admin/; os caminhos salvos são relativos à raiz do
     // site, então a pré-visualização precisa subir um nível.
@@ -1425,6 +1392,22 @@ function buildArticleCard(article, i, total) {
   grid.appendChild(buildInput("Subtítulo (opcional)", "text", article.subtitle, { article: i, key: "subtitle" }));
   grid.appendChild(buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro"));
 
+  const avatarField = buildFileUploadField(
+    "Foto do autor (opcional)",
+    article.authorAvatar,
+    { article: i, key: "authorAvatar" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar foto",
+      placeholder: `images/equipe/${article.id}-autor.jpg`,
+      preview: true,
+      previewClass: "file-upload-preview--avatar",
+      buildPath: (file) => `images/equipe/${article.id}-autor.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia foto do autor da notícia "${article.title || article.id}" (${path})`,
+    }
+  );
+  grid.appendChild(avatarField);
+
   const imageField = buildFileUploadField(
     "Imagem de capa (opcional)",
     article.image,
@@ -1441,17 +1424,7 @@ function buildArticleCard(article, i, total) {
   imageField.classList.add("full");
   grid.appendChild(imageField);
 
-  grid.appendChild(
-    buildRadioField(
-      "Cor do título (sobre a imagem de capa)",
-      [
-        { value: "light", label: "Branca" },
-        { value: "dark", label: "Preta" },
-      ],
-      article.titleColor || "light",
-      { article: i, key: "titleColor" }
-    )
-  );
+  grid.appendChild(buildInput("Legenda da imagem de capa (opcional)", "text", article.imageCaption, { article: i, key: "imageCaption" }));
 
   grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
   grid.appendChild(buildInput("Tempo de leitura", "text", article.readingTime, { article: i, key: "readingTime" }, "6 min"));

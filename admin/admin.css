@@ -277,19 +277,6 @@ a, button { cursor: pointer; }
 .checkbox-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--adm-accent); }
 .checkbox-row input[type="checkbox"]:disabled { opacity: 0.4; }
 
-/* ── COR DO TÍTULO (radio) ── */
-.radio-group { display: flex; gap: 1rem; align-items: center; height: 100%; }
-.radio-row {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-family: var(--adm-mono);
-  font-size: 0.8rem;
-  color: var(--adm-off-white);
-  cursor: pointer;
-}
-.radio-row input[type="radio"] { width: 15px; height: 15px; accent-color: var(--adm-accent); }
-
 /* ── LINKS DE INTEGRANTE (lista de tamanho livre) ── */
 .member-links-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.6rem; }
 .member-link-row { display: flex; gap: 0.5rem; }
@@ -331,6 +318,12 @@ a, button { cursor: pointer; }
   border: 1px solid var(--adm-border);
   border-radius: 3px;
   margin-top: 0.4rem;
+}
+.file-upload-preview--avatar {
+  width: 5rem;
+  max-width: 5rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
 }
 
 /* ── CORPO COM FORMATAÇÃO (negrito, itálico, tamanho, parágrafos, imagens) ── */

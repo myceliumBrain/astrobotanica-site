@@ -618,15 +618,48 @@ body.nav-open { overflow: hidden; }
   font-size: 1.1rem;
   margin: var(--space-1) 0 var(--space-3);
 }
-.article-author {
-  font-family: var(--font-mono);
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-  margin: var(--space-1) 0 0;
+.article-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
 }
-.article-author-end { margin-top: var(--space-4); }
+.article-byline { display: flex; align-items: center; gap: var(--space-2); }
+.article-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.article-byline-text { display: flex; flex-direction: column; gap: 2px; }
+.article-byline-name { font-weight: 600; font-size: 0.92rem; }
+.article-byline-meta { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-faint); }
+.article-share { display: flex; align-items: center; gap: var(--space-1); }
+.article-share-link {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  text-decoration: none;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+.article-share-link:hover {
+  color: var(--accent-800);
+  border-color: var(--accent-700);
+  background: var(--accent-100);
+}
 
 .article-references {
   max-width: var(--measure);
@@ -646,29 +679,24 @@ body.nav-open { overflow: hidden; }
 }
 .article-references-list li + li { margin-top: var(--space-1); }
 
-/* Capa da notícia (quando tem imagem): etiqueta/título/data sobrepostos no
-   canto inferior esquerdo, mesmo tratamento da capa do episódio — corte de
-   metade da altura de um banner 16:9 (ver .episode-cover). */
+/* Capa da notícia (quando tem imagem): vem depois da etiqueta/título/data
+   (ver .article-meta-row), sem texto sobreposto — layout diferente da capa
+   do episódio (ver .episode-cover), que continua com overlay. */
 .article-cover {
-  position: relative;
   width: 100%;
-  aspect-ratio: 32 / 9;
-  min-height: 8rem;
+  aspect-ratio: 16 / 9;
   background: var(--accent-100);
   overflow: hidden;
-  margin-bottom: var(--space-3);
+  border-radius: var(--radius);
+  margin-bottom: var(--space-1);
 }
 .article-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.article-cover-overlay {
-  position: absolute;
-  inset: auto 0 0 0;
-  padding: var(--space-3);
-  background: linear-gradient(to top, rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0) 85%);
+.article-cover-caption {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  margin: var(--space-1) 0 var(--space-3);
 }
-.article-cover-overlay .tag-accent { margin-bottom: var(--space-1); }
-.article-cover-overlay h1 { color: #fff; }
-.article-cover-overlay .card-meta { color: rgba(255, 255, 255, 0.8); }
-.article-cover-overlay.title-dark h1 { color: #000; }
 
 /* ---- painel de destaque (home) ---- */
 .feature-panel {
