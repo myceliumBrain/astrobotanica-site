@@ -478,13 +478,16 @@ function renderArticleList(articles: Loaded<Article>): void {
 // Artigo: detalhe (noticia.html?id=...)
 // ----------------------------------------------------------------------------
 
-// Redes exibidas na linha de compartilhar; abreviação (2-3 letras) em vez de
-// logo colorido, pra combinar com o resto da identidade visual (mono/PT-EN).
-const SHARE_NETWORKS: { name: string; abbr: string; buildUrl: (url: string, title: string) => string }[] = [
-  { name: "Bluesky", abbr: "BS", buildUrl: (url, title) => `https://bsky.app/intent/compose?text=${encodeURIComponent(`${title} ${url}`)}` },
-  { name: "Facebook", abbr: "FB", buildUrl: (url) => `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}` },
-  { name: "X", abbr: "X", buildUrl: (url, title) => `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}` },
-  { name: "LinkedIn", abbr: "in", buildUrl: (url) => `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}` },
+// Redes sociais do próprio Astrobotânica (não é "compartilhar esta
+// notícia" — é o mesmo link em toda página, configurado uma vez em
+// data/site.json via o admin, ver GENERAL_SCHEMA em admin/admin.js).
+// Abreviação (2-3 letras) em vez de logo colorido, pra combinar com o resto
+// da identidade visual (mono/PT-EN). Sem URL configurada, o ícone não aparece.
+const SOCIAL_NETWORKS: { name: string; abbr: string; key: string }[] = [
+  { name: "Bluesky", abbr: "BS", key: "social.bluesky" },
+  { name: "Facebook", abbr: "FB", key: "social.facebook" },
+  { name: "X", abbr: "X", key: "social.x" },
+  { name: "LinkedIn", abbr: "in", key: "social.linkedin" },
 ];
 
 function buildArticleMetaRow(article: Article): HTMLElement {
@@ -492,15 +495,23 @@ function buildArticleMetaRow(article: Article): HTMLElement {
 
   const byline = el("div", "article-byline");
   if (article.authorAvatar) {
+    const avatarLink = document.createElement("a");
+    avatarLink.className = "article-avatar-link";
+    avatarLink.href = "/sobre";
     const avatar = document.createElement("img");
     avatar.className = "article-avatar";
     avatar.src = article.authorAvatar;
     avatar.alt = "";
-    byline.appendChild(avatar);
+    avatarLink.appendChild(avatar);
+    byline.appendChild(avatarLink);
   }
   const bylineText = el("div", "article-byline-text");
   if (article.author) {
-    bylineText.appendChild(el("span", "article-byline-name", i18next.t("artigo.byLine", { author: article.author })));
+    const nameLink = document.createElement("a");
+    nameLink.className = "article-byline-name";
+    nameLink.href = "/sobre";
+    nameLink.textContent = i18next.t("artigo.byLine", { author: article.author });
+    bylineText.appendChild(nameLink);
   }
   const bylineMeta = el("span", "article-byline-meta");
   bylineMeta.appendChild(document.createTextNode(formatDate(article.date)));
@@ -511,13 +522,15 @@ function buildArticleMetaRow(article: Article): HTMLElement {
   row.appendChild(byline);
 
   const share = el("div", "article-share");
-  for (const network of SHARE_NETWORKS) {
+  for (const network of SOCIAL_NETWORKS) {
+    const url = i18next.t(network.key);
+    if (!url) continue;
     const a = document.createElement("a");
     a.className = "article-share-link";
-    a.href = network.buildUrl(location.href, article.title);
+    a.href = url;
     a.target = "_blank";
     a.rel = "noopener noreferrer";
-    a.setAttribute("aria-label", i18next.t("artigo.shareOn", { network: network.name }));
+    a.setAttribute("aria-label", network.name);
     a.textContent = network.abbr;
     share.appendChild(a);
   }

@@ -10,6 +10,12 @@
     "footerTagline": "Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.",
     "copyright": "© 2026 Astrobotânica."
   },
+  "social": {
+    "bluesky": "",
+    "facebook": "",
+    "x": "",
+    "linkedin": ""
+  },
   "nav": {
     "articles": "Notícias",
     "podcast": "Podcast",
@@ -67,8 +73,7 @@
   "artigo": {
     "metaTitle": "Notícia — Astrobotânica",
     "backLink": "← Voltar às notícias",
-    "byLine": "Por {{author}}",
-    "shareOn": "Compartilhar no {{network}}",
+    "byLine": "Por: {{author}}",
     "referencesHeading": "Referências",
     "latestHeading": "Mais recentes",
     "relatedHeading": "Continue lendo",

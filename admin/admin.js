@@ -74,6 +74,15 @@ const GENERAL_SCHEMA = [
       { key: "footer.navHeading", label: "Título da coluna de navegação", type: "text" },
     ],
   },
+  {
+    heading: "Redes sociais (ícones no topo das notícias)",
+    fields: [
+      { key: "social.bluesky", label: "Bluesky", type: "text", singleLang: true },
+      { key: "social.facebook", label: "Facebook", type: "text", singleLang: true },
+      { key: "social.x", label: "X (Twitter)", type: "text", singleLang: true },
+      { key: "social.linkedin", label: "LinkedIn", type: "text", singleLang: true },
+    ],
+  },
 ];
 
 const PAGE_SCHEMA = [
@@ -2205,6 +2214,10 @@ function buildSiteField(fieldDef) {
       ? buildTextarea(fieldDef.label, value, { site: fieldDef.key })
       : buildInput(fieldDef.label, "text", value, { site: fieldDef.key });
   wrap.appendChild(ptField);
+
+  // Campos sem variação por idioma (ex: link de rede social) não ganham a
+  // versão (EN) — não haveria o que traduzir, só duplicaria o campo.
+  if (fieldDef.singleLang) return wrap;
 
   const valueEn = getByPath(contentData.siteEn, fieldDef.key) ?? "";
   const enField =

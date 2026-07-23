@@ -67,8 +67,7 @@
   "artigo": {
     "metaTitle": "Article — Astrobotanica",
     "backLink": "← Back to articles",
-    "byLine": "By {{author}}",
-    "shareOn": "Share on {{network}}",
+    "byLine": "By: {{author}}",
     "referencesHeading": "References",
     "latestHeading": "Latest",
     "relatedHeading": "Keep reading",
