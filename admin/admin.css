@@ -380,7 +380,35 @@ a, button { cursor: pointer; }
 .toggle-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ── CORPO COM FORMATAÇÃO (negrito, itálico, tamanho, parágrafos, imagens) ── */
-.rich-text-toolbar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.4rem; }
+/* Fica grudada no topo (abaixo da .adm-topbar, sticky em top:0/56px de
+   altura) enquanto o campo rola por baixo dela — assim os botões continuam
+   ao lado de onde o usuário está digitando, sem precisar voltar pro topo da
+   página. Some por padrão; só some visível/clicável enquanto o foco está em
+   algum lugar dentro do campo (editor ou os próprios controles da barra),
+   via :focus-within — não depende de rastrear foco/blur manualmente. */
+.rich-text-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+  position: sticky;
+  top: 56px;
+  z-index: 5;
+  background: var(--adm-surface);
+  padding: 0.5rem 0.4rem;
+  border-radius: 3px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-4px);
+  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
+  pointer-events: none;
+}
+.rich-text-field:focus-within .rich-text-toolbar {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+  pointer-events: auto;
+}
 .rich-text-btn {
   font-family: var(--adm-mono);
   font-size: 0.7rem;

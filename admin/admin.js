@@ -1354,6 +1354,20 @@ function buildRichTextField(labelText, value, dataset, opts) {
   italicBtn.addEventListener("click", () => document.execCommand("italic"));
   toolbar.appendChild(italicBtn);
 
+  // Mesma quebra determinística do Enter (ver splitEditorParagraphAtCursor),
+  // só que por clique — útil se o cursor já estiver ali e for mais rápido
+  // clicar do que apertar Enter, ou em qualquer caso onde o atalho de
+  // teclado não for percebido.
+  const breakBtn = el("button", "rich-text-btn", "Pular linha");
+  breakBtn.type = "button";
+  breakBtn.title = "Novo parágrafo (mesmo espaçamento sempre, independente do que veio antes)";
+  breakBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  breakBtn.addEventListener("click", () => {
+    splitEditorParagraphAtCursor(editor);
+    saveSelection();
+  });
+  toolbar.appendChild(breakBtn);
+
   // Escala de tamanho legada do execCommand("fontSize") (1 a 7, padrão 3) —
   // rotulada por nome em vez do número cru, pra ficar claro no menu.
   const sizeSelect = document.createElement("select");
@@ -1439,15 +1453,10 @@ function buildRichTextField(labelText, value, dataset, opts) {
     saveSelection();
   });
 
-  imageBtn.addEventListener("mousedown", (e) => e.preventDefault());
-  imageBtn.addEventListener("click", () => imageInput.click());
-
-  imageInput.addEventListener("change", () => {
-    const file = imageInput.files[0];
-    if (!file) return;
-    // Numeração sequencial (id-imagem-1, id-imagem-2...) olhando as imagens
-    // já presentes no editor (tanto as já salvas quanto as ainda pendentes),
-    // pra nunca repetir número mesmo remontando o card várias vezes.
+  // Numeração sequencial (id-imagem-1, id-imagem-2...) olhando as imagens já
+  // presentes no editor (tanto as já salvas quanto as ainda pendentes), pra
+  // nunca repetir número mesmo remontando o card várias vezes.
+  function nextImageNumber() {
     const re = new RegExp(`-imagem-(\\d+)\\.[a-zA-Z0-9]+$`);
     let maxN = 0;
     editor.querySelectorAll("img").forEach((existing) => {
@@ -1455,13 +1464,10 @@ function buildRichTextField(labelText, value, dataset, opts) {
       const match = re.exec(src);
       if (match) maxN = Math.max(maxN, Number(match[1]));
     });
-    const path = `${opts.folder}/${opts.id}-imagem-${maxN + 1}.${fileExtension(file.name, "jpg")}`;
+    return maxN + 1;
+  }
 
-    const img = document.createElement("img");
-    img.src = URL.createObjectURL(file);
-    img.dataset.finalSrc = path;
-    img.pendingFile = file;
-
+  function insertImageAtSelection(img) {
     editor.focus();
     const sel = window.getSelection();
     if (savedRange) {
@@ -1480,7 +1486,48 @@ function buildRichTextField(labelText, value, dataset, opts) {
       editor.appendChild(img);
     }
     saveSelection();
+  }
+
+  // Insere um arquivo (File ou Blob) como imagem "pendente até confirmar" —
+  // mesmo fluxo do botão "+ imagem", usado também pelo colar (ver
+  // handlePastedImageBlob abaixo), pra nunca deixar imagem solta sem passar
+  // por aqui (é o que garante que ela vira upload de verdade em vez de
+  // base64 embutido no HTML salvo).
+  function insertPendingImage(fileOrBlob, extFallback) {
+    const path = `${opts.folder}/${opts.id}-imagem-${nextImageNumber()}.${fileExtension(fileOrBlob.name, extFallback || "jpg")}`;
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(fileOrBlob);
+    img.dataset.finalSrc = path;
+    img.pendingFile = fileOrBlob;
+    insertImageAtSelection(img);
+  }
+
+  imageBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  imageBtn.addEventListener("click", () => imageInput.click());
+
+  imageInput.addEventListener("change", () => {
+    const file = imageInput.files[0];
+    if (!file) return;
+    insertPendingImage(file);
     imageInput.value = "";
+  });
+
+  // Colar uma imagem de verdade (print, arquivo copiado do sistema) direto
+  // no corpo — sem isso, o comportamento nativo do contenteditable insere a
+  // imagem como base64 embutido no HTML, que é salvo dentro do próprio
+  // articles.json. Isso já bloatou o JSON pra > 3 MB numa notícia (o
+  // suficiente pra passar do limite de 1 MB da Contents API do GitHub, que é
+  // como o painel carrega o conteúdo — ver getFile) e quebrou o carregamento
+  // do painel inteiro. Interceptando aqui, a imagem colada passa pelo mesmo
+  // upload de arquivo binário (Git Data API) usado pelo botão "+ imagem".
+  editor.addEventListener("paste", (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const fileItem = Array.from(items).find((item) => item.kind === "file" && item.type.startsWith("image/"));
+    if (!fileItem) return;
+    e.preventDefault();
+    const file = fileItem.getAsFile();
+    if (file) insertPendingImage(file);
   });
 
   wrap.confirmBodyImages = function confirmBodyImages() {
