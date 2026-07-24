@@ -31,7 +31,11 @@ function getParam(name) {
 
 async function loadJSON(path) {
     try {
-        const res = await fetch(path);
+        // "no-cache" força revalidação com o servidor a cada carga (ver
+        // src/main.ts) em vez de reaproveitar cegamente uma cópia salva do
+        // navegador — sem isso, uma edição salva no admin podia não
+        // aparecer no site publicado até o cache expirar sozinho.
+        const res = await fetch(path, { cache: "no-cache" });
         if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
         const items = await res.json();
         return { items, failed: false };

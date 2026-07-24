@@ -99,7 +99,12 @@ function getParam(name: string): string | null {
 
 async function loadJSON<T>(path: string): Promise<Loaded<T>> {
   try {
-    const res = await fetch(path);
+    // "no-cache" força o navegador a revalidar com o servidor a cada carga
+    // (ETag/If-None-Match) em vez de reaproveitar cegamente uma cópia salva
+    // — sem isso, uma edição salva no admin (que sempre busca fresco, ver
+    // ghRequest em admin.js) podia não aparecer no site publicado até o
+    // cache do navegador expirar por conta própria.
+    const res = await fetch(path, { cache: "no-cache" });
     if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
     const items = (await res.json()) as T[];
     return { items, failed: false };
