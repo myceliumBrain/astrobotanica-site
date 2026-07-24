@@ -607,7 +607,7 @@ body.nav-open { overflow: hidden; }
   line-height: 1.75;
 }
 .article-body p + p { margin-top: var(--space-3); }
-.article-body img { max-width: 100%; height: auto; display: block; border-radius: 4px; margin: var(--space-3) 0; }
+.article-body img { max-width: 100%; height: auto; display: block; border-radius: 4px; margin: var(--space-3) auto; }
 .article-body h2, .article-body h3 { font-size: 1.3rem; margin-top: var(--space-4); margin-bottom: var(--space-1); }
 .article-body > h2:first-child, .article-body > h3:first-child { margin-top: 0; }
 .article-subtitle {
