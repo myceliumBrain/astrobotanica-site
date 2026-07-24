@@ -809,6 +809,12 @@ function finalizeRichTextHtml(container) {
       img.setAttribute("src", src.slice(3));
     }
   });
+  // Rede de segurança: parágrafo/subtítulo vazio nunca é salvo (some sua
+  // margem à do vizinho e dobra o espaço no site publicado) — não importa se
+  // veio de colar, de Enter em sequência ou de conteúdo antigo.
+  clone.querySelectorAll("p, h2, h3").forEach((node) => {
+    if (node.textContent.trim() === "" && !node.querySelector("img")) node.remove();
+  });
   return clone.innerHTML;
 }
 
@@ -1355,6 +1361,20 @@ function buildRichTextField(labelText, value, dataset, opts) {
   italicBtn.addEventListener("click", () => document.execCommand("italic"));
   toolbar.appendChild(italicBtn);
 
+  // Subtítulo de verdade (H3) em vez de simular com negrito + tamanho de
+  // fonte + linha em branco antes — o espaçamento de um <h3> vem do CSS do
+  // site (.article-body h2, h3), sempre igual, sem depender de o autor
+  // acertar manualmente o "respiro" antes/depois.
+  const headingBtn = el("button", "rich-text-btn", "Subtítulo");
+  headingBtn.type = "button";
+  headingBtn.title = "Alternar o parágrafo atual para subtítulo";
+  headingBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  headingBtn.addEventListener("click", () => {
+    const current = document.queryCommandValue("formatBlock");
+    document.execCommand("formatBlock", false, /^h3$/i.test(current) ? "p" : "h3");
+  });
+  toolbar.appendChild(headingBtn);
+
   // Mesma quebra determinística do Enter (ver splitEditorParagraphAtCursor),
   // só que por clique — útil se o cursor já estiver ali e for mais rápido
   // clicar do que apertar Enter, ou em qualquer caso onde o atalho de
@@ -1530,12 +1550,30 @@ function buildRichTextField(labelText, value, dataset, opts) {
   // upload de arquivo binário (Git Data API) usado pelo botão "+ imagem".
   editor.addEventListener("paste", (e) => {
     const items = e.clipboardData?.items;
-    if (!items) return;
-    const fileItem = Array.from(items).find((item) => item.kind === "file" && item.type.startsWith("image/"));
-    if (!fileItem) return;
+    const fileItem = items && Array.from(items).find((item) => item.kind === "file" && item.type.startsWith("image/"));
+    if (fileItem) {
+      e.preventDefault();
+      const file = fileItem.getAsFile();
+      if (file) insertPendingImage(file);
+      return;
+    }
+    // Colar texto sempre entra como texto puro, nunca o HTML de origem —
+    // Word/Google Docs (e até outros sites) trazem parágrafos vazios,
+    // <span>/<font> com estilo embutido que ignora o CSS do site e é
+    // exatamente o que produz espaçamento quebrado/inconsistente no corpo
+    // publicado. Cada linha colada vira um parágrafo pelo mesmo caminho
+    // determinístico do Enter (splitEditorParagraphAtCursor), então o
+    // espaçamento fica sempre igual, texto digitado ou colado.
     e.preventDefault();
-    const file = fileItem.getAsFile();
-    if (file) insertPendingImage(file);
+    const text = e.clipboardData?.getData("text/plain") || "";
+    const lines = text.split(/\r\n|\r|\n/).map((line) => line.trim()).filter((line) => line.length > 0);
+    if (lines.length === 0) return;
+    document.execCommand("insertText", false, lines[0]);
+    for (let i = 1; i < lines.length; i++) {
+      splitEditorParagraphAtCursor(editor);
+      document.execCommand("insertText", false, lines[i]);
+    }
+    saveSelection();
   });
 
   wrap.confirmBodyImages = function confirmBodyImages() {

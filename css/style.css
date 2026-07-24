@@ -608,6 +608,8 @@ body.nav-open { overflow: hidden; }
 }
 .article-body p + p { margin-top: var(--space-3); }
 .article-body img { max-width: 100%; height: auto; display: block; border-radius: 4px; margin: var(--space-3) 0; }
+.article-body h2, .article-body h3 { font-size: 1.3rem; margin-top: var(--space-4); margin-bottom: var(--space-1); }
+.article-body > h2:first-child, .article-body > h3:first-child { margin-top: 0; }
 .article-subtitle {
   font-family: var(--font-heading);
   font-style: italic;
