@@ -391,12 +391,13 @@ body.nav-open { overflow: hidden; }
 .section-head {
   display: flex;
   align-items: baseline;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--space-3);
-  margin-bottom: var(--space-4);
+  margin-bottom: var(--space-3);
   flex-wrap: wrap;
 }
 .section-head h2 { font-size: 2rem; }
+.section-head .btn-ghost { font-size: 0.7rem; padding: 0.2rem 0.1rem; }
 
 .empty-state {
   font-family: var(--font-mono);
@@ -573,7 +574,15 @@ body.nav-open { overflow: hidden; }
 /* ---- destaques da Home: publicação mais recente em evidência (ver
    renderArticleGrid "featured") ---- */
 .article-card--hero { grid-column: span 2; }
-.article-card--hero .article-card-image,
+/* Sem aspect-ratio fixo: a grade estica o card hero pra altura da linha
+   (ditada pelos cards vizinhos, de proporção fixa), e a imagem cresce até
+   preencher essa altura — assim o texto abaixo sempre alinha com o dos
+   cards ao lado, não importa a largura da tela. */
+.article-card--hero .article-card-image {
+  aspect-ratio: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+}
 .article-card--horizontal .article-card-image { aspect-ratio: 16 / 9; }
 .article-card-kicker { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-700); margin-bottom: 4px; }
 .article-card-title {
