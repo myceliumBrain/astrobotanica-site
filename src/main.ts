@@ -495,8 +495,10 @@ function buildArticleCard(article: Article, variant?: ArticleCardVariant): HTMLA
 }
 
 // "featured": só os destaques da Home usam isso (ver linha com
-// selectHomeItems) — a mais recente ocupa 2 colunas, as duas seguintes
-// ficam horizontais. Lista de notícias e "Continue lendo" não usam.
+// selectHomeItems) — a mais recente ocupa 2 colunas (hero), a 2ª e 3ª
+// ficam no cartão "pôster" normal (mesmo destaque da grade comum), e as
+// demais (linha de baixo) ficam com a variante horizontal, com menos
+// destaque ainda. Lista de notícias e "Continue lendo" não usam.
 function renderArticleGrid(
   container: HTMLElement,
   articles: Article[],
@@ -510,7 +512,7 @@ function renderArticleGrid(
     return;
   }
   articles.forEach((article, index) => {
-    const variant = featured ? (index === 0 ? "hero" : index === 1 || index === 2 ? "horizontal" : undefined) : undefined;
+    const variant = featured ? (index === 0 ? "hero" : index >= 3 ? "horizontal" : undefined) : undefined;
     container.appendChild(buildArticleCard(article, variant));
   });
 }

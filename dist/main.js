@@ -413,7 +413,7 @@ function renderArticleGrid(container, articles, emptyMessage, featured) {
         return;
     }
     articles.forEach((article, index) => {
-        const variant = featured ? (index === 0 ? "hero" : index === 1 || index === 2 ? "horizontal" : undefined) : undefined;
+        const variant = featured ? (index === 0 ? "hero" : index >= 3 ? "horizontal" : undefined) : undefined;
         container.appendChild(buildArticleCard(article, variant));
     });
 }
