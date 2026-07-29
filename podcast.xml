@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Jardim em Expansão</title>
+    <link>https://astrobotanica.com.br/podcast</link>
+    <description>Um espaço para falar sobre a saída das plantas do primeiro jardim.</description>
+    <language>pt-br</language>
+    <lastBuildDate>Wed, 29 Jul 2026 17:59:04 +0000</lastBuildDate>
+    <atom:link href="https://astrobotanica.com.br/podcast.xml" rel="self" type="application/rss+xml" />
+    <itunes:author>Astrobotânica</itunes:author>
+    <itunes:explicit>false</itunes:explicit>
+    <itunes:type>episodic</itunes:type>
+    <itunes:owner>
+      <itunes:name>Astrobotânica</itunes:name>
+      <itunes:email>pedro.tenorio.alvarenga@gmail.com</itunes:email>
+    </itunes:owner>
+    <itunes:category text="Science">
+      <itunes:category text="Natural Sciences" />
+    </itunes:category>
+    <itunes:image href="https://astrobotanica.com.br/images/episodios/ep-01.jpg" />
+    <image>
+      <url>https://astrobotanica.com.br/images/episodios/ep-01.jpg</url>
+      <title>Jardim em Expansão</title>
+      <link>https://astrobotanica.com.br/podcast</link>
+    </image>
+    <item>
+      <title>Um Jardim e uma Biblioteca</title>
+      <link>https://astrobotanica.com.br/episodio?id=ep-01</link>
+      <guid isPermaLink="true">https://astrobotanica.com.br/episodio?id=ep-01</guid>
+      <pubDate>Mon, 20 Jul 2026 00:00:00 +0000</pubDate>
+      <description>Episódio piloto. O que é astrobotânica, por que uma planta não cabe num pen-drive, e uma carta para quem estiver ouvindo isso fora da Terra.</description>
+      <enclosure url="https://astrobotanica.com.br/audio/episodio-01.mp3" type="audio/mpeg" length="15686547" />
+      <itunes:duration>6:32</itunes:duration>
+      <itunes:episode>1</itunes:episode>
+      <itunes:episodeType>full</itunes:episodeType>
+      <itunes:explicit>false</itunes:explicit>
+      <itunes:image href="https://astrobotanica.com.br/images/episodios/ep-01.jpg" />
+    </item>
+  </channel>
+</rss>
