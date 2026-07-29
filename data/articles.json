@@ -1,5 +1,23 @@
 [
   {
+    "id": "noticia-7",
+    "category": "Agricultura Espacial",
+    "title": "Fungos micorrízicos como peça chave no cultivo de grão-de-bico em regolito lunar",
+    "date": "2026-07-29",
+    "readingTime": "10 min",
+    "body": "",
+    "subtitle": "Um novo estudo publicado na Scientific Reports detalha como a colaboração entre plantas, fungos e resíduos orgânicos pode transformar o hostil regolito lunar em um meio de cultivo produtivo. Pela primeira vez, pesquisadores relataram o cultivo de grão-de-bico (Cicer arietinum) até a fase de produção de sementes em simulante de regolito lunar (LRS), utilizando estratégias de biorremediação terrestre.",
+    "image": "images/noticias/noticia-7-imagem-principal.png",
+    "imageCaption": "Interações entre grão-de-bico (CP), fungos micorrízicos arbusculares (FMA) e vermicomposto (VC) na rizosfera. O grão-de-bico possui uma raiz pivotante que atinge até 30 cm de profundidade, com ramificações laterais. O sistema radicular associado aos FMA (à esquerda) acessa um volume maior do meio de cultivo, alcançando nutrientes e água que, de outra forma, seriam inacessíveis, ao mesmo tempo em que sequestra metais pesados ​​(MP), impedindo sua absorção. O sistema radicular sem FMA (à direita) apresenta menor área superficial, raízes mais curtas e menos mecanismos de proteção contra MP. O VC introduz microrganismos rizosféricos e fornece nutrientes necessários para o desenvolvimento da planta.",
+    "imageVertical": "images/noticias/noticia-7-imagem-vertical.png",
+    "references": [
+      {
+        "text": "Atkin, J., Pierson, E., Gentry, T. et al. Bioremediation of lunar regolith simulant through mycorrhizal fungi and plant symbioses enables chickpea to seed. Sci Rep 16, 7498 (2026). https://doi.org/10.1038/s41598-026-35759-0",
+        "url": "https://www.nature.com/articles/s41598-026-35759-0"
+      }
+    ]
+  },
+  {
     "id": "noticia-6",
     "category": "Hardwares e Softwares",
     "title": "STELLA: Instrumento Open Science da NASA (Sensoriamento Remoto)",
