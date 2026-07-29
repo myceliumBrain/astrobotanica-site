@@ -37,5 +37,12 @@ jobs:
             echo "Nada mudou, sem commit."
           else
             git commit -m "chore: atualiza mais acessadas"
-            git push
+            # outra push pode ter chegado no main entre o checkout e aqui
+            # (ex.: painel admin salvando um artigo) — tenta rebasear e
+            # reenviar antes de desistir.
+            for i in 1 2 3; do
+              git push && break
+              git fetch origin main
+              git rebase origin/main
+            done
           fi

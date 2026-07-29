@@ -48,5 +48,10 @@ jobs:
             echo "Nada mudou, sem commit."
           else
             git commit -m "chore: regenera páginas de notícia, rss.xml e podcast.xml"
-            git push
+            # mesma corrida possível do pageviews.yml — ver comentário lá
+            for i in 1 2 3; do
+              git push && break
+              git fetch origin main
+              git rebase origin/main
+            done
           fi
