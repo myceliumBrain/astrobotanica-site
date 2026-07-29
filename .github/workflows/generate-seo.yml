@@ -30,6 +30,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Instalar dependências (Pillow, usado pra otimizar og:image)
+        run: pip install Pillow
+
       - name: Rodar gerador de notícias (páginas + rss.xml)
         run: python3 scripts/generate_seo.py
 

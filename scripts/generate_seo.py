@@ -28,10 +28,18 @@ from datetime import datetime, timezone
 from email.utils import format_datetime
 from xml.sax.saxutils import escape as xml_escape
 
+from PIL import Image
+
 SITE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE_URL = "https://astrobotanica.com.br"
 RSS_MAX_ITEMS = 30
 EXCERPT_MAX_CHARS = 220
+# WhatsApp (e crawlers de social preview em geral) falham silenciosamente —
+# sem preview nenhum, nem texto — se o og:image demorar/for pesado demais.
+# Por isso og:image usa uma cópia redimensionada/recomprimida, não a capa
+# original (que pode ter vários MB); o corpo da notícia continua intacto.
+OG_IMAGE_MAX_WIDTH = 1200
+OG_IMAGE_JPEG_QUALITY = 82
 
 
 def load_json(relpath):
@@ -64,7 +72,21 @@ def absolute_asset_url(path):
     return f"{BASE_URL}/{path.lstrip('/')}"
 
 
-def build_head(article, brand_name):
+def build_social_image(article, article_dir):
+    src_path = os.path.join(SITE_ROOT, article.get("image") or "")
+    if not article.get("image") or not os.path.isfile(src_path):
+        return None
+    with Image.open(src_path) as im:
+        im = im.convert("RGB")
+        if im.width > OG_IMAGE_MAX_WIDTH:
+            ratio = OG_IMAGE_MAX_WIDTH / im.width
+            im = im.resize((OG_IMAGE_MAX_WIDTH, round(im.height * ratio)), Image.LANCZOS)
+        out_path = os.path.join(article_dir, "og-image.jpg")
+        im.save(out_path, "JPEG", quality=OG_IMAGE_JPEG_QUALITY, optimize=True)
+    return f"artigo/{article['id']}/og-image.jpg"
+
+
+def build_head(article, brand_name, social_image_rel):
     title = f"{article['title']} — {brand_name}"
     desc = excerpt_for(article)
     url = canonical_url(article["id"])
@@ -73,8 +95,8 @@ def build_head(article, brand_name):
 
     image_tags = ""
     json_ld_images = []
-    if article.get("image"):
-        image_url = absolute_asset_url(article["image"])
+    if social_image_rel:
+        image_url = absolute_asset_url(social_image_rel)
         json_ld_images.append(image_url)
         image_tags = (
             f'<meta property="og:image" content="{html.escape(image_url, quote=True)}" />\n'
@@ -134,10 +156,11 @@ def generate_article_pages(articles, brand_name):
     shutil.rmtree(output_dir, ignore_errors=True)
 
     for article in articles:
-        head = build_head(article, brand_name)
-        page = before_head + head + after_head
         article_dir = os.path.join(output_dir, article["id"])
         os.makedirs(article_dir, exist_ok=True)
+        social_image_rel = build_social_image(article, article_dir)
+        head = build_head(article, brand_name, social_image_rel)
+        page = before_head + head + after_head
         with open(os.path.join(article_dir, "index.html"), "w", encoding="utf-8") as f:
             f.write(page)
 
