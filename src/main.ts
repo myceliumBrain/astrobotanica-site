@@ -128,6 +128,10 @@ async function loadJSON<T>(path: string): Promise<Loaded<T>> {
 const loadEpisodes = () => loadJSON<Episode>("data/episodes.json");
 const loadArticles = () => loadJSON<Article>("data/articles.json");
 const loadMembers = () => loadJSON<Member>("data/members.json");
+// Ids de notícia, mais acessada primeiro (ver scripts/fetch_pageviews.py) —
+// lista vazia até o workflow agendado rodar pela primeira vez com o token
+// do GoatCounter configurado.
+const loadPageviews = () => loadJSON<string>("data/pageviews.json");
 
 // ----------------------------------------------------------------------------
 // Idioma: pt/en via i18next. Os textos fixos do site vivem em data/site.json
@@ -549,33 +553,13 @@ const SHARE_NETWORKS: { name: string; buildUrl: (url: string, title: string) => 
 function buildArticleMetaRow(article: Article): HTMLElement {
   const row = el("div", "article-meta-row");
 
-  const byline = el("div", "article-byline");
-  if (article.authorAvatar) {
-    const avatarLink = document.createElement("a");
-    avatarLink.className = "article-avatar-link";
-    avatarLink.href = "/sobre";
-    const avatar = document.createElement("img");
-    avatar.className = "article-avatar";
-    avatar.src = article.authorAvatar;
-    avatar.alt = "";
-    avatarLink.appendChild(avatar);
-    byline.appendChild(avatarLink);
-  }
-  const bylineText = el("div", "article-byline-text");
-  if (article.author) {
-    const nameLink = document.createElement("a");
-    nameLink.className = "article-byline-name";
-    nameLink.href = "/sobre";
-    nameLink.textContent = i18next.t("artigo.byLine", { author: article.author });
-    bylineText.appendChild(nameLink);
-  }
+  // Autor/avatar não ficam mais aqui — ver buildAuthorCard, sempre depois
+  // do corpo e das referências (desktop e celular).
   const bylineMeta = el("span", "article-byline-meta");
   bylineMeta.appendChild(document.createTextNode(formatDate(article.date)));
   bylineMeta.appendChild(document.createTextNode(" · "));
   bylineMeta.appendChild(document.createTextNode(article.readingTime));
-  bylineText.appendChild(bylineMeta);
-  byline.appendChild(bylineText);
-  row.appendChild(byline);
+  row.appendChild(bylineMeta);
 
   const share = el("div", "article-share");
   share.appendChild(el("span", "article-share-label", i18next.t("artigo.shareLabel")));
@@ -594,16 +578,68 @@ function buildArticleMetaRow(article: Article): HTMLElement {
   return row;
 }
 
-// Barra lateral "mais recentes" ao lado do corpo do texto (ver
-// .article-layout) — mesmas notícias que iriam pra "Continue lendo", só que
-// resumidas (miniatura + título) e limitadas às N mais novas, não todas.
+// Card do autor, sempre depois do corpo do texto e das referências
+// (desktop e celular — ver renderArticleDetail). Cruza article.author com
+// data/members.json (pelo nome) pra puxar bio e links, quando existir um
+// integrante cadastrado com esse nome; sem isso, mostra só nome/avatar.
+function buildAuthorCard(article: Article, members: Member[]): HTMLElement | null {
+  if (!article.author) return null;
+  const member = members.find((m) => m.name === article.author);
+
+  const card = el("div", "article-author-card");
+
+  const avatarSrc = article.authorAvatar || member?.image;
+  if (avatarSrc) {
+    const photoLink = document.createElement("a");
+    photoLink.className = "article-author-photo";
+    photoLink.href = "/sobre";
+    const img = document.createElement("img");
+    img.src = avatarSrc;
+    img.alt = "";
+    photoLink.appendChild(img);
+    card.appendChild(photoLink);
+  }
+
+  const info = el("div", "article-author-info");
+  info.appendChild(el("div", "article-author-name", article.author));
+
+  const bio = member ? (i18next.language === "en" && member.descriptionEn ? member.descriptionEn : member.description) : undefined;
+  if (bio) info.appendChild(el("p", "article-author-bio", bio));
+
+  const actions = el("div", "article-author-actions");
+  const cta = document.createElement("a");
+  cta.className = "btn btn-primary";
+  cta.href = "/sobre";
+  cta.textContent = i18next.t("artigo.authorCta");
+  actions.appendChild(cta);
+
+  const firstLink = member?.links?.[0];
+  if (firstLink) {
+    const link = document.createElement("a");
+    link.className = "btn btn-secondary";
+    link.href = firstLink.url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = firstLink.label;
+    actions.appendChild(link);
+  }
+  info.appendChild(actions);
+  card.appendChild(info);
+
+  return card;
+}
+
+// Barra lateral ao lado do corpo do texto (ver .article-layout): "mais
+// recentes" (mesmas notícias que iriam pra "Continue lendo", resumidas) e,
+// quando há dados de acesso (ver data/pageviews.json e
+// scripts/fetch_pageviews.py), "mais acessadas" logo abaixo.
 const ARTICLE_SIDEBAR_MAX_ITEMS = 3;
 
-function buildArticleSidebar(items: Article[]): HTMLElement {
-  const aside = el("aside", "article-sidebar");
-  aside.appendChild(el("span", "article-sidebar-heading", i18next.t("artigo.latestHeading")));
+function buildSidebarList(heading: string, items: Article[]): HTMLElement {
+  const section = el("div", "article-sidebar-section");
+  section.appendChild(el("span", "article-sidebar-heading", heading));
   const list = el("div", "article-sidebar-list");
-  for (const item of items.slice(0, ARTICLE_SIDEBAR_MAX_ITEMS)) {
+  for (const item of items) {
     const a = document.createElement("a");
     a.className = "article-sidebar-item";
     a.href = `/artigo/${item.id}/`;
@@ -618,11 +654,20 @@ function buildArticleSidebar(items: Article[]): HTMLElement {
     a.appendChild(el("span", "article-sidebar-title", item.title));
     list.appendChild(a);
   }
-  aside.appendChild(list);
+  section.appendChild(list);
+  return section;
+}
+
+function buildArticleSidebar(recentItems: Article[], mostViewedItems: Article[]): HTMLElement {
+  const aside = el("aside", "article-sidebar");
+  aside.appendChild(buildSidebarList(i18next.t("artigo.latestHeading"), recentItems.slice(0, ARTICLE_SIDEBAR_MAX_ITEMS)));
+  if (mostViewedItems.length > 0) {
+    aside.appendChild(buildSidebarList(i18next.t("artigo.mostViewedHeading"), mostViewedItems.slice(0, ARTICLE_SIDEBAR_MAX_ITEMS)));
+  }
   return aside;
 }
 
-function renderArticleDetail(articles: Loaded<Article>): void {
+function renderArticleDetail(articles: Loaded<Article>, members: Loaded<Member>, pageviews: Loaded<string>): void {
   const root = document.getElementById("artigo-content");
   if (!root) return;
   root.innerHTML = "";
@@ -663,6 +708,9 @@ function renderArticleDetail(articles: Loaded<Article>): void {
   }
 
   const others = articles.items.filter((a) => a.id !== article.id);
+  const mostViewed = pageviews.items
+    .map((id) => others.find((a) => a.id === id))
+    .filter((a): a is Article => a !== undefined);
 
   const layout = el("div", "article-layout");
   const main = el("div", "article-main");
@@ -693,10 +741,17 @@ function renderArticleDetail(articles: Loaded<Article>): void {
     refsSection.appendChild(list);
     main.appendChild(refsSection);
   }
+
+  const authorCard = buildAuthorCard(article, members.items);
+  if (authorCard) {
+    main.appendChild(el("hr", "article-divider"));
+    main.appendChild(authorCard);
+  }
+
   layout.appendChild(main);
 
   if (others.length > 0) {
-    layout.appendChild(buildArticleSidebar(others));
+    layout.appendChild(buildArticleSidebar(others, mostViewed));
   }
   root.appendChild(layout);
 
@@ -917,13 +972,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   applyTranslations();
   renderFooterSocial();
 
-  const [episodes, articles, members] = await Promise.all([loadEpisodes(), loadArticles(), loadMembers()]);
+  const [episodes, articles, members, pageviews] = await Promise.all([
+    loadEpisodes(),
+    loadArticles(),
+    loadMembers(),
+    loadPageviews(),
+  ]);
 
   function renderAll(): void {
     renderEpisodeList(episodes);
     renderEpisodeDetail(episodes);
     renderArticleList(articles);
-    renderArticleDetail(articles);
+    renderArticleDetail(articles, members, pageviews);
     renderHomeHighlights(episodes, articles);
     renderMembersList(members);
   }

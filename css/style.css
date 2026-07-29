@@ -642,23 +642,6 @@ body.nav-open { overflow: hidden; }
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--line);
 }
-.article-byline { display: flex; align-items: center; gap: var(--space-2); }
-.article-avatar-link { flex-shrink: 0; display: block; }
-.article-avatar {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--radius);
-  object-fit: cover;
-  display: block;
-}
-.article-byline-text { display: flex; flex-direction: column; gap: 2px; }
-.article-byline-name {
-  font-weight: 600;
-  font-size: 0.92rem;
-  color: inherit;
-  text-decoration: none;
-}
-.article-byline-name:hover { color: var(--accent-700); }
 .article-byline-meta { font-family: var(--font-mono); font-size: 0.72rem; color: var(--ink-faint); }
 .article-share { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); }
 .article-share-label {
@@ -687,6 +670,38 @@ body.nav-open { overflow: hidden; }
   border-color: var(--accent-700);
   background: var(--accent-100);
 }
+
+/* Linha separando o corpo/referências do card de autor (ver
+   renderArticleDetail) — mesmo estilo dos outros divisores do site. */
+.article-divider { border: none; border-top: 1px solid var(--line); margin: var(--space-4) 0 0; }
+
+/* Card do autor, sempre depois do corpo e das referências (ver
+   buildAuthorCard) — mesmo card no desktop e no celular. */
+.article-author-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  /* só margem de cima — embaixo já tem o padding do .wrap + o padding-top
+     da seção "Continue lendo" logo depois, então margin-bottom aqui só
+     dobraria o espaço (ver o "espaço desnecessário" reportado). */
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  background: var(--accent-100);
+  border: 1px solid var(--line);
+}
+.article-author-photo {
+  flex-shrink: 0;
+  display: block;
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  overflow: hidden;
+}
+.article-author-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.article-author-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--space-1); }
+.article-author-name { font-family: var(--font-heading); font-weight: 700; font-size: 1.05rem; }
+.article-author-bio { font-size: 0.88rem; line-height: 1.5; color: var(--ink-dim); }
+.article-author-actions { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1); }
 
 .article-references {
   margin-top: var(--space-4);
@@ -736,6 +751,7 @@ body.nav-open { overflow: hidden; }
 }
 .article-main { min-width: 0; }
 .article-sidebar { position: sticky; top: var(--space-3); }
+.article-sidebar-section + .article-sidebar-section { margin-top: var(--space-4); }
 .article-sidebar-heading {
   display: inline-block;
   font-family: var(--font-mono);
@@ -861,15 +877,21 @@ body.nav-open { overflow: hidden; }
 ============================================================================ */
 @media (max-width: 860px) {
   .article-layout { grid-template-columns: 1fr; }
-  .article-sidebar { position: static; }
+  /* "Mais recentes" fica redundante no celular — a mesma lista já aparece
+     logo abaixo em "Continue lendo" (ver #artigo-related). */
+  .article-sidebar { display: none; }
 }
 
 @media (max-width: 640px) {
   .episode-row { flex-wrap: wrap; }
   .episode-row-meta { width: 100%; }
   .member-card { flex-direction: column; align-items: stretch; }
+  .article-author-card { flex-direction: column; align-items: flex-start; }
   .contact-grid { grid-template-columns: 1fr; }
   .article-grid { grid-template-columns: repeat(2, 1fr); }
+  /* label sozinho na própria linha, senão os 4 botões quebram torto (3 numa
+     linha + 1 sobrando sozinho na de baixo) — ver .article-share */
+  .article-share-label { flex-basis: 100%; }
   .brand-mark { font-size: 1.7rem; }
   .nav-overlay-panel {
     width: 100%;

@@ -52,6 +52,7 @@ async function loadJSON(path) {
 const loadEpisodes = () => loadJSON("data/episodes.json");
 const loadArticles = () => loadJSON("data/articles.json");
 const loadMembers = () => loadJSON("data/members.json");
+const loadPageviews = () => loadJSON("data/pageviews.json");
 
 // ----------------------------------------------------------------------------
 // Idioma: pt/en via i18next. Os textos fixos do site vivem em data/site.json
@@ -450,33 +451,11 @@ const SHARE_NETWORKS = [
 function buildArticleMetaRow(article) {
     const row = el("div", "article-meta-row");
 
-    const byline = el("div", "article-byline");
-    if (article.authorAvatar) {
-        const avatarLink = document.createElement("a");
-        avatarLink.className = "article-avatar-link";
-        avatarLink.href = "/sobre";
-        const avatar = document.createElement("img");
-        avatar.className = "article-avatar";
-        avatar.src = article.authorAvatar;
-        avatar.alt = "";
-        avatarLink.appendChild(avatar);
-        byline.appendChild(avatarLink);
-    }
-    const bylineText = el("div", "article-byline-text");
-    if (article.author) {
-        const nameLink = document.createElement("a");
-        nameLink.className = "article-byline-name";
-        nameLink.href = "/sobre";
-        nameLink.textContent = i18next.t("artigo.byLine", { author: article.author });
-        bylineText.appendChild(nameLink);
-    }
     const bylineMeta = el("span", "article-byline-meta");
     bylineMeta.appendChild(document.createTextNode(formatDate(article.date)));
     bylineMeta.appendChild(document.createTextNode(" · "));
     bylineMeta.appendChild(document.createTextNode(article.readingTime));
-    bylineText.appendChild(bylineMeta);
-    byline.appendChild(bylineText);
-    row.appendChild(byline);
+    row.appendChild(bylineMeta);
 
     const share = el("div", "article-share");
     share.appendChild(el("span", "article-share-label", i18next.t("artigo.shareLabel")));
@@ -495,16 +474,63 @@ function buildArticleMetaRow(article) {
     return row;
 }
 
+function buildAuthorCard(article, members) {
+    if (!article.author) return null;
+    const member = members.find((m) => m.name === article.author);
+
+    const card = el("div", "article-author-card");
+
+    const avatarSrc = article.authorAvatar || member?.image;
+    if (avatarSrc) {
+        const photoLink = document.createElement("a");
+        photoLink.className = "article-author-photo";
+        photoLink.href = "/sobre";
+        const img = document.createElement("img");
+        img.src = avatarSrc;
+        img.alt = "";
+        photoLink.appendChild(img);
+        card.appendChild(photoLink);
+    }
+
+    const info = el("div", "article-author-info");
+    info.appendChild(el("div", "article-author-name", article.author));
+
+    const bio = member ? (i18next.language === "en" && member.descriptionEn ? member.descriptionEn : member.description) : undefined;
+    if (bio) info.appendChild(el("p", "article-author-bio", bio));
+
+    const actions = el("div", "article-author-actions");
+    const cta = document.createElement("a");
+    cta.className = "btn btn-primary";
+    cta.href = "/sobre";
+    cta.textContent = i18next.t("artigo.authorCta");
+    actions.appendChild(cta);
+
+    const firstLink = member?.links?.[0];
+    if (firstLink) {
+        const link = document.createElement("a");
+        link.className = "btn btn-secondary";
+        link.href = firstLink.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = firstLink.label;
+        actions.appendChild(link);
+    }
+    info.appendChild(actions);
+    card.appendChild(info);
+
+    return card;
+}
+
 // Barra lateral "mais recentes" ao lado do corpo do texto (ver
 // .article-layout) — mesmas notícias que iriam pra "Continue lendo", só que
 // resumidas (miniatura + título) e limitadas às N mais novas, não todas.
 const ARTICLE_SIDEBAR_MAX_ITEMS = 3;
 
-function buildArticleSidebar(items) {
-    const aside = el("aside", "article-sidebar");
-    aside.appendChild(el("span", "article-sidebar-heading", i18next.t("artigo.latestHeading")));
+function buildSidebarList(heading, items) {
+    const section = el("div", "article-sidebar-section");
+    section.appendChild(el("span", "article-sidebar-heading", heading));
     const list = el("div", "article-sidebar-list");
-    for (const item of items.slice(0, ARTICLE_SIDEBAR_MAX_ITEMS)) {
+    for (const item of items) {
         const a = document.createElement("a");
         a.className = "article-sidebar-item";
         a.href = `/artigo/${item.id}/`;
@@ -519,11 +545,20 @@ function buildArticleSidebar(items) {
         a.appendChild(el("span", "article-sidebar-title", item.title));
         list.appendChild(a);
     }
-    aside.appendChild(list);
+    section.appendChild(list);
+    return section;
+}
+
+function buildArticleSidebar(recentItems, mostViewedItems) {
+    const aside = el("aside", "article-sidebar");
+    aside.appendChild(buildSidebarList(i18next.t("artigo.latestHeading"), recentItems.slice(0, ARTICLE_SIDEBAR_MAX_ITEMS)));
+    if (mostViewedItems.length > 0) {
+        aside.appendChild(buildSidebarList(i18next.t("artigo.mostViewedHeading"), mostViewedItems.slice(0, ARTICLE_SIDEBAR_MAX_ITEMS)));
+    }
     return aside;
 }
 
-function renderArticleDetail(articles) {
+function renderArticleDetail(articles, members, pageviews) {
     const root = document.getElementById("artigo-content");
     if (!root) return;
     root.innerHTML = "";
@@ -564,6 +599,9 @@ function renderArticleDetail(articles) {
     }
 
     const others = articles.items.filter((a) => a.id !== article.id);
+    const mostViewed = pageviews.items
+        .map((id) => others.find((a) => a.id === id))
+        .filter((a) => a !== undefined);
 
     const layout = el("div", "article-layout");
     const main = el("div", "article-main");
@@ -595,10 +633,16 @@ function renderArticleDetail(articles) {
         refsSection.appendChild(list);
         main.appendChild(refsSection);
     }
+
+    const authorCard = buildAuthorCard(article, members.items);
+    if (authorCard) {
+        main.appendChild(el("hr", "article-divider"));
+        main.appendChild(authorCard);
+    }
     layout.appendChild(main);
 
     if (others.length > 0) {
-        layout.appendChild(buildArticleSidebar(others));
+        layout.appendChild(buildArticleSidebar(others, mostViewed));
     }
     root.appendChild(layout);
 
@@ -819,13 +863,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     applyTranslations();
     renderFooterSocial();
 
-    const [episodes, articles, members] = await Promise.all([loadEpisodes(), loadArticles(), loadMembers()]);
+    const [episodes, articles, members, pageviews] = await Promise.all([
+        loadEpisodes(),
+        loadArticles(),
+        loadMembers(),
+        loadPageviews(),
+    ]);
 
     function renderAll() {
         renderEpisodeList(episodes);
         renderEpisodeDetail(episodes);
         renderArticleList(articles);
-        renderArticleDetail(articles);
+        renderArticleDetail(articles, members, pageviews);
         renderHomeHighlights(episodes, articles);
         renderMembersList(members);
     }

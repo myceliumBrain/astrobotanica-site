@@ -71,12 +71,14 @@
     "byLine": "By: {{author}}",
     "referencesHeading": "References",
     "latestHeading": "Latest",
+    "mostViewedHeading": "Most read",
     "relatedHeading": "Keep reading",
     "loadError": "Couldn't load the article right now.",
     "notFound": "Article not found.",
     "noOthers": "There are no other articles published yet.",
     "shareLabel": "Share:",
-    "shareOn": "Share on {{network}}"
+    "shareOn": "Share on {{network}}",
+    "authorCta": "About"
   },
   "sobre": {
     "metaTitle": "About — Astrobotanica",

@@ -77,12 +77,14 @@
     "byLine": "Por: {{author}}",
     "referencesHeading": "Referências",
     "latestHeading": "Mais recentes",
+    "mostViewedHeading": "Mais acessadas",
     "relatedHeading": "Continue lendo",
     "loadError": "Não foi possível carregar a notícia agora.",
     "notFound": "Notícia não encontrada.",
     "noOthers": "Ainda não há outras notícias publicadas.",
     "shareLabel": "Compartilhar:",
-    "shareOn": "Compartilhar no {{network}}"
+    "shareOn": "Compartilhar no {{network}}",
+    "authorCta": "Sobre"
   },
   "sobre": {
     "metaTitle": "Sobre — Astrobotânica",
