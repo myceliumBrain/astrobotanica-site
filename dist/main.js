@@ -377,13 +377,13 @@ function renderEpisodeDetail(episodes) {
 // nos destaques da Home e em "continue lendo" — sempre da mesma forma.
 // ----------------------------------------------------------------------------
 
-function buildArticleCard(article) {
+function buildArticleCard(article, variant) {
     const card = document.createElement("a");
-    card.className = "article-card";
+    card.className = variant ? `article-card article-card--${variant}` : "article-card";
     card.href = `/artigo/${article.id}/`;
 
     const image = el("div", "article-card-image");
-    const cardImageSrc = article.imageVertical || article.image;
+    const cardImageSrc = variant === "horizontal" ? (article.image || article.imageVertical) : (article.imageVertical || article.image);
     if (cardImageSrc) {
         const img = document.createElement("img");
         img.src = cardImageSrc;
@@ -405,16 +405,17 @@ function buildArticleCard(article) {
     return card;
 }
 
-function renderArticleGrid(container, articles, emptyMessage) {
+function renderArticleGrid(container, articles, emptyMessage, featured) {
     container.innerHTML = "";
     container.classList.add("article-grid");
     if (articles.length === 0) {
         container.appendChild(el("p", "empty-state", emptyMessage));
         return;
     }
-    for (const article of articles) {
-        container.appendChild(buildArticleCard(article));
-    }
+    articles.forEach((article, index) => {
+        const variant = featured ? (index === 0 ? "hero" : index === 1 || index === 2 ? "horizontal" : undefined) : undefined;
+        container.appendChild(buildArticleCard(article, variant));
+    });
 }
 
 // ----------------------------------------------------------------------------
@@ -430,7 +431,7 @@ function renderArticleList(articles) {
         list.appendChild(el("p", "empty-state", i18next.t("artigos.loadError")));
         return;
     }
-    renderArticleGrid(list, articles.items, i18next.t("artigos.emptyList"));
+    renderArticleGrid(list, articles.items, i18next.t("artigos.emptyList"), true);
 }
 
 // ----------------------------------------------------------------------------

@@ -74,7 +74,9 @@
     "relatedHeading": "Keep reading",
     "loadError": "Couldn't load the article right now.",
     "notFound": "Article not found.",
-    "noOthers": "There are no other articles published yet."
+    "noOthers": "There are no other articles published yet.",
+    "shareLabel": "Share:",
+    "shareOn": "Share on {{network}}"
   },
   "sobre": {
     "metaTitle": "About — Astrobotanica",

@@ -460,13 +460,19 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
 // nos destaques da Home e em "continue lendo" — sempre da mesma forma.
 // ----------------------------------------------------------------------------
 
-function buildArticleCard(article: Article): HTMLAnchorElement {
+// Variante usada só na lista de notícias (ver renderArticleGrid "featured"):
+// "hero" ocupa 2 colunas (a publicação mais recente), "horizontal" usa a
+// capa horizontal em vez da vertical (as duas publicações seguintes).
+type ArticleCardVariant = "hero" | "horizontal";
+
+function buildArticleCard(article: Article, variant?: ArticleCardVariant): HTMLAnchorElement {
   const card = document.createElement("a");
-  card.className = "article-card";
+  card.className = variant ? `article-card article-card--${variant}` : "article-card";
   card.href = `/artigo/${article.id}/`;
 
   const image = el("div", "article-card-image");
-  const cardImageSrc = article.imageVertical || article.image;
+  const cardImageSrc =
+    variant === "horizontal" ? article.image || article.imageVertical : article.imageVertical || article.image;
   if (cardImageSrc) {
     const img = document.createElement("img");
     img.src = cardImageSrc;
@@ -488,10 +494,14 @@ function buildArticleCard(article: Article): HTMLAnchorElement {
   return card;
 }
 
+// "featured": só a lista de notícias usa isso (ver renderArticleList) — a
+// mais recente ocupa 2 colunas, as duas seguintes ficam horizontais, e o
+// resto segue a grade normal. Home e "Continue lendo" não usam (undefined).
 function renderArticleGrid(
   container: HTMLElement,
   articles: Article[],
-  emptyMessage: string
+  emptyMessage: string,
+  featured?: boolean
 ): void {
   container.innerHTML = "";
   container.classList.add("article-grid");
@@ -499,9 +509,10 @@ function renderArticleGrid(
     container.appendChild(el("p", "empty-state", emptyMessage));
     return;
   }
-  for (const article of articles) {
-    container.appendChild(buildArticleCard(article));
-  }
+  articles.forEach((article, index) => {
+    const variant = featured ? (index === 0 ? "hero" : index === 1 || index === 2 ? "horizontal" : undefined) : undefined;
+    container.appendChild(buildArticleCard(article, variant));
+  });
 }
 
 // ----------------------------------------------------------------------------
@@ -517,7 +528,7 @@ function renderArticleList(articles: Loaded<Article>): void {
     list.appendChild(el("p", "empty-state", i18next.t("artigos.loadError")));
     return;
   }
-  renderArticleGrid(list, articles.items, i18next.t("artigos.emptyList"));
+  renderArticleGrid(list, articles.items, i18next.t("artigos.emptyList"), true);
 }
 
 // ----------------------------------------------------------------------------
