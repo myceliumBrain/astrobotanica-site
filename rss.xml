@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Astrobotânica — Notícias</title>
+    <link>https://astrobotanica.com.br/noticias</link>
+    <description>Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.</description>
+    <language>pt-br</language>
+    <lastBuildDate>Wed, 29 Jul 2026 17:38:42 +0000</lastBuildDate>
+    <atom:link href="https://astrobotanica.com.br/rss.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Cientista Brasileira Lidera Estudo de Vanguarda sobre Consórcio de Culturas em Solo Marciano</title>
+      <link>https://astrobotanica.com.br/artigo/noticia-3/</link>
+      <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-3/</guid>
+      <pubDate>Fri, 24 Jul 2026 00:00:00 +0000</pubDate>
+      <category>Space Farming</category>
+      <description>À medida que a exploração espacial avança para missões de longa duração, a transição de "alimentos enviados da Terra" para "alimentos produzidos in situ torna-se uma necessidade estratégica. Um estudo recente, liderado…</description>
+      <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-3-imagem-principal.png" type="image/png" />
+    </item>
+    <item>
+      <title>A Nova Era da Astrobotânica: Plantas e Microorganismos como Pilares da Exploração Espacial Sustentável</title>
+      <link>https://astrobotanica.com.br/artigo/noticia-2/</link>
+      <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-2/</guid>
+      <pubDate>Thu, 23 Jul 2026 00:00:00 +0000</pubDate>
+      <category>Space Farming</category>
+      <description>A exploração espacial de longa duração está abandonando o modelo de dependência total de suprimentos terrestres em favor de uma arquitetura integrada de gerenciamento de recursos. Um estudo recente propõe um framework…</description>
+      <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-2-imagem-principal.jpg" type="image/jpeg" />
+    </item>
+    <item>
+      <title>O 'cérebro' subterrâneo do planeta: hifas de fungos somam distância equivalente a 11 mil anos-luz</title>
+      <link>https://astrobotanica.com.br/artigo/noticia-1/</link>
+      <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-1/</guid>
+      <pubDate>Wed, 22 Jul 2026 00:00:00 +0000</pubDate>
+      <category>Micorrizas</category>
+      <description>Um novo estudo publicado na Science denominado "Global density and biomass of arbuscular mycorrhizal fungal networks" , quantifica a infraestrutura invisível que sustenta a vida terrestre. Os fungos micorrízicos…</description>
+      <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-1-imagem-principal.png" type="image/png" />
+    </item>
+  </channel>
+</rss>

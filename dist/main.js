@@ -28,6 +28,10 @@ function el(tag, className, text) {
 function getParam(name) {
     return new URLSearchParams(location.search).get(name);
 }
+function getArticleIdFromPath() {
+    const match = location.pathname.match(/^\/artigo\/([^/]+)\/?$/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
 
 async function loadJSON(path) {
     try {
@@ -376,7 +380,7 @@ function renderEpisodeDetail(episodes) {
 function buildArticleCard(article) {
     const card = document.createElement("a");
     card.className = "article-card";
-    card.href = `/noticia?id=${article.id}`;
+    card.href = `/artigo/${article.id}/`;
 
     const image = el("div", "article-card-image");
     const cardImageSrc = article.imageVertical || article.image;
@@ -502,7 +506,7 @@ function buildArticleSidebar(items) {
     for (const item of items.slice(0, ARTICLE_SIDEBAR_MAX_ITEMS)) {
         const a = document.createElement("a");
         a.className = "article-sidebar-item";
-        a.href = `/noticia?id=${item.id}`;
+        a.href = `/artigo/${item.id}/`;
         if (item.image) {
             const img = document.createElement("img");
             img.className = "article-sidebar-thumb";
@@ -528,7 +532,7 @@ function renderArticleDetail(articles) {
         return;
     }
 
-    const id = getParam("id");
+    const id = getParam("id") ?? getArticleIdFromPath();
     const article = (id ? articles.items.find((a) => a.id === id) : undefined) ?? articles.items[0];
 
     if (!article) {

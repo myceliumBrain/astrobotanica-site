@@ -1,0 +1,43 @@
+name: Gerar páginas de notícia (SEO) e RSS
+
+# O site é publicado direto do branch main pelo GitHub Pages (sem passo de
+# build) — este workflow só regenera artigo/<id>/index.html e rss.xml
+# (ver scripts/generate_seo.py) e commita o resultado de volta, para que as
+# páginas geradas fiquem sempre em sincronia com data/articles.json.
+on:
+  push:
+    branches: [main]
+    paths:
+      - data/articles.json
+      - data/site.json
+      - noticia.html
+      - scripts/generate_seo.py
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: generate-seo
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rodar gerador
+        run: python3 scripts/generate_seo.py
+
+      - name: Commitar arquivos gerados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add artigo rss.xml
+          if git diff --cached --quiet; then
+            echo "Nada mudou, sem commit."
+          else
+            git commit -m "chore: regenera páginas de notícia e rss.xml"
+            git push
+          fi

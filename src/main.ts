@@ -97,6 +97,17 @@ function getParam(name: string): string | null {
   return new URLSearchParams(location.search).get(name);
 }
 
+// Notícias também são servidas em /artigo/<id>/ (páginas estáticas geradas
+// por scripts/generate_seo.py, com as tags Open Graph corretas para
+// preview em redes sociais/WhatsApp) — o id vem do caminho, não da query
+// string, nesse formato. ?id= continua funcionando (links antigos).
+// Não usamos "/noticia/<id>/" aqui porque isso criaria uma pasta "noticia/"
+// na raiz do site, colidindo com a URL limpa de noticia.html (/noticia).
+function getArticleIdFromPath(): string | null {
+  const match = location.pathname.match(/^\/artigo\/([^/]+)\/?$/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function loadJSON<T>(path: string): Promise<Loaded<T>> {
   try {
     // "no-cache" força o navegador a revalidar com o servidor a cada carga
@@ -452,7 +463,7 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
 function buildArticleCard(article: Article): HTMLAnchorElement {
   const card = document.createElement("a");
   card.className = "article-card";
-  card.href = `/noticia?id=${article.id}`;
+  card.href = `/artigo/${article.id}/`;
 
   const image = el("div", "article-card-image");
   const cardImageSrc = article.imageVertical || article.image;
@@ -582,7 +593,7 @@ function buildArticleSidebar(items: Article[]): HTMLElement {
   for (const item of items.slice(0, ARTICLE_SIDEBAR_MAX_ITEMS)) {
     const a = document.createElement("a");
     a.className = "article-sidebar-item";
-    a.href = `/noticia?id=${item.id}`;
+    a.href = `/artigo/${item.id}/`;
     if (item.image) {
       const img = document.createElement("img");
       img.className = "article-sidebar-thumb";
@@ -608,7 +619,7 @@ function renderArticleDetail(articles: Loaded<Article>): void {
     return;
   }
 
-  const id = getParam("id");
+  const id = getParam("id") ?? getArticleIdFromPath();
   const article = (id ? articles.items.find((a) => a.id === id) : undefined) ?? articles.items[0];
 
   if (!article) {
