@@ -5,14 +5,41 @@
     <link>https://astrobotanica.com.br/noticias</link>
     <description>Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.</description>
     <language>pt-br</language>
-    <lastBuildDate>Wed, 29 Jul 2026 17:38:42 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 29 Jul 2026 17:39:44 +0000</lastBuildDate>
     <atom:link href="https://astrobotanica.com.br/rss.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>STELLA: Instrumento Open Science da NASA (Sensoriamento Remoto)</title>
+      <link>https://astrobotanica.com.br/artigo/noticia-6/</link>
+      <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-6/</guid>
+      <pubDate>Wed, 29 Jul 2026 00:00:00 +0000</pubDate>
+      <category>Hardwares e Softwares</category>
+      <description>O artigo denominado "Educação em Ciência e Tecnologia para Avaliação da Terra e da Vida (STELLA): Democratizando a Ciência do Sensoriamento Remoto com Instrumentos de Baixo Custo e Código Aberto para Pesquisa e…</description>
+      <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-6-imagem-principal.png" type="image/png" />
+    </item>
+    <item>
+      <title>Brasil e Agricultura Espacial: Audiência Pública Debate o Futuro da Economia no Espaço</title>
+      <link>https://astrobotanica.com.br/artigo/noticia-5/</link>
+      <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-5/</guid>
+      <pubDate>Mon, 27 Jul 2026 00:00:00 +0000</pubDate>
+      <category>Astropolítica</category>
+      <description>A Audiência Pública Realizada dia 17/06/2026 na Comissão de Ciência, Tecnologia e Inovação da Câmara dos Deputados, Consolida a Agricultura Espacial como Eixo Estratégico para a Economia do Espaço e Segurança Alimentar</description>
+      <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-5-imagem-principal.png" type="image/png" />
+    </item>
+    <item>
+      <title>Ervilhas em Marte: Adubo de Insetos Pode Proporcionar a Agricultura no Planeta Vermelho</title>
+      <link>https://astrobotanica.com.br/artigo/noticia-4/</link>
+      <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-4/</guid>
+      <pubDate>Sun, 26 Jul 2026 00:00:00 +0000</pubDate>
+      <category>Agricultura Espacial</category>
+      <description>Uma nova pesquisa liderada por cientistas da Texas A&amp;M University College of Engineering trouxe resultados promissores para o futuro da colonização espacial: O cultivo bem-sucedido de ervilhas Pisum sativum em simulante…</description>
+      <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-4-imagem-principal.png" type="image/png" />
+    </item>
     <item>
       <title>Cientista Brasileira Lidera Estudo de Vanguarda sobre Consórcio de Culturas em Solo Marciano</title>
       <link>https://astrobotanica.com.br/artigo/noticia-3/</link>
       <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-3/</guid>
       <pubDate>Fri, 24 Jul 2026 00:00:00 +0000</pubDate>
-      <category>Space Farming</category>
+      <category>Agricultura Espacial</category>
       <description>À medida que a exploração espacial avança para missões de longa duração, a transição de "alimentos enviados da Terra" para "alimentos produzidos in situ torna-se uma necessidade estratégica. Um estudo recente, liderado…</description>
       <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-3-imagem-principal.png" type="image/png" />
     </item>
@@ -21,7 +48,7 @@
       <link>https://astrobotanica.com.br/artigo/noticia-2/</link>
       <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-2/</guid>
       <pubDate>Thu, 23 Jul 2026 00:00:00 +0000</pubDate>
-      <category>Space Farming</category>
+      <category>Agricultura Espacial</category>
       <description>A exploração espacial de longa duração está abandonando o modelo de dependência total de suprimentos terrestres em favor de uma arquitetura integrada de gerenciamento de recursos. Um estudo recente propõe um framework…</description>
       <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-2-imagem-principal.jpg" type="image/jpeg" />
     </item>
