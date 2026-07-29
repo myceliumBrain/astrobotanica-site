@@ -383,7 +383,7 @@ function buildArticleCard(article, variant) {
     card.href = `/artigo/${article.id}/`;
 
     const image = el("div", "article-card-image");
-    const cardImageSrc = variant === "horizontal" ? (article.image || article.imageVertical) : (article.imageVertical || article.image);
+    const cardImageSrc = variant ? (article.image || article.imageVertical) : (article.imageVertical || article.image);
     if (cardImageSrc) {
         const img = document.createElement("img");
         img.src = cardImageSrc;
@@ -431,7 +431,7 @@ function renderArticleList(articles) {
         list.appendChild(el("p", "empty-state", i18next.t("artigos.loadError")));
         return;
     }
-    renderArticleGrid(list, articles.items, i18next.t("artigos.emptyList"), true);
+    renderArticleGrid(list, articles.items, i18next.t("artigos.emptyList"));
 }
 
 // ----------------------------------------------------------------------------
@@ -647,7 +647,7 @@ function renderHomeHighlights(episodes, articles) {
             artRoot.innerHTML = "";
             artRoot.appendChild(el("p", "empty-state", i18next.t("home.loadErrorArticles")));
         } else {
-            renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), i18next.t("home.emptyArticles"));
+            renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), i18next.t("home.emptyArticles"), true);
         }
     }
 }

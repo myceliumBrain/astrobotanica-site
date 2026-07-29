@@ -570,9 +570,10 @@ body.nav-open { overflow: hidden; }
 .article-card-image img { width: 100%; height: 100%; object-fit: cover; }
 .article-card:hover .article-card-image { border-color: var(--accent-700); }
 
-/* ---- lista de notícias: publicação mais recente em destaque (ver
+/* ---- destaques da Home: publicação mais recente em evidência (ver
    renderArticleGrid "featured") ---- */
 .article-card--hero { grid-column: span 2; }
+.article-card--hero .article-card-image,
 .article-card--horizontal .article-card-image { aspect-ratio: 16 / 9; }
 .article-card-kicker { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-700); margin-bottom: 4px; }
 .article-card-title {

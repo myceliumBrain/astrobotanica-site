@@ -460,9 +460,10 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
 // nos destaques da Home e em "continue lendo" — sempre da mesma forma.
 // ----------------------------------------------------------------------------
 
-// Variante usada só na lista de notícias (ver renderArticleGrid "featured"):
-// "hero" ocupa 2 colunas (a publicação mais recente), "horizontal" usa a
-// capa horizontal em vez da vertical (as duas publicações seguintes).
+// Variante usada só nos destaques da Home (ver renderArticleGrid
+// "featured"): "hero" ocupa 2 colunas (a publicação mais recente),
+// "horizontal" usa a capa horizontal em vez da vertical (as duas
+// publicações seguintes). Ambas usam a capa horizontal — ver CSS.
 type ArticleCardVariant = "hero" | "horizontal";
 
 function buildArticleCard(article: Article, variant?: ArticleCardVariant): HTMLAnchorElement {
@@ -471,8 +472,7 @@ function buildArticleCard(article: Article, variant?: ArticleCardVariant): HTMLA
   card.href = `/artigo/${article.id}/`;
 
   const image = el("div", "article-card-image");
-  const cardImageSrc =
-    variant === "horizontal" ? article.image || article.imageVertical : article.imageVertical || article.image;
+  const cardImageSrc = variant ? article.image || article.imageVertical : article.imageVertical || article.image;
   if (cardImageSrc) {
     const img = document.createElement("img");
     img.src = cardImageSrc;
@@ -494,9 +494,9 @@ function buildArticleCard(article: Article, variant?: ArticleCardVariant): HTMLA
   return card;
 }
 
-// "featured": só a lista de notícias usa isso (ver renderArticleList) — a
-// mais recente ocupa 2 colunas, as duas seguintes ficam horizontais, e o
-// resto segue a grade normal. Home e "Continue lendo" não usam (undefined).
+// "featured": só os destaques da Home usam isso (ver linha com
+// selectHomeItems) — a mais recente ocupa 2 colunas, as duas seguintes
+// ficam horizontais. Lista de notícias e "Continue lendo" não usam.
 function renderArticleGrid(
   container: HTMLElement,
   articles: Article[],
@@ -528,7 +528,7 @@ function renderArticleList(articles: Loaded<Article>): void {
     list.appendChild(el("p", "empty-state", i18next.t("artigos.loadError")));
     return;
   }
-  renderArticleGrid(list, articles.items, i18next.t("artigos.emptyList"), true);
+  renderArticleGrid(list, articles.items, i18next.t("artigos.emptyList"));
 }
 
 // ----------------------------------------------------------------------------
@@ -743,7 +743,7 @@ function renderHomeHighlights(episodes: Loaded<Episode>, articles: Loaded<Articl
       artRoot.innerHTML = "";
       artRoot.appendChild(el("p", "empty-state", i18next.t("home.loadErrorArticles")));
     } else {
-      renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), i18next.t("home.emptyArticles"));
+      renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), i18next.t("home.emptyArticles"), true);
     }
   }
 }
