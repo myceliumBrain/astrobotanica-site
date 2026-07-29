@@ -34,14 +34,18 @@ ARTICLE_PATH_RE = re.compile(r"^/artigo/([^/]+)/?$")
 
 
 def fetch_hits():
+    # Essa API não pagina por cursor "after" — pagina excluindo, na próxima
+    # chamada, os path_ids já recebidos (ver exclude_paths), conforme
+    # https://www.goatcounter.com/help/api.
     base_url = f"https://{GOATCOUNTER_CODE}.goatcounter.com/api/v0/stats/hits"
+    headers = {"Authorization": f"Bearer {GOATCOUNTER_API_TOKEN}", "Content-Type": "application/json"}
     counts = {}
-    after = None
+    seen_path_ids = []
     for _ in range(20):  # até 20 páginas (2000 caminhos) é mais que suficiente
         url = f"{base_url}?limit=100"
-        if after:
-            url += f"&after={after}"
-        req = urllib.request.Request(url, headers={"Authorization": f"Bearer {GOATCOUNTER_API_TOKEN}"})
+        for path_id in seen_path_ids:
+            url += f"&exclude_paths={path_id}"
+        req = urllib.request.Request(url, headers=headers)
         with urllib.request.urlopen(req, timeout=20) as resp:
             data = json.loads(resp.read())
         for hit in data.get("hits", []):
@@ -49,12 +53,24 @@ def fetch_hits():
             if match:
                 article_id = match.group(1)
                 counts[article_id] = counts.get(article_id, 0) + hit.get("count", 0)
+            if "path_id" in hit:
+                seen_path_ids.append(hit["path_id"])
         if not data.get("more"):
             break
-        after = data.get("after")
-        if not after:
-            break
     return counts
+
+
+def check_token():
+    # Endpoint simples (só confirma token + site) — roda antes de
+    # /stats/hits pra diagnosticar problema de código do site/token sem
+    # misturar com erros da parte de paginação.
+    url = f"https://{GOATCOUNTER_CODE}.goatcounter.com/api/v0/me"
+    headers = {"Authorization": f"Bearer {GOATCOUNTER_API_TOKEN}", "Content-Type": "application/json"}
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=20) as resp:
+        data = json.loads(resp.read())
+    site = data.get("site", {})
+    print(f"Token válido para o site: código={site.get('code')!r}, id={site.get('id')!r}, url={site.get('url')!r}")
 
 
 def main():
@@ -63,8 +79,19 @@ def main():
         return
 
     try:
+        check_token()
+    except HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise SystemExit(f"Token/código do site inválido (GOATCOUNTER_CODE={GOATCOUNTER_CODE!r}): HTTP {e.code} {e.reason} — {body}")
+    except URLError as e:
+        raise SystemExit(f"Falha ao consultar a API do GoatCounter: {e}")
+
+    try:
         counts = fetch_hits()
-    except (HTTPError, URLError) as e:
+    except HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        raise SystemExit(f"Falha ao consultar a API do GoatCounter: HTTP {e.code} {e.reason} — {body}")
+    except URLError as e:
         raise SystemExit(f"Falha ao consultar a API do GoatCounter: {e}")
 
     # Lista simples de ids, mais acessada primeiro — mesmo formato de
