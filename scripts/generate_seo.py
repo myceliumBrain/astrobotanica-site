@@ -97,7 +97,8 @@ def build_head(article, brand_name):
     if json_ld_images:
         json_ld["image"] = json_ld_images
 
-    return f"""<title>{esc_title}</title>
+    return f"""<base href="/" />
+<title>{esc_title}</title>
 <meta name="description" content="{esc_desc}" />
 <link rel="canonical" href="{url}" />
 <meta property="og:type" content="article" />
