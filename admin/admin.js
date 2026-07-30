@@ -39,6 +39,11 @@ const PATHS = {
 // aquela constante, já que este arquivo não passa pelo bundler do site.
 const HOME_MAX_ITEMS = 6;
 
+// Caracteres/minuto usados pra estimar o tempo de leitura (ver
+// computeReadingTime) — media de ~200 palavras/min de leitura silenciosa,
+// contando só caracteres não-espaço (tags HTML e espaços em branco excluídos).
+const READING_CHARS_PER_MINUTE = 900;
+
 const LOCKOUT = {
   storageKey: "astrobotanica-admin-attempts",
   maxAttempts: 5,
@@ -187,6 +192,16 @@ function articleBodyToHtml(body) {
   if (typeof body === "string") return body;
   if (Array.isArray(body)) return body.map((p) => `<p>${escapeHtml(p)}</p>`).join("");
   return "";
+}
+
+// Tempo de leitura estimado a partir da quantidade de caracteres do corpo —
+// não é mais digitado à mão (ver "Tempo de leitura" em buildArticleCard),
+// pra nunca ficar desatualizado ou inconsistente com o texto de verdade.
+function computeReadingTime(bodyHtml) {
+  const text = (bodyHtml || "").replace(/<[^>]*>/g, " ");
+  const chars = text.replace(/\s/g, "").length;
+  const minutes = Math.max(1, Math.round(chars / READING_CHARS_PER_MINUTE));
+  return `${minutes} min`;
 }
 
 function linesToParagraphs(text) {
@@ -856,6 +871,7 @@ function applyArticleField(input) {
       }
     });
     record[key] = newHtml;
+    if (key === "body") record.readingTime = computeReadingTime(newHtml);
     return;
   }
   const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
@@ -1089,11 +1105,11 @@ function enforceFeaturedLimit(section) {
   if (counter) counter.textContent = `${checkedCount}/${HOME_MAX_ITEMS} na home`;
 }
 
-function buildTextarea(labelText, value, dataset, multilineParagraphs) {
+function buildTextarea(labelText, value, dataset, multilineParagraphs, rows) {
   const textarea = document.createElement("textarea");
   textarea.className = "input";
   textarea.value = value ?? "";
-  textarea.rows = 4;
+  textarea.rows = rows || 4;
   Object.entries(dataset).forEach(([k, v]) => { textarea.dataset[k] = v; });
   if (multilineParagraphs) textarea.dataset.multiline = "paragraphs";
   return buildField(labelText, textarea);
@@ -1428,6 +1444,12 @@ function buildRichTextField(labelText, value, dataset, opts) {
   editor.addEventListener("focus", () => {
     try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch { /* navegador sem suporte */ }
   });
+  // Callback opcional pra reagir a cada edição do corpo em tempo real (ver
+  // computeReadingTime/readingTimeInput em buildArticleCard) — usa o HTML
+  // ainda "cru" do editor (sem passar por finalizeRichTextHtml), suficiente
+  // pra uma contagem de caracteres em tempo real; o valor salvo de fato é
+  // sempre recalculado a partir do HTML finalizado em applyArticleField.
+  if (opts.onInput) editor.addEventListener("input", () => opts.onInput(editor.innerHTML));
 
   // Editor à esquerda, barra de botões à direita (ver .rich-text-layout no
   // CSS) — a barra é sticky, então acompanha o scroll conforme o corpo é
@@ -1672,9 +1694,10 @@ function setSmoothCollapse(el, open) {
 // como se tivessem sido digitados/enviados à mão.
 //
 // Some coisas de propósito:
-// - O acordeão sempre abre fechado (nenhum dos 2 botões pré-selecionado),
-//   mesmo que a notícia já tenha autor definido — só um resumo ao lado da
-//   setinha mostra quem é, sem precisar expandir.
+// - O acordeão abre expandido por padrão (ver panelOpen) — autor é campo de
+//   conteúdo, não detalhe secundário, e ficava fácil demais de não notar que
+//   existe. Nenhum dos 2 botões vem pré-selecionado mesmo assim: só decide
+//   ativo se já houver dado real (nome manual ou integrante) preenchido.
 // - Só um modo pode ter dado por vez: assim que um dos dois (nome manual OU
 //   integrante selecionado) tem valor, o botão do outro modo fica desabilitado.
 //   Ele só volta a ficar disponível quando esse valor for esvaziado de novo
@@ -1733,7 +1756,10 @@ function buildArticleAuthorSourceField(article, authorField, authorInput, avatar
   // travamento do outro botão vem sempre do dado de verdade nos campos,
   // nunca de qual botão foi clicado por último).
   let activePanel = matched ? "member" : article.author ? "manual" : null;
-  let panelOpen = false;
+  // Abre por padrão (diferente do resto dos acordeões) — o autor é um campo
+  // de conteúdo, não um detalhe secundário, então não deve depender de quem
+  // edita perceber uma setinha pequena e clicar pra descobrir que ele existe.
+  let panelOpen = true;
 
   function hasManualData() {
     return authorInput.value.trim() !== "" || !!avatarField.getValue();
@@ -1842,8 +1868,8 @@ function buildArticleCard(article, i, total) {
 
   grid.appendChild(buildReadOnlyField("Identificador (id)", article.id));
   grid.appendChild(buildInput("Categoria", "text", article.category, { article: i, key: "category" }, "Fisiologia vegetal"));
-  grid.appendChild(buildInput("Título", "text", article.title, { article: i, key: "title" }));
-  grid.appendChild(buildInput("Subtítulo (opcional)", "text", article.subtitle, { article: i, key: "subtitle" }));
+  grid.appendChild(buildTextarea("Título", article.title, { article: i, key: "title" }, false, 2));
+  grid.appendChild(buildTextarea("Subtítulo (opcional)", article.subtitle, { article: i, key: "subtitle" }, false, 2));
 
   const authorField = buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro");
   const authorInput = authorField.querySelector("input");
@@ -1884,7 +1910,7 @@ function buildArticleCard(article, i, total) {
   imageField.classList.add("full");
   grid.appendChild(imageField);
 
-  grid.appendChild(buildInput("Legenda da imagem de capa (opcional)", "text", article.imageCaption, { article: i, key: "imageCaption" }));
+  grid.appendChild(buildTextarea("Legenda da imagem de capa (opcional)", article.imageCaption, { article: i, key: "imageCaption" }, false, 3));
 
   const imageVerticalField = buildFileUploadField(
     "Imagem vertical para prévia (opcional)",
@@ -1905,7 +1931,17 @@ function buildArticleCard(article, i, total) {
   grid.appendChild(imageVerticalField);
 
   grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
-  grid.appendChild(buildInput("Tempo de leitura", "text", article.readingTime, { article: i, key: "readingTime" }, "6 min"));
+
+  const readingTimeField = el("div", "field");
+  readingTimeField.appendChild(el("label", "", "Tempo de leitura"));
+  readingTimeField.appendChild(el("span", "field-hint", "Calculado automaticamente a partir da quantidade de caracteres do corpo."));
+  const readingTimeInput = document.createElement("input");
+  readingTimeInput.className = "input";
+  readingTimeInput.type = "text";
+  readingTimeInput.value = computeReadingTime(article.body);
+  readingTimeInput.disabled = true;
+  readingTimeField.appendChild(readingTimeInput);
+  grid.appendChild(readingTimeField);
 
   grid.appendChild(
     buildCheckboxField(
@@ -1924,6 +1960,7 @@ function buildArticleCard(article, i, total) {
       id: article.id,
       folder: "images/noticias",
       buildImageMessage: (path) => `admin: envia imagem do corpo da notícia "${article.title || article.id}" (${path})`,
+      onInput: (html) => { readingTimeInput.value = computeReadingTime(html); },
     }
   );
   bodyField.classList.add("full");

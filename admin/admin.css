@@ -374,11 +374,12 @@ a, button { cursor: pointer; }
   background: none;
   border: none;
   padding: 0;
-  font-family: var(--adm-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--adm-off-white);
+  font-family: var(--adm-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--adm-accent);
   cursor: pointer;
 }
 .author-source-chevron { display: inline-block; transition: transform 0.2s ease; }
