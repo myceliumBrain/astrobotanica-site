@@ -1644,6 +1644,15 @@ function buildRichTextField(labelText, value, dataset, opts) {
     });
   };
 
+  // Usado por "Copiar corpo em português" (ver buildArticleEnglishSection):
+  // substitui o conteúdo do editor por um HTML já salvo (imagens com caminho
+  // definitivo, sem data-final-src/pendingFile), então nada disso entra na
+  // fila de upload — as imagens continuam sendo as mesmas já enviadas.
+  wrap.setValue = function setValue(html) {
+    editor.innerHTML = toEditorPreviewHtml(html);
+    if (opts.onInput) opts.onInput(editor.innerHTML);
+  };
+
   return wrap;
 }
 
@@ -1991,6 +2000,31 @@ function buildArticleEnglishSection(article, i) {
     }
   );
   bodyEnField.classList.add("full");
+
+  // O corpo em inglês normalmente é só uma tradução do corpo em português —
+  // sem isso, traduzir obrigava reenviar de novo cada imagem já publicada
+  // (dobrando o espaço usado no repositório). Este botão copia o HTML do
+  // corpo em português (imagens com o caminho já definitivo, sem upload
+  // pendente) pro editor em inglês; a pessoa só precisa traduzir o texto por
+  // cima, as imagens continuam sendo as mesmas já enviadas.
+  const copyBodyBtn = el("button", "btn btn-secondary btn-small full", "Copiar corpo do português");
+  copyBodyBtn.type = "button";
+  copyBodyBtn.title = "Preenche o corpo em inglês com o mesmo HTML e as mesmas imagens do corpo em português — não envia nada de novo, só falta traduzir o texto.";
+  copyBodyBtn.addEventListener("click", () => {
+    collectAll();
+    const currentEn = finalizeRichTextHtml(bodyEnField.querySelector(".rich-text-editor"));
+    if (currentEn && !confirm("Isso substitui o corpo em inglês atual pelo corpo em português (mesmas imagens). Continuar?")) return;
+    bodyEnField.setValue(article.body || "");
+  });
+  panel.appendChild(copyBodyBtn);
+
+  const copyBodyWarning = el(
+    "p",
+    "field-hint full",
+    "Atenção: depois de copiar, as imagens do corpo em inglês passam a ser as mesmas do corpo em português (mesmo arquivo, não uma cópia). Se uma imagem for removida ou trocada no corpo em português depois disso, o painel pode apagar o arquivo entendendo que ela \"saiu\" de lá — o que quebraria essa mesma imagem no corpo em inglês. Editou imagem do português numa notícia já traduzida? Confira o corpo em inglês em seguida."
+  );
+  panel.appendChild(copyBodyWarning);
+
   panel.appendChild(bodyEnField);
 
   wrap.appendChild(panel);
