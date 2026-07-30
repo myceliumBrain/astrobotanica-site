@@ -425,6 +425,11 @@ a, button { cursor: pointer; }
 .article-en-chevron { display: inline-block; transition: transform 0.2s ease; }
 .article-en-summary.open .article-en-chevron { transform: rotate(90deg); }
 .article-en-panel { margin-top: 0.75rem; }
+/* .article-en-panel também é .fields-grid (display: grid) — sem esta regra,
+   esse display vence o "display: none" do atributo hidden (mesma origem e
+   especificidade, decidido só pela ordem das regras) e o painel nunca some
+   de fato ao recolher. */
+.article-en-panel[hidden] { display: none; }
 .toggle-btn.active { background: var(--adm-accent); color: #0c0c0c; border-color: var(--adm-accent); }
 .toggle-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
