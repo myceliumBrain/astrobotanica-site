@@ -688,25 +688,30 @@ body.nav-open { overflow: hidden; }
   margin-right: 2px;
 }
 .article-share-link {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  letter-spacing: 0.02em;
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 2rem;
-  padding: 0 0.65rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--line);
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
   color: var(--ink-dim);
   text-decoration: none;
-  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
-.article-share-link:hover {
-  color: var(--accent-800);
-  border-color: var(--accent-700);
-  background: var(--accent-100);
+.article-share-link svg { width: 1.05rem; height: 1.05rem; fill: currentColor; display: block; }
+.article-share-link:hover { color: var(--accent-800); background: var(--accent-100); }
+
+/* Aviso "Link copiado!" (ver handleInstagramShareClick em main.ts) — some
+   sozinho depois de alguns segundos, sem precisar de um sistema de toast
+   inteiro só pra esse caso. */
+.article-share-copied {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent-700);
+  opacity: 0;
+  transition: opacity 0.25s ease;
 }
+.article-share-copied.visible { opacity: 1; }
 
 /* Linha separando o corpo/referências do card de autor (ver
    renderArticleDetail) — mesmo estilo dos outros divisores do site. */
