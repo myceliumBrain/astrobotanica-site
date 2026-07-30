@@ -903,7 +903,7 @@ function applyArticleField(input) {
   const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
   const deleteIfEmpty = [
     "subtitle", "image", "author", "authorAvatar", "imageCaption", "imageVertical",
-    "categoryEn", "titleEn", "subtitleEn", "imageCaptionEn",
+    "categoryEn", "titleEn", "subtitleEn", "imageCaptionEn", "time",
   ];
   if (deleteIfEmpty.includes(key) && !value) delete record[key];
   else record[key] = value;
@@ -929,7 +929,7 @@ function applyEpisodeField(input) {
     else record.transcript = paragraphs;
     return;
   }
-  if (key === "image" && !input.value) { delete record.image; return; }
+  if ((key === "image" || key === "time") && !input.value) { delete record[key]; return; }
   record[key] = input.value;
 }
 
@@ -2109,6 +2109,7 @@ function buildArticleCard(article, i, total) {
   grid.appendChild(imageVerticalField);
 
   grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
+  grid.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no rss.xml)", "time", article.time, { article: i, key: "time" }));
 
   const readingTimeField = el("div", "field");
   readingTimeField.appendChild(el("label", "", "Tempo de leitura"));
@@ -2214,6 +2215,7 @@ function addArticle() {
     category: "",
     title: "",
     date: new Date().toISOString().slice(0, 10),
+    time: new Date().toTimeString().slice(0, 5),
     readingTime: "",
     body: "",
   });
@@ -2272,6 +2274,7 @@ function buildEpisodeCard(episode, i, total) {
   grid.appendChild(description);
 
   grid.appendChild(buildInput("Data", "date", episode.date, { episode: i, key: "date" }));
+  grid.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no podcast.xml)", "time", episode.time, { episode: i, key: "time" }));
 
   grid.appendChild(
     buildCheckboxField(
@@ -2378,6 +2381,7 @@ function addEpisode() {
     title: "",
     description: "",
     date: new Date().toISOString().slice(0, 10),
+    time: new Date().toTimeString().slice(0, 5),
     duration: "",
     audioSrc: "",
   });

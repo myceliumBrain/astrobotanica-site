@@ -24,7 +24,7 @@ import mimetypes
 import os
 import re
 import shutil
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from xml.sax.saxutils import escape as xml_escape
 
@@ -33,6 +33,18 @@ from PIL import Image
 SITE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASE_URL = "https://astrobotanica.com.br"
 RSS_MAX_ITEMS = 30
+# Horário de Brasília, sem horário de verão (extinto no Brasil desde 2019).
+BRT = timezone(timedelta(hours=-3))
+
+
+def parse_pub_date(date_str, time_str):
+    """Combina date ("YYYY-MM-DD") e time opcional ("HH:MM", horário de
+    Brasília) num datetime. Sem time (conteúdo antigo, cadastrado antes do
+    campo existir), mantém o comportamento anterior: meia-noite UTC."""
+    if time_str:
+        dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        return dt.replace(tzinfo=BRT)
+    return datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 EXCERPT_MAX_CHARS = 220
 # WhatsApp (e crawlers de social preview em geral) falham silenciosamente —
 # sem preview nenhum, nem texto — se o og:image demorar/for pesado demais.
@@ -171,7 +183,7 @@ def build_rss(articles, brand_name, brand_tagline):
     items_xml = []
     for article in articles[:RSS_MAX_ITEMS]:
         url = canonical_url(article["id"])
-        dt = datetime.strptime(article["date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+        dt = parse_pub_date(article["date"], article.get("time"))
         pub_date = format_datetime(dt)
         desc = excerpt_for(article)
         enclosure = ""

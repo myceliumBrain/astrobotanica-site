@@ -14,7 +14,7 @@ import json
 import mimetypes
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from email.utils import format_datetime
 from xml.sax.saxutils import escape as xml_escape
 
@@ -24,6 +24,18 @@ BASE_URL = "https://astrobotanica.com.br"
 # ajuste aqui se "Science" > "Natural Sciences" não for a mais adequada.
 ITUNES_CATEGORY = "Science"
 ITUNES_SUBCATEGORY = "Natural Sciences"
+# Horário de Brasília, sem horário de verão (extinto no Brasil desde 2019).
+BRT = timezone(timedelta(hours=-3))
+
+
+def parse_pub_date(date_str, time_str):
+    """Combina date ("YYYY-MM-DD") e time opcional ("HH:MM", horário de
+    Brasília) num datetime. Sem time (conteúdo antigo, cadastrado antes do
+    campo existir), mantém o comportamento anterior: meia-noite UTC."""
+    if time_str:
+        dt = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+        return dt.replace(tzinfo=BRT)
+    return datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc)
 
 
 def load_json(relpath):
@@ -50,7 +62,7 @@ def enclosure_length(audio_src):
 
 def build_item(episode):
     url = f"{BASE_URL}/episodio?id={episode['id']}"
-    dt = datetime.strptime(episode["date"], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+    dt = parse_pub_date(episode["date"], episode.get("time"))
     pub_date = format_datetime(dt)
     audio_url = absolute_asset_url(episode["audioSrc"])
     mime = mimetypes.guess_type(audio_url)[0] or "audio/mpeg"
