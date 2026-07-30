@@ -6,9 +6,9 @@
     "language": "Idioma"
   },
   "brand": {
-    "name": "astrobotânica",
+    "name": "astrobotanica",
     "footerTagline": "Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.",
-    "copyright": "© 2026 Astrobotânica."
+    "copyright": "© 2026 Astrobotanica."
   },
   "social": {
     "bluesky": "",
@@ -33,7 +33,9 @@
     "loadErrorEpisodes": "Não foi possível carregar os episódios agora.",
     "emptyEpisodes": "Nenhum episódio publicado ainda.",
     "loadErrorArticles": "Não foi possível carregar as notícias agora.",
-    "emptyArticles": "Nenhuma notícia publicada ainda."
+    "emptyArticles": "Nenhuma notícia publicada ainda.",
+    "eventBannerImage": "",
+    "eventBannerLink": ""
   },
   "podcast": {
     "metaTitle": "Podcast — Astrobotânica",
