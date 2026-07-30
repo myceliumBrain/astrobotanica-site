@@ -1,0 +1,10 @@
+# rss.xml e podcast.xml são regenerados por scripts/generate_seo.py e
+# scripts/generate_podcast_feed.py a cada execução do workflow generate-seo.yml,
+# sempre com um novo <lastBuildDate>. Isso causa conflito de merge sempre que
+# o commit local diverge do commit do bot. Como o conteúdo é sempre
+# regenerado (nunca editado manualmente), "merge=ours" evita o conflito:
+# em caso de divergência, mantém a versão local e descarta a remota — o
+# próximo push do workflow regenera o arquivo de qualquer forma.
+# Requer (uma vez por clone/máquina): git config merge.ours.driver true
+rss.xml merge=ours
+podcast.xml merge=ours
