@@ -931,11 +931,12 @@ body.nav-open { overflow: hidden; }
   .nav-toggle { display: flex; }
   /* 50/50 vira 1 coluna — a imagem some pra frente (order: -1), colada nela
      vem só o título (gap bem menor que o resto do card, pra ficar perto da
-     imagem) e, numa linha só (diferente do selo/meta empilhados dos outros
-     cards — ver .home-articles-row/.article-grid), o selo + data/tempo de
-     leitura lado a lado. Subtítulo e autor continuam escondidos. Uma linha
-     no fim separa esse card dos próximos, já que ele se destaca dos
-     demais. */
+     imagem) e, empilhados (selo, depois data/tempo de leitura — como nos
+     outros cards, ver .home-articles-row/.article-grid), evitando o selo e
+     a meta disputarem espaço numa linha só e quebrando no meio da palavra
+     ("10 min" virando "10" + "min"). Subtítulo e autor continuam
+     escondidos. Uma linha no fim separa esse card dos próximos, já que ele
+     se destaca dos demais. */
   .article-card-split {
     grid-template-columns: 1fr;
     gap: var(--space-2);
@@ -944,11 +945,9 @@ body.nav-open { overflow: hidden; }
   }
   .article-card-split-image { order: -1; }
   .article-card-split-info {
-    grid-template-columns: auto 1fr;
-    grid-template-areas: "title title" "kicker meta";
-    column-gap: var(--space-2);
+    grid-template-columns: 1fr;
+    grid-template-areas: "title" "kicker" "meta";
     row-gap: 4px;
-    align-items: baseline;
   }
   .article-card-split-title { margin-top: var(--space-2); }
   .article-card-split-info .article-card-kicker { margin-bottom: 0; }
