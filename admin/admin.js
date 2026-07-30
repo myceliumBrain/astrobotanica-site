@@ -1679,9 +1679,21 @@ function buildSaveCardButton(onSave) {
 // nunca gruda. Por isso libera o overflow assim que a abertura termina de
 // transicionar, e trava de novo antes de fechar (senão o conteúdo vaza
 // durante a transição de encolhimento).
-function wireCardAccordion(card, header, body) {
+// siblingsContainer (opcional): lista onde o card vive — passe pra manter só
+// 1 card aberto por vez nela (fecha os outros ao abrir este). Sem isso,
+// comportamento de sempre: cada card abre/fecha independente dos outros
+// (é o caso de Integrantes, que não usa siblingsContainer).
+function wireCardAccordion(card, header, body, siblingsContainer) {
   header.addEventListener("click", () => {
     const opening = !card.classList.contains("open");
+    if (opening && siblingsContainer) {
+      siblingsContainer.querySelectorAll(":scope > .card.open").forEach((openCard) => {
+        if (openCard === card) return;
+        openCard.classList.remove("open");
+        const openBody = openCard.querySelector(".card-body");
+        if (openBody) openBody.style.overflow = "";
+      });
+    }
     if (!opening) body.style.overflow = "";
     card.classList.toggle("open");
   });
@@ -1942,13 +1954,146 @@ function buildArticleCategoryField(article, i) {
   return wrap;
 }
 
+// Seção colapsável "Versão em português" de uma notícia — os campos que não
+// dependem de idioma (id, referências) ficam fora, direto no card (ver
+// buildArticleCard). Existe pra poder fechar sozinha quando "Versão em
+// inglês" abre (mutuamente exclusivas — ver buildArticleCard), já que os
+// dois corpos (PT/EN) abertos ao mesmo tempo deixavam o card bem extenso.
+function buildArticlePortugueseSection(article, i) {
+  const wrap = el("div", "field full article-pt-section");
+
+  const summary = el("button", "article-lang-summary");
+  summary.type = "button";
+  const chevron = el("span", "article-lang-chevron", "▸");
+  summary.appendChild(chevron);
+  summary.appendChild(el("span", "", "Versão em português"));
+  wrap.appendChild(summary);
+
+  const panel = el("div", "article-lang-panel fields-grid");
+  wrap.appendChild(panel);
+
+  panel.appendChild(buildArticleCategoryField(article, i));
+  panel.appendChild(buildTextarea("Título", article.title, { article: i, key: "title" }, false, 2));
+  panel.appendChild(buildTextarea("Subtítulo (opcional)", article.subtitle, { article: i, key: "subtitle" }, false, 2));
+
+  const authorField = buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro");
+  const authorInput = authorField.querySelector("input");
+
+  const avatarField = buildFileUploadField(
+    "Foto do autor (opcional)",
+    article.authorAvatar,
+    { article: i, key: "authorAvatar" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar foto",
+      preview: true,
+      previewClass: "file-upload-preview--avatar",
+      allowClear: true,
+      buildPath: (file) => `images/equipe/${article.id}-autor.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia foto do autor da notícia "${article.title || article.id}" (${path})`,
+    }
+  );
+
+  panel.appendChild(buildArticleAuthorSourceField(article, authorField, authorInput, avatarField));
+  panel.appendChild(authorField);
+  panel.appendChild(avatarField);
+
+  const imageField = buildFileUploadField(
+    "Imagem de capa (opcional)",
+    article.image,
+    { article: i, key: "image" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar imagem",
+      preview: true,
+      allowClear: true,
+      hint: "Tamanho recomendado: 1600×900px (proporção 16:9)",
+      buildPath: (file) => `images/noticias/${article.id}-imagem-principal.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia imagem da notícia "${article.title || article.id}" (${path})`,
+    }
+  );
+  imageField.classList.add("full");
+  panel.appendChild(imageField);
+
+  panel.appendChild(buildTextarea("Legenda da imagem de capa (opcional)", article.imageCaption, { article: i, key: "imageCaption" }, false, 3));
+
+  const imageVerticalField = buildFileUploadField(
+    "Imagem vertical para prévia (opcional)",
+    article.imageVertical,
+    { article: i, key: "imageVertical" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar imagem",
+      preview: true,
+      previewClass: "file-upload-preview--vertical",
+      allowClear: true,
+      hint: "Tamanho recomendado: 900×1200px (proporção 3:4)",
+      buildPath: (file) => `images/noticias/${article.id}-imagem-vertical.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia imagem vertical da notícia "${article.title || article.id}" (${path})`,
+    }
+  );
+  imageVerticalField.classList.add("full");
+  panel.appendChild(imageVerticalField);
+
+  panel.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
+  panel.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no rss.xml)", "time", article.time, { article: i, key: "time" }));
+
+  const readingTimeField = el("div", "field");
+  readingTimeField.appendChild(el("label", "", "Tempo de leitura"));
+  readingTimeField.appendChild(el("span", "field-hint", "Calculado automaticamente a partir da quantidade de caracteres do corpo."));
+  const readingTimeInput = document.createElement("input");
+  readingTimeInput.className = "input";
+  readingTimeInput.type = "text";
+  readingTimeInput.value = computeReadingTime(article.body);
+  readingTimeInput.disabled = true;
+  readingTimeField.appendChild(readingTimeInput);
+  panel.appendChild(readingTimeField);
+
+  panel.appendChild(
+    buildCheckboxField(
+      "Destacar na Home",
+      article.featured,
+      { article: i, key: "featured" },
+      () => enforceFeaturedLimit("articles")
+    )
+  );
+
+  const bodyField = buildRichTextField(
+    "Corpo",
+    articleBodyToHtml(article.body),
+    { article: i, key: "body" },
+    {
+      id: article.id,
+      folder: "images/noticias",
+      buildImageMessage: (path) => `admin: envia imagem do corpo da notícia "${article.title || article.id}" (${path})`,
+      onInput: (html) => { readingTimeInput.value = computeReadingTime(html); },
+    }
+  );
+  bodyField.classList.add("full");
+  panel.appendChild(bodyField);
+
+  wrap.summary = summary;
+  wrap.panel = panel;
+  wrap.setOpen = function setOpen(isOpen) {
+    panel.hidden = !isOpen;
+    summary.classList.toggle("open", isOpen);
+  };
+  wrap.avatarField = avatarField;
+  wrap.imageField = imageField;
+  wrap.imageVerticalField = imageVerticalField;
+  wrap.bodyField = bodyField;
+
+  return wrap;
+}
+
 // Seção colapsável "Versão em inglês" de uma notícia — todos os campos são
 // opcionais (categoryEn/titleEn/subtitleEn/imageCaptionEn/bodyEn/
 // readingTimeEn no JSON; ver localize() em src/main.ts pra como o site usa
 // isso, caindo pro campo em português quando algum não foi preenchido).
 // Fecha por padrão pra não dobrar de tamanho o formulário de toda notícia
 // que ainda não tem tradução — abre sozinha se já existir algum campo em
-// inglês preenchido.
+// inglês preenchido; mutuamente exclusiva com "Versão em português" (ver
+// buildArticleCard).
 function buildArticleEnglishSection(article, i) {
   const wrap = el("div", "field full article-en-section");
 
@@ -1956,16 +2101,14 @@ function buildArticleEnglishSection(article, i) {
     article.categoryEn || article.titleEn || article.subtitleEn || article.imageCaptionEn || article.bodyEn
   );
 
-  const summary = el("button", "article-en-summary");
+  const summary = el("button", "article-lang-summary");
   summary.type = "button";
-  const chevron = el("span", "article-en-chevron", "▸");
+  const chevron = el("span", "article-lang-chevron", "▸");
   summary.appendChild(chevron);
   summary.appendChild(el("span", "", "Versão em inglês (opcional)"));
-  summary.classList.toggle("open", hasEnContent);
   wrap.appendChild(summary);
 
-  const panel = el("div", "article-en-panel fields-grid");
-  panel.hidden = !hasEnContent;
+  const panel = el("div", "article-lang-panel fields-grid");
 
   panel.appendChild(buildInput("Categoria (EN)", "text", article.categoryEn, { article: i, key: "categoryEn" }, "Space Agriculture"));
   panel.appendChild(buildTextarea("Título (EN)", article.titleEn, { article: i, key: "titleEn" }, false, 2));
@@ -2029,11 +2172,13 @@ function buildArticleEnglishSection(article, i) {
 
   wrap.appendChild(panel);
 
-  summary.addEventListener("click", () => {
-    panel.hidden = !panel.hidden;
-    summary.classList.toggle("open", !panel.hidden);
-  });
-
+  wrap.summary = summary;
+  wrap.panel = panel;
+  wrap.hasEnContent = hasEnContent;
+  wrap.setOpen = function setOpen(isOpen) {
+    panel.hidden = !isOpen;
+    summary.classList.toggle("open", isOpen);
+  };
   wrap.confirmBodyImages = bodyEnField.confirmBodyImages;
 
   return wrap;
@@ -2056,11 +2201,11 @@ function renderArticlesList() {
     return;
   }
 
-  items.forEach((article, i) => container.appendChild(buildArticleCard(article, i, items.length)));
+  items.forEach((article, i) => container.appendChild(buildArticleCard(article, i, items.length, container)));
   enforceFeaturedLimit("articles");
 }
 
-function buildArticleCard(article, i, total) {
+function buildArticleCard(article, i, total, container) {
   const card = el("div", "card");
   card.id = `article-card-${i}`;
 
@@ -2075,109 +2220,32 @@ function buildArticleCard(article, i, total) {
   card.appendChild(header);
 
   const body = el("div", "card-body");
-  wireCardAccordion(card, header, body);
+  wireCardAccordion(card, header, body, container);
   const grid = el("div", "fields-grid");
 
   grid.appendChild(buildReadOnlyField("Identificador (id)", article.id));
-  grid.appendChild(buildArticleCategoryField(article, i));
-  grid.appendChild(buildTextarea("Título", article.title, { article: i, key: "title" }, false, 2));
-  grid.appendChild(buildTextarea("Subtítulo (opcional)", article.subtitle, { article: i, key: "subtitle" }, false, 2));
 
-  const authorField = buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro");
-  const authorInput = authorField.querySelector("input");
+  const ptSection = buildArticlePortugueseSection(article, i);
+  const englishSection = buildArticleEnglishSection(article, i);
 
-  const avatarField = buildFileUploadField(
-    "Foto do autor (opcional)",
-    article.authorAvatar,
-    { article: i, key: "authorAvatar" },
-    {
-      accept: "image/*",
-      buttonText: "Enviar foto",
-      preview: true,
-      previewClass: "file-upload-preview--avatar",
-      allowClear: true,
-      buildPath: (file) => `images/equipe/${article.id}-autor.${fileExtension(file.name, "jpg")}`,
-      buildMessage: (path) => `admin: envia foto do autor da notícia "${article.title || article.id}" (${path})`,
-    }
-  );
+  // Só 1 dos dois corpos (PT/EN) fica aberto de cada vez — abrir um sempre
+  // fecha o outro — pra notícia com tradução não ficar com o dobro do
+  // conteúdo visível ao mesmo tempo. Abre em português por padrão, a não ser
+  // que já exista conteúdo em inglês cadastrado.
+  ptSection.setOpen(!englishSection.hasEnContent);
+  englishSection.setOpen(englishSection.hasEnContent);
+  ptSection.summary.addEventListener("click", () => {
+    const opening = ptSection.panel.hidden;
+    ptSection.setOpen(opening);
+    if (opening) englishSection.setOpen(false);
+  });
+  englishSection.summary.addEventListener("click", () => {
+    const opening = englishSection.panel.hidden;
+    englishSection.setOpen(opening);
+    if (opening) ptSection.setOpen(false);
+  });
 
-  grid.appendChild(buildArticleAuthorSourceField(article, authorField, authorInput, avatarField));
-  grid.appendChild(authorField);
-  grid.appendChild(avatarField);
-
-  const imageField = buildFileUploadField(
-    "Imagem de capa (opcional)",
-    article.image,
-    { article: i, key: "image" },
-    {
-      accept: "image/*",
-      buttonText: "Enviar imagem",
-      preview: true,
-      allowClear: true,
-      hint: "Tamanho recomendado: 1600×900px (proporção 16:9)",
-      buildPath: (file) => `images/noticias/${article.id}-imagem-principal.${fileExtension(file.name, "jpg")}`,
-      buildMessage: (path) => `admin: envia imagem da notícia "${article.title || article.id}" (${path})`,
-    }
-  );
-  imageField.classList.add("full");
-  grid.appendChild(imageField);
-
-  grid.appendChild(buildTextarea("Legenda da imagem de capa (opcional)", article.imageCaption, { article: i, key: "imageCaption" }, false, 3));
-
-  const imageVerticalField = buildFileUploadField(
-    "Imagem vertical para prévia (opcional)",
-    article.imageVertical,
-    { article: i, key: "imageVertical" },
-    {
-      accept: "image/*",
-      buttonText: "Enviar imagem",
-      preview: true,
-      previewClass: "file-upload-preview--vertical",
-      allowClear: true,
-      hint: "Tamanho recomendado: 900×1200px (proporção 3:4)",
-      buildPath: (file) => `images/noticias/${article.id}-imagem-vertical.${fileExtension(file.name, "jpg")}`,
-      buildMessage: (path) => `admin: envia imagem vertical da notícia "${article.title || article.id}" (${path})`,
-    }
-  );
-  imageVerticalField.classList.add("full");
-  grid.appendChild(imageVerticalField);
-
-  grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
-  grid.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no rss.xml)", "time", article.time, { article: i, key: "time" }));
-
-  const readingTimeField = el("div", "field");
-  readingTimeField.appendChild(el("label", "", "Tempo de leitura"));
-  readingTimeField.appendChild(el("span", "field-hint", "Calculado automaticamente a partir da quantidade de caracteres do corpo."));
-  const readingTimeInput = document.createElement("input");
-  readingTimeInput.className = "input";
-  readingTimeInput.type = "text";
-  readingTimeInput.value = computeReadingTime(article.body);
-  readingTimeInput.disabled = true;
-  readingTimeField.appendChild(readingTimeInput);
-  grid.appendChild(readingTimeField);
-
-  grid.appendChild(
-    buildCheckboxField(
-      "Destacar na Home",
-      article.featured,
-      { article: i, key: "featured" },
-      () => enforceFeaturedLimit("articles")
-    )
-  );
-
-  const bodyField = buildRichTextField(
-    "Corpo",
-    articleBodyToHtml(article.body),
-    { article: i, key: "body" },
-    {
-      id: article.id,
-      folder: "images/noticias",
-      buildImageMessage: (path) => `admin: envia imagem do corpo da notícia "${article.title || article.id}" (${path})`,
-      onInput: (html) => { readingTimeInput.value = computeReadingTime(html); },
-    }
-  );
-  bodyField.classList.add("full");
-  grid.appendChild(bodyField);
+  grid.appendChild(ptSection);
 
   const referencesField = el("div", "field full");
   referencesField.appendChild(el("label", "", 'Referências (aparecem após o corpo, antes de "Continue lendo")'));
@@ -2190,17 +2258,16 @@ function buildArticleCard(article, i, total) {
   referencesField.appendChild(addReferenceBtn);
   grid.appendChild(referencesField);
 
-  const englishSection = buildArticleEnglishSection(article, i);
   grid.appendChild(englishSection);
 
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
   const saveBtn = buildSaveCardButton(() => {
-    avatarField.confirmFileUpload();
-    imageField.confirmFileUpload();
-    imageVerticalField.confirmFileUpload();
-    bodyField.confirmBodyImages();
+    ptSection.avatarField.confirmFileUpload();
+    ptSection.imageField.confirmFileUpload();
+    ptSection.imageVerticalField.confirmFileUpload();
+    ptSection.bodyField.confirmBodyImages();
     englishSection.confirmBodyImages();
     collectArticleCardFields(i);
     markDirty("articles");
@@ -2276,11 +2343,11 @@ function renderEpisodesList() {
     return;
   }
 
-  items.forEach((episode, i) => container.appendChild(buildEpisodeCard(episode, i, items.length)));
+  items.forEach((episode, i) => container.appendChild(buildEpisodeCard(episode, i, items.length, container)));
   enforceFeaturedLimit("episodes");
 }
 
-function buildEpisodeCard(episode, i, total) {
+function buildEpisodeCard(episode, i, total, container) {
   const card = el("div", "card");
   card.id = `episode-card-${i}`;
 
@@ -2295,7 +2362,7 @@ function buildEpisodeCard(episode, i, total) {
   card.appendChild(header);
 
   const body = el("div", "card-body");
-  wireCardAccordion(card, header, body);
+  wireCardAccordion(card, header, body, container);
   const grid = el("div", "fields-grid");
 
   grid.appendChild(buildReadOnlyField("Identificador (id)", episode.id));
