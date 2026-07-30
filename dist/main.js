@@ -406,7 +406,7 @@ function buildArticleCard(article, variant) {
     return card;
 }
 
-function renderArticleGrid(container, articles, emptyMessage, featured) {
+function renderArticleGrid(container, articles, emptyMessage, featured, trailingCta) {
     container.innerHTML = "";
     container.classList.add("article-grid");
     if (articles.length === 0) {
@@ -417,6 +417,13 @@ function renderArticleGrid(container, articles, emptyMessage, featured) {
         const variant = featured ? (index === 0 ? "hero" : index >= 3 ? "horizontal" : undefined) : undefined;
         container.appendChild(buildArticleCard(article, variant));
     });
+    if (trailingCta) {
+        const cta = document.createElement("a");
+        cta.className = "article-card article-card--more";
+        cta.href = trailingCta.href;
+        cta.appendChild(el("span", "article-card-more-label", trailingCta.label));
+        container.appendChild(cta);
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -691,7 +698,10 @@ function renderHomeHighlights(episodes, articles) {
             artRoot.innerHTML = "";
             artRoot.appendChild(el("p", "empty-state", i18next.t("home.loadErrorArticles")));
         } else {
-            renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), i18next.t("home.emptyArticles"), true);
+            renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), i18next.t("home.emptyArticles"), true, {
+                href: "/noticias",
+                label: i18next.t("home.featuredCta"),
+            });
         }
     }
 }

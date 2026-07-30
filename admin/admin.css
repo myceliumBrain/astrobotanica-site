@@ -190,6 +190,17 @@ a, button { cursor: pointer; }
 }
 .sidebar-section:first-child { margin-top: 0; border-top: none; padding-top: 0; }
 
+/* Corte de prioridade entre o grupo de uso frequente (Páginas — conteúdo
+   textual que acompanha o ritmo de publicação) e o que raramente muda depois
+   de configurado uma vez (Geral, Sistema) — bem mais grosso que a borda fina
+   de .sidebar-section, pra marcar essa fronteira com mais peso visual. */
+.sidebar-divider {
+  border: none;
+  border-top: 3px solid var(--adm-border);
+  margin: 0.85rem 1.5rem 0;
+}
+.sidebar-divider + .sidebar-section { border-top: none; }
+
 .nav-btn {
   display: block;
   width: 100%;
@@ -358,7 +369,6 @@ a, button { cursor: pointer; }
   width: 5rem;
   max-width: 5rem;
   aspect-ratio: 1 / 1;
-  border-radius: 50%;
 }
 .file-upload-preview--vertical {
   width: 12rem;

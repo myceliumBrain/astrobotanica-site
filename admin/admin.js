@@ -82,6 +82,14 @@ const GENERAL_SCHEMA = [
   },
 ];
 
+// Ordem = prioridade de uso: páginas cujo conteúdo textual muda com mais
+// frequência (Home e as telas de notícias, que acompanham o ritmo de
+// publicação) vêm primeiro; Podcast/Episódio em seguida (conteúdo publicado
+// com menos frequência que notícias); Sobre/Contato por último dentro deste
+// grupo, por serem páginas institucionais que praticamente não mudam depois
+// de configuradas uma vez (ver divisor grosso na barra lateral, em
+// admin/index.html, que separa este grupo do GENERAL_SCHEMA — este sim quase
+// nunca editado).
 const PAGE_SCHEMA = [
   {
     key: "home",
@@ -90,26 +98,8 @@ const PAGE_SCHEMA = [
       { key: "home.metaTitle", label: "Título da aba do navegador", type: "text" },
       { key: "home.metaDescription", label: "Descrição (SEO)", type: "textarea" },
       { key: "home.featuredHeading", label: "Título \"Notícias em destaque\"", type: "text" },
-      { key: "home.featuredCta", label: "Link \"ver todos\"", type: "text" },
+      { key: "home.featuredCta", label: "Texto do bloco \"acessar todas as notícias\" (após a última notícia)", type: "text" },
       { key: "home.panelKicker", label: "Selo do painel do podcast", type: "text" },
-    ],
-  },
-  {
-    key: "podcast",
-    label: "Podcast",
-    fields: [
-      { key: "podcast.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "podcast.tag", label: "Selo", type: "text" },
-      { key: "podcast.title", label: "Título", type: "text" },
-      { key: "podcast.intro", label: "Texto de introdução", type: "textarea" },
-    ],
-  },
-  {
-    key: "episodio",
-    label: "Episódio",
-    fields: [
-      { key: "episodio.backLink", label: "Link \"voltar\"", type: "text" },
-      { key: "episodio.relatedHeading", label: "Título \"outros episódios\"", type: "text" },
     ],
   },
   {
@@ -130,6 +120,24 @@ const PAGE_SCHEMA = [
       { key: "artigo.byLine", label: "Texto do autor (use {{author}})", type: "text" },
       { key: "artigo.latestHeading", label: "Título da barra lateral \"mais recentes\"", type: "text" },
       { key: "artigo.relatedHeading", label: "Título \"continue lendo\"", type: "text" },
+    ],
+  },
+  {
+    key: "podcast",
+    label: "Podcast",
+    fields: [
+      { key: "podcast.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "podcast.tag", label: "Selo", type: "text" },
+      { key: "podcast.title", label: "Título", type: "text" },
+      { key: "podcast.intro", label: "Texto de introdução", type: "textarea" },
+    ],
+  },
+  {
+    key: "episodio",
+    label: "Episódio",
+    fields: [
+      { key: "episodio.backLink", label: "Link \"voltar\"", type: "text" },
+      { key: "episodio.relatedHeading", label: "Título \"outros episódios\"", type: "text" },
     ],
   },
   {
@@ -1827,6 +1835,79 @@ function buildArticleAuthorSourceField(article, authorField, authorInput, avatar
   return wrap;
 }
 
+// Categoria da notícia: combobox com as categorias já usadas em outras
+// notícias + opção "+ Adicionar nova categoria", que troca pra um campo de
+// texto livre. O valor salvo continua sendo só article.category, no mesmo
+// <input> de sempre (ver applyArticleField) — o select é só um atalho pra
+// não redigitar à mão um nome já existente, nunca a fonte de verdade.
+function buildArticleCategoryField(article, i) {
+  const wrap = el("div", "field category-field");
+  wrap.appendChild(el("label", "", "Categoria"));
+
+  const input = document.createElement("input");
+  input.className = "input";
+  input.type = "text";
+  input.value = article.category ?? "";
+  input.placeholder = "Fisiologia vegetal";
+  input.dataset.article = i;
+  input.dataset.key = "category";
+
+  // Lista deriva das categorias já usadas em QUALQUER notícia (inclusive
+  // esta) — cresce sozinha assim que uma categoria nova é salva, sem precisar
+  // cadastrar em lugar nenhum separado.
+  const categories = Array.from(
+    new Set(contentData.articles.map((a) => a.category).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+
+  const select = document.createElement("select");
+  select.className = "input";
+  const blank = document.createElement("option");
+  blank.value = "";
+  blank.textContent = "— selecione uma categoria —";
+  select.appendChild(blank);
+  categories.forEach((cat) => {
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    select.appendChild(opt);
+  });
+  const newOpt = document.createElement("option");
+  newOpt.value = "__new__";
+  newOpt.textContent = "+ Adicionar nova categoria";
+  select.appendChild(newOpt);
+  select.value = categories.includes(article.category) ? article.category : "";
+
+  function showSelect() {
+    select.hidden = false;
+    input.hidden = true;
+  }
+  function showInput(focus) {
+    select.hidden = true;
+    input.hidden = false;
+    if (focus) input.focus();
+  }
+
+  // Categoria já definida mas fora da lista de opções (caso impossível hoje,
+  // já que a lista inclui esta própria notícia — mas protege se o valor
+  // salvo vier com espaços/capitalização diferente de todas as outras) cai
+  // direto no campo de texto livre em vez de perder o valor escondendo-o.
+  if (article.category && !categories.includes(article.category)) showInput(false);
+  else showSelect();
+
+  select.addEventListener("change", () => {
+    if (select.value === "__new__") {
+      input.value = "";
+      showInput(true);
+      return;
+    }
+    input.value = select.value;
+  });
+
+  wrap.appendChild(select);
+  wrap.appendChild(input);
+  return wrap;
+}
+
 // ----------------------------------------------------------------------------
 // Notícias
 // ----------------------------------------------------------------------------
@@ -1867,7 +1948,7 @@ function buildArticleCard(article, i, total) {
   const grid = el("div", "fields-grid");
 
   grid.appendChild(buildReadOnlyField("Identificador (id)", article.id));
-  grid.appendChild(buildInput("Categoria", "text", article.category, { article: i, key: "category" }, "Fisiologia vegetal"));
+  grid.appendChild(buildArticleCategoryField(article, i));
   grid.appendChild(buildTextarea("Título", article.title, { article: i, key: "title" }, false, 2));
   grid.appendChild(buildTextarea("Subtítulo (opcional)", article.subtitle, { article: i, key: "subtitle" }, false, 2));
 
