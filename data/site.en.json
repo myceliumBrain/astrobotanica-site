@@ -67,6 +67,7 @@
     "metaTitle": "Article — Astrobotanica",
     "backLink": "← Back to articles",
     "byLine": "By: {{author}}",
+    "publishedAt": "at {{time}}",
     "referencesHeading": "References",
     "latestHeading": "Latest",
     "mostViewedHeading": "Most read",

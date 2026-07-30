@@ -73,6 +73,7 @@
     "metaTitle": "Notícia — Astrobotânica",
     "backLink": "← Voltar às notícias",
     "byLine": "Por: {{author}}",
+    "publishedAt": "às {{time}}",
     "referencesHeading": "Referências",
     "latestHeading": "Mais recentes",
     "mostViewedHeading": "Mais acessadas",

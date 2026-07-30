@@ -9,6 +9,7 @@ interface Episode {
   title: string;
   description: string;
   date: string; // formato AAAA-MM-DD
+  time?: string; // opcional: horário de Brasília, formato "HH:MM" — usado no podcast.xml
   duration: string; // formato "MM:SS" ou "HH:MM:SS"
   audioSrc: string; // caminho para o arquivo .mp3, ex: "audio/episodio-01.mp3"
   image?: string; // opcional: caminho da imagem de capa, ex: "images/episodios/ep-01.jpg"
@@ -24,6 +25,7 @@ interface Article {
   author?: string; // opcional: mostrado no topo, ao lado da data — mesmo em qualquer idioma (nome próprio, não se traduz)
   authorAvatar?: string; // opcional: foto do autor, ex: "images/equipe/pedro.jpg"
   date: string; // formato AAAA-MM-DD
+  time?: string; // opcional: horário de Brasília, formato "HH:MM" — usado no rss.xml e mostrado ao lado da data na página de notícia
   readingTime: string; // ex: "6 min"
   body: string; // HTML gerado pelo editor do painel (negrito, parágrafos, imagens)
   image?: string; // opcional: caminho da imagem de capa (horizontal), ex: "images/noticias/minha-noticia.jpg"
@@ -672,6 +674,9 @@ function buildArticleMetaRow(article: Article): HTMLElement {
   // do corpo e das referências (desktop e celular).
   const bylineMeta = el("span", "article-byline-meta");
   bylineMeta.appendChild(document.createTextNode(formatDate(article.date)));
+  if (article.time) {
+    bylineMeta.appendChild(document.createTextNode(` ${i18next.t("artigo.publishedAt", { time: article.time })}`));
+  }
   bylineMeta.appendChild(document.createTextNode(" · "));
   bylineMeta.appendChild(document.createTextNode(localize(article.readingTime, article.readingTimeEn)));
   row.appendChild(bylineMeta);
