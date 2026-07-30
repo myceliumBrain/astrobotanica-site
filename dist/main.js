@@ -305,7 +305,9 @@ function renderEpisodeDetail(episodes) {
         root.appendChild(meta);
     }
 
-    root.appendChild(el("p", "player-label", i18next.t("episodio.listenLabel")));
+    const contentCol = el("div", "episode-content-col");
+
+    contentCol.appendChild(el("p", "player-label", i18next.t("episodio.listenLabel")));
 
     const player = el("div", "player-panel");
     const audio = document.createElement("audio");
@@ -317,14 +319,14 @@ function renderEpisodeDetail(episodes) {
     audio.appendChild(source);
     audio.appendChild(document.createTextNode(i18next.t("episodio.audioUnsupported")));
     player.appendChild(audio);
-    root.appendChild(player);
+    contentCol.appendChild(player);
 
     const body = el("div", "episode-description");
     body.appendChild(el("p", "", episode.description));
-    root.appendChild(body);
+    contentCol.appendChild(body);
 
     if (episode.transcript && episode.transcript.length > 0) {
-        root.appendChild(el("h2", "transcript-heading", i18next.t("episodio.transcriptHeading")));
+        contentCol.appendChild(el("h2", "transcript-heading", i18next.t("episodio.transcriptHeading")));
 
         // Começa recolhida (só as primeiras linhas, com fade) pra não empurrar
         // "outros episódios" pra longe — o botão abaixo expande sob demanda.
@@ -334,7 +336,7 @@ function renderEpisodeDetail(episodes) {
             transcript.appendChild(el("p", "", paragraph));
         }
         wrap.appendChild(transcript);
-        root.appendChild(wrap);
+        contentCol.appendChild(wrap);
 
         const toggle = document.createElement("button");
         toggle.type = "button";
@@ -348,8 +350,10 @@ function renderEpisodeDetail(episodes) {
             chevron.textContent = collapsed ? "▼" : "▲";
             label.textContent = ` ${i18next.t(collapsed ? "episodio.transcriptExpand" : "episodio.transcriptCollapse")}`;
         });
-        root.appendChild(toggle);
+        contentCol.appendChild(toggle);
     }
+
+    root.appendChild(contentCol);
 
     const related = document.getElementById("episodio-related");
     if (related) {
@@ -373,9 +377,13 @@ function renderEpisodeDetail(episodes) {
     document.title = `${episode.title} — Astrobotânica`;
 }
 
+function localize(pt, en) {
+    return i18next.language === "en" && en ? en : pt;
+}
+
 // ----------------------------------------------------------------------------
 // Artigos: cartão em grade (pôster + título), usado na lista de artigos,
-// nos destaques da Home e em "continue lendo" — sempre da mesma forma.
+// na lista pequena da Home e em "continue lendo" — sempre da mesma forma.
 // ----------------------------------------------------------------------------
 
 function buildArticleCard(article, variant) {
@@ -394,35 +402,106 @@ function buildArticleCard(article, variant) {
     }
     card.appendChild(image);
 
-    card.appendChild(el("div", "article-card-kicker", article.category));
-    card.appendChild(el("div", "article-card-title", article.title));
+    card.appendChild(el("div", "article-card-kicker", localize(article.category, article.categoryEn)));
+    card.appendChild(el("div", "article-card-title", localize(article.title, article.titleEn)));
     card.appendChild(
-        el("div", "article-card-meta", `${formatDate(article.date)} · ${article.readingTime}`)
+        el("div", "article-card-meta", `${formatDate(article.date)} · ${localize(article.readingTime, article.readingTimeEn)}`)
     );
-    if (article.author) {
-        card.appendChild(el("div", "article-card-author", i18next.t("artigo.byLine", { author: article.author })));
-    }
 
     return card;
 }
 
-function renderArticleGrid(container, articles, emptyMessage, featured, trailingCta) {
+function renderArticleGrid(container, articles, emptyMessage) {
     container.innerHTML = "";
     container.classList.add("article-grid");
     if (articles.length === 0) {
         container.appendChild(el("p", "empty-state", emptyMessage));
         return;
     }
-    articles.forEach((article, index) => {
-        const variant = featured ? (index === 0 ? "hero" : index >= 3 ? "horizontal" : undefined) : undefined;
-        container.appendChild(buildArticleCard(article, variant));
-    });
-    if (trailingCta) {
-        const cta = document.createElement("a");
-        cta.className = "article-card article-card--more";
-        cta.href = trailingCta.href;
-        cta.appendChild(el("span", "article-card-more-label", trailingCta.label));
-        container.appendChild(cta);
+    articles.forEach((article) => container.appendChild(buildArticleCard(article)));
+}
+
+function buildArticleSplitCard(article) {
+    const card = document.createElement("a");
+    card.className = "article-card-split";
+    card.href = `/artigo/${article.id}/`;
+
+    const info = el("div", "article-card-split-info");
+    info.appendChild(el("div", "article-card-kicker", localize(article.category, article.categoryEn)));
+    info.appendChild(el("div", "article-card-split-title", localize(article.title, article.titleEn)));
+    const splitSubtitle = localize(article.subtitle, article.subtitleEn);
+    if (splitSubtitle) {
+        info.appendChild(el("p", "article-card-split-subtitle", splitSubtitle));
+    }
+    info.appendChild(
+        el("div", "article-card-meta", `${formatDate(article.date)} · ${localize(article.readingTime, article.readingTimeEn)}`)
+    );
+    if (article.author) {
+        info.appendChild(el("div", "article-card-author", i18next.t("artigo.byLine", { author: article.author })));
+    }
+    card.appendChild(info);
+
+    const image = el("div", "article-card-split-image");
+    const cardImageSrc = article.image || article.imageVertical;
+    if (cardImageSrc) {
+        const img = document.createElement("img");
+        img.src = cardImageSrc;
+        img.alt = "";
+        img.loading = "lazy";
+        image.appendChild(img);
+    }
+    card.appendChild(image);
+
+    return card;
+}
+
+function buildHomeEventBanner() {
+    const src = i18next.exists("home.eventBannerImage") ? i18next.t("home.eventBannerImage") : "";
+    if (!src) return null;
+
+    const img = document.createElement("img");
+    img.src = src;
+    img.alt = "";
+    img.loading = "lazy";
+
+    const link = i18next.exists("home.eventBannerLink") ? i18next.t("home.eventBannerLink") : "";
+    if (link) {
+        const a = document.createElement("a");
+        a.className = "home-event-banner";
+        a.href = link;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.appendChild(img);
+        return a;
+    }
+    const wrap = el("div", "home-event-banner");
+    wrap.appendChild(img);
+    return wrap;
+}
+
+function renderHomeArticles(container, topArticles, remainingArticles, emptyMessage) {
+    container.innerHTML = "";
+    if (topArticles.length === 0 && remainingArticles.length === 0) {
+        container.appendChild(el("p", "empty-state", emptyMessage));
+        return;
+    }
+
+    const [featured, ...nextFour] = topArticles;
+    if (featured) container.appendChild(buildArticleSplitCard(featured));
+
+    if (nextFour.length > 0) {
+        const row = el("div", "home-articles-row");
+        nextFour.forEach((article) => row.appendChild(buildArticleCard(article)));
+        container.appendChild(row);
+    }
+
+    const banner = buildHomeEventBanner();
+    if (banner) container.appendChild(banner);
+
+    if (remainingArticles.length > 0) {
+        const grid = el("div", "article-grid");
+        remainingArticles.forEach((article) => grid.appendChild(buildArticleCard(article, "horizontal")));
+        container.appendChild(grid);
     }
 }
 
@@ -461,7 +540,7 @@ function buildArticleMetaRow(article) {
     const bylineMeta = el("span", "article-byline-meta");
     bylineMeta.appendChild(document.createTextNode(formatDate(article.date)));
     bylineMeta.appendChild(document.createTextNode(" · "));
-    bylineMeta.appendChild(document.createTextNode(article.readingTime));
+    bylineMeta.appendChild(document.createTextNode(localize(article.readingTime, article.readingTimeEn)));
     row.appendChild(bylineMeta);
 
     const share = el("div", "article-share");
@@ -469,7 +548,7 @@ function buildArticleMetaRow(article) {
     for (const network of SHARE_NETWORKS) {
         const a = document.createElement("a");
         a.className = "article-share-link";
-        a.href = network.buildUrl(location.href, article.title);
+        a.href = network.buildUrl(location.href, localize(article.title, article.titleEn));
         a.target = "_blank";
         a.rel = "noopener noreferrer";
         a.setAttribute("aria-label", i18next.t("artigo.shareOn", { network: network.name }));
@@ -549,7 +628,7 @@ function buildSidebarList(heading, items) {
             img.loading = "lazy";
             a.appendChild(img);
         }
-        a.appendChild(el("span", "article-sidebar-title", item.title));
+        a.appendChild(el("span", "article-sidebar-title", localize(item.title, item.titleEn)));
         list.appendChild(a);
     }
     section.appendChild(list);
@@ -586,10 +665,11 @@ function renderArticleDetail(articles, members, pageviews) {
     // Ordem fixa, sem sobrepor texto na imagem: etiqueta, título, subtítulo,
     // depois a linha de autor/data + compartilhar, e só então a capa (com
     // legenda opcional logo abaixo).
-    root.appendChild(el("span", "tag tag-accent", article.category));
-    root.appendChild(el("h1", "", article.title));
-    if (article.subtitle) {
-        root.appendChild(el("p", "article-subtitle", article.subtitle));
+    root.appendChild(el("span", "tag tag-accent", localize(article.category, article.categoryEn)));
+    root.appendChild(el("h1", "", localize(article.title, article.titleEn)));
+    const detailSubtitle = localize(article.subtitle, article.subtitleEn);
+    if (detailSubtitle) {
+        root.appendChild(el("p", "article-subtitle", detailSubtitle));
     }
     root.appendChild(buildArticleMetaRow(article));
 
@@ -600,8 +680,9 @@ function renderArticleDetail(articles, members, pageviews) {
         img.alt = "";
         cover.appendChild(img);
         root.appendChild(cover);
-        if (article.imageCaption) {
-            root.appendChild(el("p", "article-cover-caption", article.imageCaption));
+        const caption = localize(article.imageCaption, article.imageCaptionEn);
+        if (caption) {
+            root.appendChild(el("p", "article-cover-caption", caption));
         }
     }
 
@@ -614,7 +695,7 @@ function renderArticleDetail(articles, members, pageviews) {
     const main = el("div", "article-main");
 
     const body = el("div", "article-body");
-    body.innerHTML = article.body;
+    body.innerHTML = localize(article.body, article.bodyEn);
     main.appendChild(body);
 
     if (article.references && article.references.length > 0) {
@@ -658,7 +739,7 @@ function renderArticleDetail(articles, members, pageviews) {
         renderArticleGrid(related, others, i18next.t("artigo.noOthers"));
     }
 
-    document.title = `${article.title} — Astrobotânica`;
+    document.title = `${localize(article.title, article.titleEn)} — Astrobotânica`;
 }
 
 // ----------------------------------------------------------------------------
@@ -666,6 +747,7 @@ function renderArticleDetail(articles, members, pageviews) {
 // ----------------------------------------------------------------------------
 
 const HOME_MAX_ITEMS = 6;
+const HOME_ARTICLES_TOP = 5;
 
 // A Home mostra, no máximo, HOME_MAX_ITEMS itens: primeiro todos os
 // marcados como "featured" no admin (até o limite), e as vagas restantes
@@ -698,10 +780,10 @@ function renderHomeHighlights(episodes, articles) {
             artRoot.innerHTML = "";
             artRoot.appendChild(el("p", "empty-state", i18next.t("home.loadErrorArticles")));
         } else {
-            renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), i18next.t("home.emptyArticles"), true, {
-                href: "/noticias",
-                label: i18next.t("home.featuredCta"),
-            });
+            const topArticles = selectHomeItems(articles.items, HOME_ARTICLES_TOP);
+            const topSet = new Set(topArticles);
+            const remainingArticles = articles.items.filter((article) => !topSet.has(article));
+            renderHomeArticles(artRoot, topArticles, remainingArticles, i18next.t("home.emptyArticles"));
         }
     }
 }
@@ -764,28 +846,6 @@ function renderMembersList(members) {
     for (const member of members.items) {
         list.appendChild(buildMemberCard(member));
     }
-}
-
-// ----------------------------------------------------------------------------
-// Tema claro/escuro: a escolha (ou preferência do sistema) já é aplicada em
-// <html data-theme="..."> por um script inline no <head> de cada página,
-// antes da primeira pintura (evita flash do tema errado). Aqui só cuidamos
-// do botão: refletir o estado atual e alternar/persistir ao clicar.
-// ----------------------------------------------------------------------------
-
-function setupThemeToggle() {
-    const toggle = document.querySelector(".theme-toggle");
-    if (!toggle) return;
-
-    const isDark = () => document.documentElement.getAttribute("data-theme") === "dark";
-    toggle.setAttribute("aria-checked", String(isDark()));
-
-    toggle.addEventListener("click", () => {
-        const next = isDark() ? "light" : "dark";
-        document.documentElement.setAttribute("data-theme", next);
-        localStorage.setItem("theme", next);
-        toggle.setAttribute("aria-checked", String(next === "dark"));
-    });
 }
 
 // ----------------------------------------------------------------------------
@@ -867,7 +927,6 @@ function setupHeaderAutoHide() {
 document.addEventListener("DOMContentLoaded", async () => {
     setupHeaderAutoHide();
     setupNavOverlay();
-    setupThemeToggle();
 
     await initI18n();
     applyTranslations();

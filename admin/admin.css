@@ -402,6 +402,29 @@ a, button { cursor: pointer; }
   color: var(--adm-white);
 }
 .author-source-toggle { display: flex; gap: 0.5rem; }
+
+/* ── NOTÍCIA: seção colapsável "Versão em inglês" (ver
+   buildArticleEnglishSection) — sem transição de altura suave de propósito
+   (diferente do acordeão do card e de .author-source-field): o corpo em
+   inglês é um editor rich-text que pode ficar bem mais alto que qualquer
+   outro campo, e um teto de altura fixo cortaria conteúdo comprido em vez
+   de só escondê-lo por inteiro. */
+.article-en-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--adm-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--adm-accent);
+  cursor: pointer;
+}
+.article-en-chevron { display: inline-block; transition: transform 0.2s ease; }
+.article-en-summary.open .article-en-chevron { transform: rotate(90deg); }
+.article-en-panel { margin-top: 0.75rem; }
 .toggle-btn.active { background: var(--adm-accent); color: #0c0c0c; border-color: var(--adm-accent); }
 .toggle-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 

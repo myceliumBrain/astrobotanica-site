@@ -4,9 +4,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
 :root {
-  /* cor — papel claro, acento verde pastel */
-  --bg: #f4f4f2;
-  --bg-panel: #ececea;
+  /* cor — fundo branco, acento verde pastel */
+  --bg: #ffffff;
+  --bg-panel: #f4f4f2;
   --ink: #1d1f20;
   --ink-dim: color-mix(in srgb, var(--ink) 68%, transparent);
   --ink-faint: color-mix(in srgb, var(--ink) 48%, transparent);
@@ -32,37 +32,16 @@
   --space-6: 6.5rem;
 
   --radius: 2px;
-  --max-width: 72rem;
+  /* Largura do conteúdo (.wrap) — mais larga de propósito (era 72rem) pra
+     não sobrar tanta margem em branco nas laterais em telas grandes. */
+  --max-width: 100rem;
   --measure: 38rem;
-}
-
-/* Tema escuro: aplicado via [data-theme="dark"] (escolha explícita, ver
-   .theme-toggle) ou automaticamente pelo prefers-color-scheme do sistema
-   quando não há escolha salva (ver regra @media logo abaixo). */
-:root[data-theme='dark'] {
-  --bg: #17181a;
-  --bg-panel: #1f2123;
-  --ink: #edf0ee;
-
-  --accent: #8fbf9b;
-  --accent-600: #a3cdad;
-  --accent-700: #bcdcc4;
-  --accent-800: #d8ecdd;
-  --accent-100: #223229;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: #17181a;
-    --bg-panel: #1f2123;
-    --ink: #edf0ee;
-
-    --accent: #8fbf9b;
-    --accent-600: #a3cdad;
-    --accent-700: #bcdcc4;
-    --accent-800: #d8ecdd;
-    --accent-100: #223229;
-  }
+  /* Largura de leitura pra blocos de texto corrido que hoje ficam soltos
+     dentro de .wrap sem coluna própria (corpo da notícia/episódio, bio de
+     integrante) — o valor de .wrap de antes (72rem menos os dois
+     padding-inline de --space-3), pra manter essas colunas do jeito que
+     já estavam mesmo com o --max-width geral mais largo. */
+  --content-width: 69rem;
 }
 
 /* ============================================================================
@@ -83,7 +62,6 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  transition: background-color 0.2s ease, color 0.2s ease;
   font-family: var(--font-body);
   font-size: 16px;
   line-height: 1.6;
@@ -172,37 +150,88 @@ button { font-family: inherit; }
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
-  padding-block: var(--space-3) var(--space-2);
   transform: translateY(0);
   transition: transform 0.35s ease;
 }
 .site-header--hidden { transform: translateY(-100%); }
 
-.header-stack {
-  position: relative;
+/* Linha 1: só a marca (+ hambúrguer no celular, ver .nav-toggle) — nada
+   mais aqui de propósito, pra linha 1 ficar só com a logo no desktop. */
+.header-top {
   display: flex;
   align-items: center;
-  justify-content: center;
-  text-align: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
 }
 
 .brand-mark {
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 2.4rem;
+  font-size: 2rem;
   letter-spacing: 0.01em;
   text-transform: uppercase;
   text-decoration: none;
   color: var(--ink);
 }
 
-/* Botão hamburguer que abre o menu em overlay (ver .nav-overlay) */
-.nav-toggle {
-  position: absolute;
-  left: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
+/* Linha divisória entre a logo (linha 1) e os links (linha 2) — de
+   propósito fora de .wrap (não tem essa classe), pra atravessar a largura
+   inteira da viewport, não só até --max-width. */
+.header-divider {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 0;
+}
+
+/* Linha 2: Notícias/Podcast/Sobre/Contato à esquerda, RSS feed + idioma à
+   direita (.header-nav-right) — visível só no desktop; no celular não cabe
+   do lado da marca, então vira o botão hambúrguer + .nav-overlay (mesmos
+   links, incluindo RSS feed — ver @media RESPONSIVO). */
+.header-nav {
   display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-block: var(--space-2);
+}
+/* Combinador direto (>), não descendente: .rss-link mora um nível mais
+   fundo (dentro de .header-nav-right) e tem estilo próprio — sem o ">"
+   essa regra bateria nela também, e ganharia por especificidade. */
+.header-nav > a {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  color: var(--ink-dim);
+}
+.header-nav > a:hover, .header-nav > a[aria-current='page'] { color: var(--accent-700); }
+
+.header-nav-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.rss-link {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink-dim);
+}
+.rss-link:hover { color: var(--accent-700); }
+
+.header-nav-right .lang-switch { margin-top: 0; }
+
+/* Botão hamburguer que abre o menu em overlay (ver .nav-overlay) — some por
+   padrão, só aparece no celular (ver @media RESPONSIVO), no lugar de
+   .header-nav. */
+.nav-toggle {
+  display: none;
   flex-direction: column;
   justify-content: center;
   gap: 5px;
@@ -223,42 +252,6 @@ button { font-family: inherit; }
 .nav-toggle[aria-expanded='true'] .nav-toggle-bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
 .nav-toggle[aria-expanded='true'] .nav-toggle-bar:nth-child(2) { opacity: 0; }
 .nav-toggle[aria-expanded='true'] .nav-toggle-bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
-
-/* Alternador de tema claro/escuro (ver setupThemeToggle em src/main.ts) */
-.theme-toggle {
-  position: absolute;
-  right: var(--space-3);
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-.theme-toggle-track {
-  display: block;
-  width: 2.75rem;
-  height: 1.5rem;
-  border-radius: 999px;
-  background: var(--bg-panel);
-  border: 1px solid var(--line);
-  position: relative;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-.theme-toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: calc(1.5rem - 6px);
-  height: calc(1.5rem - 6px);
-  border-radius: 50%;
-  background: var(--ink);
-  transition: transform 0.25s ease, background-color 0.2s ease;
-}
-.theme-toggle[aria-checked='true'] .theme-toggle-thumb {
-  transform: translateX(1.25rem);
-  background: var(--accent);
-}
 
 .visually-hidden {
   position: absolute;
@@ -335,26 +328,24 @@ button { font-family: inherit; }
   cursor: pointer;
 }
 
-/* Seletor de idioma, dentro do menu overlay (ver setupLangSwitch em src/main.ts) */
+/* Seletor de idioma (bandeiras BR/US — ver setupLangSwitch em src/main.ts),
+   dentro de .header-nav-right no desktop e do menu overlay no celular. */
 .lang-switch {
   display: flex;
   gap: var(--space-2);
   margin-top: var(--space-2);
 }
 .lang-btn {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  letter-spacing: 0.05em;
-  padding: 0.35rem 0.9rem;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.35rem 0.6rem;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: none;
-  color: var(--ink-dim);
   cursor: pointer;
-  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 .lang-btn[aria-current='true'] {
-  color: var(--accent-800);
   border-color: var(--accent-700);
   background: var(--accent-100);
 }
@@ -483,6 +474,11 @@ body.nav-open { overflow: hidden; }
   margin-bottom: 4px;
 }
 
+/* Player/descrição/transcrição do episódio (ver renderEpisodeDetail em
+   src/main.ts) — só a capa acima (.episode-cover) usa a largura cheia de
+   .wrap, essa coluna fica no --content-width de leitura. */
+.episode-content-col { max-width: var(--content-width); margin-inline: auto; }
+
 .player-panel {
   border: 1px solid var(--line);
   padding: var(--space-3);
@@ -560,18 +556,6 @@ body.nav-open { overflow: hidden; }
 .article-card-image img { width: 100%; height: 100%; object-fit: cover; }
 .article-card:hover .article-card-image { border-color: var(--accent-700); }
 
-/* ---- destaques da Home: publicação mais recente em evidência (ver
-   renderArticleGrid "featured") ---- */
-.article-card--hero { grid-column: span 2; }
-/* Sem aspect-ratio fixo: a grade estica o card hero pra altura da linha
-   (ditada pelos cards vizinhos, de proporção fixa), e a imagem cresce até
-   preencher essa altura — assim o texto abaixo sempre alinha com o dos
-   cards ao lado, não importa a largura da tela. */
-.article-card--hero .article-card-image {
-  aspect-ratio: auto;
-  flex: 1 1 auto;
-  min-height: 0;
-}
 .article-card--horizontal .article-card-image { aspect-ratio: 16 / 9; }
 .article-card-kicker { font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-700); margin-bottom: 4px; }
 .article-card-title {
@@ -588,28 +572,69 @@ body.nav-open { overflow: hidden; }
   margin-top: 4px;
 }
 
-/* Bloco final "acessar todas as notícias", no lugar do antigo link "ver
-   todos" no topo da seção (ver renderArticleGrid trailingCta) — mesma célula
-   de grade que um card comum, então ocupa o mesmo espaço visual da última
-   notícia em vez de um link de canto discreto. */
-.article-card--more {
-  display: flex;
+/* ---- Home: notícia de destaque em card 50/50 (texto à esquerda, imagem à
+   direita) — ver buildArticleSplitCard/renderHomeArticles ---- */
+.article-card-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
   align-items: center;
-  justify-content: center;
-  text-align: center;
-  border: 1px solid var(--line);
-  background: var(--accent-100);
-  padding: var(--space-3);
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  text-decoration: none;
+  color: inherit;
+  margin-bottom: var(--space-4);
 }
-.article-card--more:hover { border-color: var(--accent-700); background: color-mix(in srgb, var(--accent-700) 12%, var(--accent-100)); }
-.article-card-more-label {
+/* Grid com áreas nomeadas (não flex-column) de propósito: no celular (ver
+   @media RESPONSIVO) só a disposição dessas áreas muda — selo e meta viram
+   vizinhos numa linha só, em vez de linhas empilhadas — sem precisar
+   duplicar elemento nenhum. No desktop, uma coluna só, mesma ordem visual
+   de sempre (selo, título, subtítulo, meta, autor). */
+.article-card-split-info {
+  display: grid;
+  grid-template-areas: "kicker" "title" "subtitle" "meta" "author";
+}
+.article-card-split-info .article-card-kicker { grid-area: kicker; }
+.article-card-split-title {
+  grid-area: title;
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: 1.1rem;
-  line-height: 1.35;
-  color: var(--accent-700);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  line-height: 1.1;
+  margin-top: 4px;
 }
+.article-card-split-subtitle {
+  grid-area: subtitle;
+  font-size: 1.05rem;
+  color: var(--ink-dim);
+  margin-top: var(--space-2);
+}
+.article-card-split .article-card-meta { grid-area: meta; margin-top: var(--space-2); }
+.article-card-split .article-card-author { grid-area: author; margin-top: var(--space-2); }
+.article-card-split-image {
+  aspect-ratio: 4 / 3;
+  background: var(--accent-100);
+  border: 1px solid var(--line);
+  overflow: hidden;
+}
+.article-card-split-image img { width: 100%; height: 100%; object-fit: cover; }
+.article-card-split:hover .article-card-split-image { border-color: var(--accent-700); }
+
+/* ---- Home: linha com as 4 próximas notícias, formato pôster normal (ver
+   renderHomeArticles) ---- */
+.home-articles-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4) var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+/* ---- Home: banner de evento opcional, entre a linha de destaques e a
+   lista completa (ver buildHomeEventBanner, cadastrado no admin em Home)
+   ---- */
+.home-event-banner {
+  display: block;
+  margin-bottom: var(--space-4);
+}
+.home-event-banner img { width: 100%; height: auto; display: block; }
 
 .card {
   display: flex;
@@ -757,7 +782,7 @@ body.nav-open { overflow: hidden; }
    RESPONSIVO). */
 .article-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 18rem;
+  grid-template-columns: minmax(0, 1fr) 22rem;
   gap: var(--space-4);
   align-items: start;
 }
@@ -818,6 +843,8 @@ body.nav-open { overflow: hidden; }
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  max-width: var(--content-width);
+  margin-inline: auto;
 }
 .member-card { display: flex; align-items: flex-start; gap: var(--space-3); }
 .member-photo {
@@ -892,11 +919,46 @@ body.nav-open { overflow: hidden; }
   /* "Mais recentes" fica redundante no celular — a mesma lista já aparece
      logo abaixo em "Continue lendo" (ver #artigo-related). */
   .article-sidebar { display: none; }
+  /* Linha 2 do cabeçalho não cabe do lado da marca numa tela estreita —
+     vira o hambúrguer + .nav-overlay (mesmos links, ver noticia/podcast/
+     sobre/contato + idioma dentro do overlay). */
+  .header-nav { display: none; }
+  .nav-toggle { display: flex; }
+  /* 50/50 vira 1 coluna — a imagem some pra frente (order: -1), colada nela
+     vem só o título (gap bem menor que o resto do card, pra ficar perto da
+     imagem) e, numa linha só (diferente do selo/meta empilhados dos outros
+     cards — ver .home-articles-row/.article-grid), o selo + data/tempo de
+     leitura lado a lado. Subtítulo e autor continuam escondidos. Uma linha
+     no fim separa esse card dos próximos, já que ele se destaca dos
+     demais. */
+  .article-card-split {
+    grid-template-columns: 1fr;
+    gap: var(--space-2);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: var(--space-4);
+  }
+  .article-card-split-image { order: -1; }
+  .article-card-split-info {
+    grid-template-columns: auto 1fr;
+    grid-template-areas: "title title" "kicker meta";
+    column-gap: var(--space-2);
+    row-gap: 4px;
+    align-items: baseline;
+  }
+  .article-card-split-title { margin-top: var(--space-2); }
+  .article-card-split-info .article-card-kicker { margin-bottom: 0; }
+  .article-card-split .article-card-meta { margin-top: 0; }
+  .article-card-split-subtitle, .article-card-split .article-card-author { display: none; }
+  .home-articles-row { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 640px) {
   .episode-row { flex-wrap: wrap; }
   .episode-row-meta { width: 100%; }
+  /* Data/minutagem do painel de podcast da Home quebravam o layout do
+     .episode-row numa tela estreita — só ali, escondidas (a lista completa
+     em /podcast continua mostrando). */
+  .feature-panel-episode .episode-row-meta { display: none; }
   .member-card { flex-direction: column; align-items: stretch; }
   .article-author-card { flex-direction: column; align-items: flex-start; }
   .contact-grid { grid-template-columns: 1fr; }

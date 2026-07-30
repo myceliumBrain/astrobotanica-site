@@ -2,7 +2,7 @@
   "common": {
     "openMenu": "Abrir menu",
     "closeMenu": "Fechar menu",
-    "toggleTheme": "Alternar tema claro/escuro",
+    "rssFeed": "RSS feed",
     "language": "Idioma"
   },
   "brand": {
@@ -29,8 +29,6 @@
   "home": {
     "metaTitle": "Astrobotânica — divulgação científica e podcast sobre plantas fora da Terra",
     "metaDescription": "Astrobotânica é um projeto de divulgação científica sobre o reino das plantas e sua jornada para fora da Terra: notícias e, em paralelo, um podcast, com o pesquisador Pedro Alvarenga.",
-    "featuredHeading": "Notícias",
-    "featuredCta": "Acessar todas as notícias",
     "panelKicker": "Podcast Jardim em Expansão",
     "loadErrorEpisodes": "Não foi possível carregar os episódios agora.",
     "emptyEpisodes": "Nenhum episódio publicado ainda.",

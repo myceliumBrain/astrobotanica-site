@@ -21,7 +21,7 @@ interface Article {
   category: string; // ex: "Fisiologia vegetal", "Agricultura espacial"
   title: string;
   subtitle?: string;
-  author?: string; // opcional: mostrado no topo, ao lado da data
+  author?: string; // opcional: mostrado no topo, ao lado da data — mesmo em qualquer idioma (nome próprio, não se traduz)
   authorAvatar?: string; // opcional: foto do autor, ex: "images/equipe/pedro.jpg"
   date: string; // formato AAAA-MM-DD
   readingTime: string; // ex: "6 min"
@@ -30,7 +30,16 @@ interface Article {
   imageCaption?: string; // opcional: legenda exibida abaixo da imagem de capa
   imageVertical?: string; // opcional: caminho da imagem vertical usada nos cartões de prévia (ver buildArticleCard); sem ela, cai para `image`
   featured?: boolean; // marcado no admin: fixa o artigo na Home (ver selectHomeItems)
-  references?: ArticleReference[]; // opcional: lista exibida após o corpo, antes de "Continue lendo"
+  references?: ArticleReference[]; // opcional: lista exibida após o corpo, antes de "Continue lendo" — citações não são traduzidas
+  // Versão em inglês (todas opcionais, mantidas à mão pelo admin — ver
+  // articleField() abaixo). Sem a tradução de um campo, a página em inglês
+  // cai de volta pro campo em português correspondente.
+  categoryEn?: string;
+  titleEn?: string;
+  subtitleEn?: string;
+  bodyEn?: string;
+  imageCaptionEn?: string;
+  readingTimeEn?: string; // calculado a partir de bodyEn, não digitado (mesma lógica do admin pro campo em português)
 }
 
 interface ArticleReference {
@@ -391,7 +400,13 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
     root.appendChild(meta);
   }
 
-  root.appendChild(el("p", "player-label", i18next.t("episodio.listenLabel")));
+  // Descrição/player/transcrição ficam numa coluna de leitura própria
+  // (.episode-content-col, largura de --content-width) — só a capa acima
+  // usa a largura cheia de .wrap (mesmo padrão do corpo da notícia, ver
+  // .article-layout).
+  const contentCol = el("div", "episode-content-col");
+
+  contentCol.appendChild(el("p", "player-label", i18next.t("episodio.listenLabel")));
 
   const player = el("div", "player-panel");
   const audio = document.createElement("audio");
@@ -403,14 +418,14 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
   audio.appendChild(source);
   audio.appendChild(document.createTextNode(i18next.t("episodio.audioUnsupported")));
   player.appendChild(audio);
-  root.appendChild(player);
+  contentCol.appendChild(player);
 
   const body = el("div", "episode-description");
   body.appendChild(el("p", "", episode.description));
-  root.appendChild(body);
+  contentCol.appendChild(body);
 
   if (episode.transcript && episode.transcript.length > 0) {
-    root.appendChild(el("h2", "transcript-heading", i18next.t("episodio.transcriptHeading")));
+    contentCol.appendChild(el("h2", "transcript-heading", i18next.t("episodio.transcriptHeading")));
 
     // Começa recolhida (só as primeiras linhas, com fade) pra não empurrar
     // "outros episódios" pra longe — o botão abaixo expande sob demanda.
@@ -420,7 +435,7 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
       transcript.appendChild(el("p", "", paragraph));
     }
     wrap.appendChild(transcript);
-    root.appendChild(wrap);
+    contentCol.appendChild(wrap);
 
     const toggle = document.createElement("button");
     toggle.type = "button";
@@ -434,8 +449,10 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
       chevron.textContent = collapsed ? "▼" : "▲";
       label.textContent = ` ${i18next.t(collapsed ? "episodio.transcriptExpand" : "episodio.transcriptCollapse")}`;
     });
-    root.appendChild(toggle);
+    contentCol.appendChild(toggle);
   }
+
+  root.appendChild(contentCol);
 
   const related = document.getElementById("episodio-related");
   if (related) {
@@ -459,16 +476,25 @@ function renderEpisodeDetail(episodes: Loaded<Episode>): void {
   document.title = `${episode.title} — Astrobotânica`;
 }
 
+// Campo traduzido de uma notícia (categoria/título/subtítulo/corpo/legenda/
+// tempo de leitura — ver categoryEn/titleEn/etc. em Article): usa a versão
+// em inglês só quando o idioma atual é inglês E ela foi de fato preenchida
+// no admin; sem isso, cai pro campo em português correspondente. Autor,
+// data, imagens e referências não passam por aqui — não se traduzem.
+function localize(pt: string, en: string | undefined): string;
+function localize(pt: string | undefined, en: string | undefined): string | undefined;
+function localize(pt: string | undefined, en: string | undefined): string | undefined {
+  return i18next.language === "en" && en ? en : pt;
+}
+
 // ----------------------------------------------------------------------------
 // Artigos: cartão em grade (pôster + título), usado na lista de artigos,
-// nos destaques da Home e em "continue lendo" — sempre da mesma forma.
+// na lista pequena da Home e em "continue lendo" — sempre da mesma forma.
 // ----------------------------------------------------------------------------
 
-// Variante usada só nos destaques da Home (ver renderArticleGrid
-// "featured"): "hero" ocupa 2 colunas (a publicação mais recente),
-// "horizontal" usa a capa horizontal em vez da vertical (as duas
-// publicações seguintes). Ambas usam a capa horizontal — ver CSS.
-type ArticleCardVariant = "hero" | "horizontal";
+// "horizontal": só a lista pequena da Home usa isso (ver renderHomeArticles)
+// — capa horizontal em vez de vertical, card com menos destaque.
+type ArticleCardVariant = "horizontal";
 
 function buildArticleCard(article: Article, variant?: ArticleCardVariant): HTMLAnchorElement {
   const card = document.createElement("a");
@@ -486,48 +512,127 @@ function buildArticleCard(article: Article, variant?: ArticleCardVariant): HTMLA
   }
   card.appendChild(image);
 
-  card.appendChild(el("div", "article-card-kicker", article.category));
-  card.appendChild(el("div", "article-card-title", article.title));
+  card.appendChild(el("div", "article-card-kicker", localize(article.category, article.categoryEn)));
+  card.appendChild(el("div", "article-card-title", localize(article.title, article.titleEn)));
   card.appendChild(
-    el("div", "article-card-meta", `${formatDate(article.date)} · ${article.readingTime}`)
+    el("div", "article-card-meta", `${formatDate(article.date)} · ${localize(article.readingTime, article.readingTimeEn)}`)
   );
-  if (article.author) {
-    card.appendChild(el("div", "article-card-author", i18next.t("artigo.byLine", { author: article.author })));
-  }
+  // Sem autor aqui de propósito: nome completo estourava a largura desses
+  // cards pequenos (grade da Home, /noticias, "continue lendo"), quebrando
+  // o layout — ver .article-author-card na página de detalhe, que tem
+  // espaço de sobra pra isso, e o card 50/50 (buildArticleSplitCard).
 
   return card;
 }
 
-// "featured": só os destaques da Home usam isso (ver linha com
-// selectHomeItems) — a mais recente ocupa 2 colunas (hero), a 2ª e 3ª
-// ficam no cartão "pôster" normal (mesmo destaque da grade comum), e as
-// demais (linha de baixo) ficam com a variante horizontal, com menos
-// destaque ainda. Lista de notícias e "Continue lendo" não usam.
-function renderArticleGrid(
-  container: HTMLElement,
-  articles: Article[],
-  emptyMessage: string,
-  featured?: boolean,
-  trailingCta?: { href: string; label: string }
-): void {
+function renderArticleGrid(container: HTMLElement, articles: Article[], emptyMessage: string): void {
   container.innerHTML = "";
   container.classList.add("article-grid");
   if (articles.length === 0) {
     container.appendChild(el("p", "empty-state", emptyMessage));
     return;
   }
-  articles.forEach((article, index) => {
-    const variant = featured ? (index === 0 ? "hero" : index >= 3 ? "horizontal" : undefined) : undefined;
-    container.appendChild(buildArticleCard(article, variant));
-  });
-  // Bloco final do tamanho de um card, no lugar do antigo link "ver todos"
-  // no topo da seção (ver home.featuredCta) — só a Home passa trailingCta.
-  if (trailingCta) {
-    const cta = document.createElement("a");
-    cta.className = "article-card article-card--more";
-    cta.href = trailingCta.href;
-    cta.appendChild(el("span", "article-card-more-label", trailingCta.label));
-    container.appendChild(cta);
+  articles.forEach((article) => container.appendChild(buildArticleCard(article)));
+}
+
+// Card 50/50 (texto à esquerda, imagem à direita) — só a notícia mais
+// recente/destacada da Home usa isso (ver renderHomeArticles).
+function buildArticleSplitCard(article: Article): HTMLAnchorElement {
+  const card = document.createElement("a");
+  card.className = "article-card-split";
+  card.href = `/artigo/${article.id}/`;
+
+  const info = el("div", "article-card-split-info");
+  info.appendChild(el("div", "article-card-kicker", localize(article.category, article.categoryEn)));
+  info.appendChild(el("div", "article-card-split-title", localize(article.title, article.titleEn)));
+  const splitSubtitle = localize(article.subtitle, article.subtitleEn);
+  if (splitSubtitle) {
+    info.appendChild(el("p", "article-card-split-subtitle", splitSubtitle));
+  }
+  info.appendChild(
+    el("div", "article-card-meta", `${formatDate(article.date)} · ${localize(article.readingTime, article.readingTimeEn)}`)
+  );
+  if (article.author) {
+    info.appendChild(el("div", "article-card-author", i18next.t("artigo.byLine", { author: article.author })));
+  }
+  card.appendChild(info);
+
+  const image = el("div", "article-card-split-image");
+  const cardImageSrc = article.image || article.imageVertical;
+  if (cardImageSrc) {
+    const img = document.createElement("img");
+    img.src = cardImageSrc;
+    img.alt = "";
+    img.loading = "lazy";
+    image.appendChild(img);
+  }
+  card.appendChild(image);
+
+  return card;
+}
+
+// Banner de evento (opcional, cadastrado no admin em Home) — imagem solta
+// entre a linha das 4 próximas notícias e a lista completa, com link
+// opcional. Fica de fora por completo sem imagem cadastrada.
+function buildHomeEventBanner(): HTMLElement | null {
+  const src = i18next.exists("home.eventBannerImage") ? i18next.t("home.eventBannerImage") : "";
+  if (!src) return null;
+
+  const img = document.createElement("img");
+  img.src = src;
+  img.alt = "";
+  img.loading = "lazy";
+
+  const link = i18next.exists("home.eventBannerLink") ? i18next.t("home.eventBannerLink") : "";
+  if (link) {
+    const a = document.createElement("a");
+    a.className = "home-event-banner";
+    a.href = link;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.appendChild(img);
+    return a;
+  }
+  const wrap = el("div", "home-event-banner");
+  wrap.appendChild(img);
+  return wrap;
+}
+
+// Home: 1) notícia de destaque em card 50/50 (buildArticleSplitCard); 2) as
+// próximas 4 (topArticles[1..4]) em linha, formato pôster normal; 3) banner
+// de evento (opcional); 4) todas as demais notícias, formato pequeno
+// (variante "horizontal") — ao contrário do esquema antigo (uma seleção
+// limitada + link "ver todos"), a Home lista literalmente todas as
+// notícias, só a apresentação muda conforme a posição (ver
+// renderHomeHighlights, que separa topArticles/remainingArticles).
+function renderHomeArticles(
+  container: HTMLElement,
+  topArticles: Article[],
+  remainingArticles: Article[],
+  emptyMessage: string
+): void {
+  container.innerHTML = "";
+  if (topArticles.length === 0 && remainingArticles.length === 0) {
+    container.appendChild(el("p", "empty-state", emptyMessage));
+    return;
+  }
+
+  const [featured, ...nextFour] = topArticles;
+  if (featured) container.appendChild(buildArticleSplitCard(featured));
+
+  if (nextFour.length > 0) {
+    const row = el("div", "home-articles-row");
+    nextFour.forEach((article) => row.appendChild(buildArticleCard(article)));
+    container.appendChild(row);
+  }
+
+  const banner = buildHomeEventBanner();
+  if (banner) container.appendChild(banner);
+
+  if (remainingArticles.length > 0) {
+    const grid = el("div", "article-grid");
+    remainingArticles.forEach((article) => grid.appendChild(buildArticleCard(article, "horizontal")));
+    container.appendChild(grid);
   }
 }
 
@@ -568,7 +673,7 @@ function buildArticleMetaRow(article: Article): HTMLElement {
   const bylineMeta = el("span", "article-byline-meta");
   bylineMeta.appendChild(document.createTextNode(formatDate(article.date)));
   bylineMeta.appendChild(document.createTextNode(" · "));
-  bylineMeta.appendChild(document.createTextNode(article.readingTime));
+  bylineMeta.appendChild(document.createTextNode(localize(article.readingTime, article.readingTimeEn)));
   row.appendChild(bylineMeta);
 
   const share = el("div", "article-share");
@@ -576,7 +681,7 @@ function buildArticleMetaRow(article: Article): HTMLElement {
   for (const network of SHARE_NETWORKS) {
     const a = document.createElement("a");
     a.className = "article-share-link";
-    a.href = network.buildUrl(location.href, article.title);
+    a.href = network.buildUrl(location.href, localize(article.title, article.titleEn));
     a.target = "_blank";
     a.rel = "noopener noreferrer";
     a.setAttribute("aria-label", i18next.t("artigo.shareOn", { network: network.name }));
@@ -661,7 +766,7 @@ function buildSidebarList(heading: string, items: Article[]): HTMLElement {
       img.loading = "lazy";
       a.appendChild(img);
     }
-    a.appendChild(el("span", "article-sidebar-title", item.title));
+    a.appendChild(el("span", "article-sidebar-title", localize(item.title, item.titleEn)));
     list.appendChild(a);
   }
   section.appendChild(list);
@@ -698,10 +803,11 @@ function renderArticleDetail(articles: Loaded<Article>, members: Loaded<Member>,
   // Ordem fixa, sem sobrepor texto na imagem: etiqueta, título, subtítulo,
   // depois a linha de autor/data + compartilhar, e só então a capa (com
   // legenda opcional logo abaixo).
-  root.appendChild(el("span", "tag tag-accent", article.category));
-  root.appendChild(el("h1", "", article.title));
-  if (article.subtitle) {
-    root.appendChild(el("p", "article-subtitle", article.subtitle));
+  root.appendChild(el("span", "tag tag-accent", localize(article.category, article.categoryEn)));
+  root.appendChild(el("h1", "", localize(article.title, article.titleEn)));
+  const detailSubtitle = localize(article.subtitle, article.subtitleEn);
+  if (detailSubtitle) {
+    root.appendChild(el("p", "article-subtitle", detailSubtitle));
   }
   root.appendChild(buildArticleMetaRow(article));
 
@@ -712,8 +818,9 @@ function renderArticleDetail(articles: Loaded<Article>, members: Loaded<Member>,
     img.alt = "";
     cover.appendChild(img);
     root.appendChild(cover);
-    if (article.imageCaption) {
-      root.appendChild(el("p", "article-cover-caption", article.imageCaption));
+    const caption = localize(article.imageCaption, article.imageCaptionEn);
+    if (caption) {
+      root.appendChild(el("p", "article-cover-caption", caption));
     }
   }
 
@@ -726,7 +833,7 @@ function renderArticleDetail(articles: Loaded<Article>, members: Loaded<Member>,
   const main = el("div", "article-main");
 
   const body = el("div", "article-body");
-  body.innerHTML = article.body;
+  body.innerHTML = localize(article.body, article.bodyEn);
   main.appendChild(body);
 
   if (article.references && article.references.length > 0) {
@@ -770,7 +877,7 @@ function renderArticleDetail(articles: Loaded<Article>, members: Loaded<Member>,
     renderArticleGrid(related, others, i18next.t("artigo.noOthers"));
   }
 
-  document.title = `${article.title} — Astrobotânica`;
+  document.title = `${localize(article.title, article.titleEn)} — Astrobotânica`;
 }
 
 // ----------------------------------------------------------------------------
@@ -778,6 +885,13 @@ function renderArticleDetail(articles: Loaded<Article>, members: Loaded<Member>,
 // ----------------------------------------------------------------------------
 
 const HOME_MAX_ITEMS = 6;
+// Quantas notícias ocupam as posições "de destaque" da Home: a 1ª vira o
+// card 50/50 (ver buildArticleSplitCard), as outras 4 formam a linha de
+// pôsteres logo abaixo (ver renderHomeArticles) — diferente de
+// HOME_MAX_ITEMS (episódios), que ainda limita quantos aparecem na Home; as
+// notícias que sobram desse recorte de 5 continuam aparecendo, só que na
+// lista pequena mais abaixo (nenhuma notícia fica de fora da Home).
+const HOME_ARTICLES_TOP = 5;
 
 // A Home mostra, no máximo, HOME_MAX_ITEMS itens: primeiro todos os
 // marcados como "featured" no admin (até o limite), e as vagas restantes
@@ -810,10 +924,10 @@ function renderHomeHighlights(episodes: Loaded<Episode>, articles: Loaded<Articl
       artRoot.innerHTML = "";
       artRoot.appendChild(el("p", "empty-state", i18next.t("home.loadErrorArticles")));
     } else {
-      renderArticleGrid(artRoot, selectHomeItems(articles.items, HOME_MAX_ITEMS), i18next.t("home.emptyArticles"), true, {
-        href: "/noticias",
-        label: i18next.t("home.featuredCta"),
-      });
+      const topArticles = selectHomeItems(articles.items, HOME_ARTICLES_TOP);
+      const topSet = new Set(topArticles);
+      const remainingArticles = articles.items.filter((article) => !topSet.has(article));
+      renderHomeArticles(artRoot, topArticles, remainingArticles, i18next.t("home.emptyArticles"));
     }
   }
 }
@@ -876,28 +990,6 @@ function renderMembersList(members: Loaded<Member>): void {
   for (const member of members.items) {
     list.appendChild(buildMemberCard(member));
   }
-}
-
-// ----------------------------------------------------------------------------
-// Tema claro/escuro: a escolha (ou preferência do sistema) já é aplicada em
-// <html data-theme="..."> por um script inline no <head> de cada página,
-// antes da primeira pintura (evita flash do tema errado). Aqui só cuidamos
-// do botão: refletir o estado atual e alternar/persistir ao clicar.
-// ----------------------------------------------------------------------------
-
-function setupThemeToggle(): void {
-  const toggle = document.querySelector<HTMLButtonElement>(".theme-toggle");
-  if (!toggle) return;
-
-  const isDark = () => document.documentElement.getAttribute("data-theme") === "dark";
-  toggle.setAttribute("aria-checked", String(isDark()));
-
-  toggle.addEventListener("click", () => {
-    const next = isDark() ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("theme", next);
-    toggle.setAttribute("aria-checked", String(next === "dark"));
-  });
 }
 
 // ----------------------------------------------------------------------------
@@ -979,7 +1071,6 @@ function setupHeaderAutoHide(): void {
 document.addEventListener("DOMContentLoaded", async () => {
   setupHeaderAutoHide();
   setupNavOverlay();
-  setupThemeToggle();
 
   await initI18n();
   applyTranslations();

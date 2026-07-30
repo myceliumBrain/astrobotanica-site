@@ -4,15 +4,6 @@
 <script>
 (function () {
   try {
-    var t = localStorage.getItem("theme");
-    if (t !== "light" && t !== "dark") {
-      t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
-    document.documentElement.setAttribute("data-theme", t);
-  } catch (e) {}
-})();
-(function () {
-  try {
     var l = localStorage.getItem("lang");
     if (l !== "pt" && l !== "en") {
       l = navigator.language.slice(0, 2).toLowerCase() === "en" ? "en" : "pt";
@@ -30,7 +21,7 @@
 <body>
 
 <header class="site-header">
-  <div class="wrap header-stack">
+  <div class="wrap header-top">
     <a href="/" class="brand-mark" data-text="brand.name">astrobotânica</a>
     <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="nav-overlay">
       <span class="nav-toggle-bar"></span>
@@ -38,10 +29,21 @@
       <span class="nav-toggle-bar"></span>
       <span class="visually-hidden" data-text="common.openMenu">Abrir menu</span>
     </button>
-    <button type="button" class="theme-toggle" role="switch" aria-checked="false" aria-label="Alternar tema claro/escuro" data-text="common.toggleTheme" data-text-attr="aria-label">
-      <span class="theme-toggle-track"><span class="theme-toggle-thumb"></span></span>
-    </button>
   </div>
+  <hr class="header-divider" />
+  <nav class="wrap header-nav">
+    <a href="/noticias" data-text="nav.articles">Notícias</a>
+    <a href="/podcast" data-text="nav.podcast">Podcast</a>
+    <a href="/sobre" data-text="nav.about">Sobre</a>
+    <a href="/contato" aria-current="page" data-text="nav.contact">Contato</a>
+    <div class="header-nav-right">
+      <a href="/rss.xml" class="rss-link" data-text="common.rssFeed">RSS feed</a>
+      <div class="lang-switch" role="group" data-text-attr="aria-label" data-text="common.language" aria-label="Idioma">
+        <button type="button" class="lang-btn" data-lang="pt" aria-label="Português">🇧🇷</button>
+        <button type="button" class="lang-btn" data-lang="en" aria-label="English">🇺🇸</button>
+      </div>
+    </div>
+  </nav>
 </header>
 
 <div class="nav-overlay" id="nav-overlay">
@@ -51,9 +53,10 @@
     <a href="/podcast" data-text="nav.podcast">Podcast</a>
     <a href="/sobre" data-text="nav.about">Sobre</a>
     <a href="/contato" aria-current="page" data-text="nav.contact">Contato</a>
+    <a href="/rss.xml" data-text="common.rssFeed">RSS feed</a>
     <div class="lang-switch" role="group" data-text-attr="aria-label" data-text="common.language" aria-label="Idioma">
-      <button type="button" class="lang-btn" data-lang="pt">PT</button>
-      <button type="button" class="lang-btn" data-lang="en">EN</button>
+      <button type="button" class="lang-btn" data-lang="pt" aria-label="Português">🇧🇷</button>
+      <button type="button" class="lang-btn" data-lang="en" aria-label="English">🇺🇸</button>
     </div>
   </nav>
 </div>

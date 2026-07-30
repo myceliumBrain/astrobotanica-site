@@ -76,11 +76,20 @@ localmente nem passo de build para isso.
   painel não edita esse arquivo). As duas chaves precisam ficar em sincronia;
   se uma chave existir só em português, o texto em inglês simplesmente não
   aparece (o `data-text` mantém o texto em português já presente no HTML).
-- **Conteúdo de notícias/episódios** (título, corpo, transcrição etc., em
-  `data/episodes.json`/`data/articles.json`) **não é traduzido** — só a
-  interface fixa (menu, rodapé, títulos de página, mensagens de
-  carregamento/vazio/erro).
-- **Seletor**: botões "PT"/"EN" dentro do menu overlay (`.lang-switch`, ver
+- **Conteúdo de episódios** (título, transcrição etc., em
+  `data/episodes.json`) **não é traduzido** — só a interface fixa (menu,
+  rodapé, títulos de página, mensagens de carregamento/vazio/erro).
+- **Conteúdo de notícias**: categoria, título, subtítulo, legenda da imagem
+  de capa e corpo têm uma versão em inglês opcional (`categoryEn`/`titleEn`/
+  `subtitleEn`/`imageCaptionEn`/`bodyEn` em `data/articles.json`, editável no
+  painel — ver "Versão em inglês" no card de cada notícia), com
+  `readingTimeEn` calculado sozinho a partir de `bodyEn` (mesma lógica do
+  `readingTime` em português). Autor, data e imagens não têm versão em
+  inglês (nome próprio e arquivos não se traduzem). Sem uma tradução
+  preenchida, a página em inglês cai de volta pro campo em português
+  correspondente (ver `localize()` em `src/main.ts`) — nunca fica em branco.
+- **Seletor**: bandeiras 🇧🇷/🇺🇸 no cabeçalho (desktop, `.header-nav-right`) e
+  dentro do menu overlay no celular (`.lang-switch`, ver
   `setupLangSwitch()` em `src/main.ts`). A escolha fica em
   `localStorage.lang`; sem escolha salva, usa o idioma do navegador.
 - **Sem CDN disponível**: se o script do i18next não carregar (offline,
@@ -340,18 +349,27 @@ desde que o serviço sirva os arquivos por HTTP (todos esses servem).
 
 ## Layout
 
-- **Cabeçalho**: logo centralizada, botão hambúrguer à esquerda (abre o menu
-  em overlay/gaveta lateral, classes `.nav-toggle` / `.nav-overlay` /
-  `.nav-overlay-panel`) e alternador de tema claro/escuro à direita
-  (`.theme-toggle`) — classes em `css/style.css`, lógica em
-  `setupNavOverlay()`/`setupThemeToggle()` em `src/main.ts`. O seletor de
-  idioma (PT/EN) fica dentro do próprio menu overlay.
-- **Tema claro/escuro**: paleta alternativa em `:root[data-theme="dark"]`
-  (`css/style.css`), aplicada automaticamente pelo `prefers-color-scheme` do
-  sistema ou pela escolha salva em `localStorage.theme`; um script inline no
-  `<head>` de cada página aplica isso antes da primeira pintura, evitando
-  flash do tema errado.
+- **Cabeçalho em 2 linhas**: linha 1 — marca à esquerda (`.brand-mark`), RSS
+  feed à direita (`.rss-link`, sempre aponta pra `/rss.xml`); linha 2 —
+  Notícias/Podcast/Sobre/Contato + idioma (`.header-nav`), visível só no
+  desktop. No celular, `.header-nav` some e vira o botão hambúrguer
+  (`.nav-toggle`) que abre os mesmos links num overlay/gaveta lateral
+  (`.nav-overlay` / `.nav-overlay-panel`) — troca entre os dois na media
+  query de 860px em `css/style.css`, lógica do overlay em
+  `setupNavOverlay()` em `src/main.ts`.
+- **Sem alternador claro/escuro**: o site é sempre no tema claro (fundo
+  branco), de propósito — a paleta fica em `:root` (`css/style.css`).
 - **Grade de notícias**: cartões de altura uniforme (pôster + título + data),
-  usada igual na Home, em `/noticias` e em "Continue lendo" — classes
-  `.article-grid` / `.article-card` em `css/style.css`, geradas por
+  usada em `/noticias`, em "Continue lendo" e na parte de baixo da Home —
+  classes `.article-grid` / `.article-card` em `css/style.css`, geradas por
   `buildArticleCard()` em `src/main.ts`.
+- **Home — notícias**: só ali a apresentação muda por posição (ver
+  `renderHomeArticles()`/`selectHomeItems()` em `src/main.ts`). A notícia de
+  destaque (a mais recente, ou a marcada "Destacar na Home" no admin) vira
+  um card 50/50 (texto à esquerda, imagem à direita — `.article-card-split`);
+  as próximas 4 (`HOME_ARTICLES_TOP = 5` no total) ficam numa linha de
+  pôsteres normais (`.home-articles-row`); depois vem o banner de evento
+  opcional (`.home-event-banner`, cadastrado no admin em Home —
+  `contentData.site.home.eventBannerImage`/`eventBannerLink`); e todas as
+  notícias restantes aparecem em formato pequeno (`.article-card--horizontal`)
+  — nenhuma notícia fica de fora da Home, só o destaque muda.

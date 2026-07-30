@@ -34,10 +34,14 @@ const PATHS = {
   siteEn: CONFIG.siteEnPath,
 };
 
-// Quantos artigos/episódios marcados como "destaque" cabem na Home (ver
+// Quantos episódios marcados como "destaque" cabem na Home (ver
 // selectHomeItems em src/main.ts) — mantido em sincronia manualmente com
 // aquela constante, já que este arquivo não passa pelo bundler do site.
 const HOME_MAX_ITEMS = 6;
+// Idem, mas pras notícias: só as 5 primeiras posições da Home (1 card 50/50
+// + 4 na linha de baixo) respeitam "destaque" — o resto aparece de qualquer
+// jeito na lista pequena mais abaixo (ver HOME_ARTICLES_TOP em src/main.ts).
+const HOME_ARTICLES_TOP = 5;
 
 // Caracteres/minuto usados pra estimar o tempo de leitura (ver
 // computeReadingTime) — media de ~200 palavras/min de leitura silenciosa,
@@ -97,8 +101,6 @@ const PAGE_SCHEMA = [
     fields: [
       { key: "home.metaTitle", label: "Título da aba do navegador", type: "text" },
       { key: "home.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "home.featuredHeading", label: "Título \"Notícias em destaque\"", type: "text" },
-      { key: "home.featuredCta", label: "Texto do bloco \"acessar todas as notícias\" (após a última notícia)", type: "text" },
       { key: "home.panelKicker", label: "Selo do painel do podcast", type: "text" },
     ],
   },
@@ -660,6 +662,7 @@ async function enterApp() {
 
   await loadContent();
   renderPageForms();
+  renderHomeEventBanner();
   await loadAccess();
 }
 
@@ -669,6 +672,12 @@ async function enterApp() {
 
 let contentData = { articles: null, episodes: null, members: null, site: null, siteEn: null };
 const dirty = new Set();
+
+// Campo de upload do banner de evento da Home (ver renderHomeEventBanner) —
+// guardado à parte porque, ao contrário dos campos de artigo/episódio/
+// integrante, não há um botão "Salvar alterações" de card que chame
+// confirmFileUpload() na hora certa; collectAll() chama direto por aqui.
+let homeEventBannerField = null;
 
 // Uploads de áudio/imagem confirmados (via "Salvar alterações" de um card),
 // aguardando o clique em "Salvar no GitHub" — só então são de fato
@@ -878,12 +887,25 @@ function applyArticleField(input) {
         pendingDeletions.push({ path, message: `admin: remove imagem não usada mais no corpo (${path})` });
       }
     });
-    record[key] = newHtml;
-    if (key === "body") record.readingTime = computeReadingTime(newHtml);
+    // bodyEn é opcional (diferente de body) — corpo em inglês vazio some
+    // por completo (e o tempo de leitura calculado a partir dele junto),
+    // em vez de salvar uma string vazia.
+    if (key === "bodyEn" && !newHtml) {
+      delete record.bodyEn;
+      delete record.readingTimeEn;
+    } else {
+      record[key] = newHtml;
+      if (key === "body") record.readingTime = computeReadingTime(newHtml);
+      else if (key === "bodyEn") record.readingTimeEn = computeReadingTime(newHtml);
+    }
     return;
   }
   const value = input.dataset.multiline === "paragraphs" ? linesToParagraphs(input.value) : input.value;
-  if ((key === "subtitle" || key === "image" || key === "author" || key === "authorAvatar" || key === "imageCaption" || key === "imageVertical") && !value) delete record[key];
+  const deleteIfEmpty = [
+    "subtitle", "image", "author", "authorAvatar", "imageCaption", "imageVertical",
+    "categoryEn", "titleEn", "subtitleEn", "imageCaptionEn",
+  ];
+  if (deleteIfEmpty.includes(key) && !value) delete record[key];
   else record[key] = value;
 }
 
@@ -929,6 +951,7 @@ function collectAll() {
   document.querySelectorAll("[data-episode]").forEach(applyEpisodeField);
   document.querySelectorAll("[data-member]").forEach(applyMemberField);
   collectMemberLinks();
+  if (homeEventBannerField) homeEventBannerField.confirmFileUpload();
   document.querySelectorAll("[data-site]").forEach((input) => {
     setByPath(contentData.site, input.dataset.site, input.value);
   });
@@ -1097,20 +1120,22 @@ function buildCheckboxField(labelText, checked, dataset, onToggle) {
   return wrap;
 }
 
-// Trava o marcador de "destaque" em HOME_MAX_ITEMS por seção: ao chegar no
-// limite, desabilita as checkboxes ainda desmarcadas (até alguém desmarcar
-// uma) — evita ambiguidade sobre qual item sairia da Home se o JSON tivesse
-// mais marcados do que cabem nela.
+// Trava o marcador de "destaque" no limite de cada seção (HOME_MAX_ITEMS
+// pra episódios, HOME_ARTICLES_TOP pra notícias — ver as duas no topo do
+// arquivo): ao chegar no limite, desabilita as checkboxes ainda desmarcadas
+// (até alguém desmarcar uma) — evita ambiguidade sobre qual item sairia da
+// Home se o JSON tivesse mais marcados do que cabem nela.
 function enforceFeaturedLimit(section) {
   const container = document.getElementById(`${section}-list`);
   if (!container) return;
+  const limit = section === "articles" ? HOME_ARTICLES_TOP : HOME_MAX_ITEMS;
   const checkboxes = Array.from(container.querySelectorAll('input[type="checkbox"][data-key="featured"]'));
   const checkedCount = checkboxes.filter((cb) => cb.checked).length;
   checkboxes.forEach((cb) => {
-    cb.disabled = !cb.checked && checkedCount >= HOME_MAX_ITEMS;
+    cb.disabled = !cb.checked && checkedCount >= limit;
   });
   const counter = document.getElementById(`featured-count-${section}`);
-  if (counter) counter.textContent = `${checkedCount}/${HOME_MAX_ITEMS} na home`;
+  if (counter) counter.textContent = `${checkedCount}/${limit} na home`;
 }
 
 function buildTextarea(labelText, value, dataset, multilineParagraphs, rows) {
@@ -1908,6 +1933,78 @@ function buildArticleCategoryField(article, i) {
   return wrap;
 }
 
+// Seção colapsável "Versão em inglês" de uma notícia — todos os campos são
+// opcionais (categoryEn/titleEn/subtitleEn/imageCaptionEn/bodyEn/
+// readingTimeEn no JSON; ver localize() em src/main.ts pra como o site usa
+// isso, caindo pro campo em português quando algum não foi preenchido).
+// Fecha por padrão pra não dobrar de tamanho o formulário de toda notícia
+// que ainda não tem tradução — abre sozinha se já existir algum campo em
+// inglês preenchido.
+function buildArticleEnglishSection(article, i) {
+  const wrap = el("div", "field full article-en-section");
+
+  const hasEnContent = !!(
+    article.categoryEn || article.titleEn || article.subtitleEn || article.imageCaptionEn || article.bodyEn
+  );
+
+  const summary = el("button", "article-en-summary");
+  summary.type = "button";
+  const chevron = el("span", "article-en-chevron", "▸");
+  summary.appendChild(chevron);
+  summary.appendChild(el("span", "", "Versão em inglês (opcional)"));
+  summary.classList.toggle("open", hasEnContent);
+  wrap.appendChild(summary);
+
+  const panel = el("div", "article-en-panel fields-grid");
+  panel.hidden = !hasEnContent;
+
+  panel.appendChild(buildInput("Categoria (EN)", "text", article.categoryEn, { article: i, key: "categoryEn" }, "Space Agriculture"));
+  panel.appendChild(buildTextarea("Título (EN)", article.titleEn, { article: i, key: "titleEn" }, false, 2));
+  panel.appendChild(buildTextarea("Subtítulo (EN)", article.subtitleEn, { article: i, key: "subtitleEn" }, false, 2));
+  panel.appendChild(buildTextarea("Legenda da imagem de capa (EN)", article.imageCaptionEn, { article: i, key: "imageCaptionEn" }, false, 3));
+
+  const readingTimeEnField = el("div", "field");
+  readingTimeEnField.appendChild(el("label", "", "Tempo de leitura (EN)"));
+  readingTimeEnField.appendChild(el("span", "field-hint", "Calculado automaticamente a partir do corpo em inglês."));
+  const readingTimeEnInput = document.createElement("input");
+  readingTimeEnInput.className = "input";
+  readingTimeEnInput.type = "text";
+  readingTimeEnInput.value = article.bodyEn ? computeReadingTime(article.bodyEn) : "";
+  readingTimeEnInput.disabled = true;
+  readingTimeEnField.appendChild(readingTimeEnInput);
+  panel.appendChild(readingTimeEnField);
+
+  // opts.id com sufixo "-en" só pra dar um prefixo de arquivo diferente às
+  // imagens deste corpo (ver nextImageNumber/insertPendingImage em
+  // buildRichTextField) — sem isso, os dois editores (PT e EN) gerariam o
+  // mesmo caminho pra primeira imagem inserida (`${id}-imagem-1.ext`) e um
+  // sobrescreveria o arquivo do outro no repositório.
+  const bodyEnField = buildRichTextField(
+    "Corpo (EN)",
+    articleBodyToHtml(article.bodyEn),
+    { article: i, key: "bodyEn" },
+    {
+      id: `${article.id}-en`,
+      folder: "images/noticias",
+      buildImageMessage: (path) => `admin: envia imagem do corpo em inglês da notícia "${article.title || article.id}" (${path})`,
+      onInput: (html) => { readingTimeEnInput.value = html ? computeReadingTime(html) : ""; },
+    }
+  );
+  bodyEnField.classList.add("full");
+  panel.appendChild(bodyEnField);
+
+  wrap.appendChild(panel);
+
+  summary.addEventListener("click", () => {
+    panel.hidden = !panel.hidden;
+    summary.classList.toggle("open", !panel.hidden);
+  });
+
+  wrap.confirmBodyImages = bodyEnField.confirmBodyImages;
+
+  return wrap;
+}
+
 // ----------------------------------------------------------------------------
 // Notícias
 // ----------------------------------------------------------------------------
@@ -2058,6 +2155,9 @@ function buildArticleCard(article, i, total) {
   referencesField.appendChild(addReferenceBtn);
   grid.appendChild(referencesField);
 
+  const englishSection = buildArticleEnglishSection(article, i);
+  grid.appendChild(englishSection);
+
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
@@ -2066,6 +2166,7 @@ function buildArticleCard(article, i, total) {
     imageField.confirmFileUpload();
     imageVerticalField.confirmFileUpload();
     bodyField.confirmBodyImages();
+    englishSection.confirmBodyImages();
     collectArticleCardFields(i);
     markDirty("articles");
     toast('Alterações da notícia prontas — clique em "Salvar no GitHub" para enviar.', "ok");
@@ -2656,6 +2757,51 @@ function renderPageForms() {
     container.addEventListener("input", handleSiteFieldChange);
     container.addEventListener("change", handleSiteFieldChange);
   }
+}
+
+// Banner de evento da Home: única imagem "solta" (não é campo de texto do
+// PAGE_SCHEMA, por isso fica fora do loop acima) — aparece na Home entre a
+// linha de notícias em destaque e a lista completa (ver renderHomeArticles
+// em src/main.ts). Guardado em contentData.site.home.eventBannerImage/Link,
+// mesmo mecanismo de "data-site" dos outros campos de texto da página Home
+// (ver handleSiteFieldChange/collectAll), só que via buildFileUploadField.
+// Como não há um botão "Salvar alterações" próprio aqui (diferente de
+// notícia/episódio/integrante), confirmFileUpload() é chamado direto em
+// collectAll() através de homeEventBannerField (ver mais abaixo).
+function renderHomeEventBanner() {
+  const container = document.getElementById("page-form-home");
+  if (!container) return;
+  const home = contentData.site.home || (contentData.site.home = {});
+
+  const bannerField = buildFileUploadField(
+    "Banner de evento (opcional)",
+    home.eventBannerImage,
+    { site: "home.eventBannerImage" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar imagem",
+      preview: true,
+      allowClear: true,
+      hint: 'Aparece na Home, entre a linha de notícias em destaque e a lista completa. Some se vazio.',
+      buildPath: (file) => `images/home/evento-banner.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia banner de evento da Home (${path})`,
+    }
+  );
+  container.appendChild(bannerField);
+
+  const linkField = buildInput(
+    "Link do banner (opcional)",
+    "text",
+    home.eventBannerLink,
+    { site: "home.eventBannerLink" },
+    "https://..."
+  );
+  container.appendChild(linkField);
+
+  container.addEventListener("input", handleSiteFieldChange);
+  container.addEventListener("change", handleSiteFieldChange);
+
+  homeEventBannerField = bannerField;
 }
 
 // ----------------------------------------------------------------------------
