@@ -1721,71 +1721,26 @@ function buildReorderButtons(idx, total, onUp, onDown) {
   return wrap;
 }
 
-// Expande/recolhe um elemento com transição suave de altura. Usa um teto
-// generoso (em vez do scrollHeight exato) porque o conteúdo de dentro pode
-// mudar de tamanho depois (ex: preview de foto carregando) sem que isso
-// precise recalcular nada.
-function setSmoothCollapse(el, open) {
-  el.style.overflow = "hidden";
-  el.style.transition = "max-height 0.22s ease, opacity 0.22s ease, margin-top 0.22s ease";
-  if (open) {
-    el.style.maxHeight = "40rem";
-    el.style.opacity = "1";
-    el.style.marginTop = "0.6rem";
-  } else {
-    el.style.maxHeight = "0px";
-    el.style.opacity = "0";
-    el.style.marginTop = "0";
-  }
-}
-
-// Escolha de como preencher autor/foto de uma notícia: "integrante" busca
-// nome e foto de um item já cadastrado em contentData.members (ver
-// renderMembersList); "manual" mantém o comportamento antigo (texto livre +
+// Escolha de como preencher autor/foto de uma notícia: um integrante já
+// cadastrado em contentData.members (ver renderMembersList) — nome e foto
+// vêm de lá — ou "Outro", que mantém o comportamento antigo (texto livre +
 // upload próprio, ver authorField/avatarField em buildArticleCard). A opção
 // escolhida aqui não é salva por si — ela só decide qual controle fica
 // visível; o que de fato vai pro JSON é sempre author/authorAvatar, exatos
 // como se tivessem sido digitados/enviados à mão.
 //
-// Some coisas de propósito:
-// - O acordeão abre expandido por padrão (ver panelOpen) — autor é campo de
-//   conteúdo, não detalhe secundário, e ficava fácil demais de não notar que
-//   existe. Nenhum dos 2 botões vem pré-selecionado mesmo assim: só decide
-//   ativo se já houver dado real (nome manual ou integrante) preenchido.
-// - Só um modo pode ter dado por vez: assim que um dos dois (nome manual OU
-//   integrante selecionado) tem valor, o botão do outro modo fica desabilitado.
-//   Ele só volta a ficar disponível quando esse valor for esvaziado de novo
-//   (nome apagado + foto removida, ou integrante voltando pra "— selecione —"),
-//   porque author/authorAvatar são campos únicos — os dois modos escrevem no
-//   mesmo lugar, então não faz sentido os dois preenchidos ao mesmo tempo.
+// Combobox sempre visível (mesmo padrão de buildArticleCategoryField), sem
+// setinha de expandir/recolher: o campo antigo (some/aparece atrás de um
+// clique) deixava fácil não notar que ele existia.
 function buildArticleAuthorSourceField(article, authorField, authorInput, avatarField) {
-  const wrap = el("div", "field full author-source-field");
+  const wrap = el("div", "field author-source-field");
+  wrap.appendChild(el("label", "", "Autor"));
 
-  const summary = el("button", "author-source-summary");
-  summary.type = "button";
-  const chevron = el("span", "author-source-chevron", "▸");
-  summary.appendChild(chevron);
-  summary.appendChild(el("span", "", "Autor"));
-  const hint = el("span", "author-source-hint", article.author || "");
-  summary.appendChild(hint);
-  wrap.appendChild(summary);
-
-  const panel = el("div", "author-source-panel");
-  const toggle = el("div", "author-source-toggle");
-  const memberBtn = el("button", "btn btn-secondary btn-small toggle-btn", "Selecionar integrante");
-  memberBtn.type = "button";
-  const manualBtn = el("button", "btn btn-secondary btn-small toggle-btn", "Digitar manualmente");
-  manualBtn.type = "button";
-  toggle.appendChild(memberBtn);
-  toggle.appendChild(manualBtn);
-  panel.appendChild(toggle);
-
-  const selectWrap = el("div", "author-source-select-wrap");
   const select = document.createElement("select");
   select.className = "input";
   const blank = document.createElement("option");
   blank.value = "";
-  blank.textContent = "— selecione um integrante —";
+  blank.textContent = "— sem autor —";
   select.appendChild(blank);
   for (const member of contentData.members) {
     const opt = document.createElement("option");
@@ -1793,85 +1748,34 @@ function buildArticleAuthorSourceField(article, authorField, authorInput, avatar
     opt.textContent = member.name || member.id;
     select.appendChild(opt);
   }
-  selectWrap.appendChild(select);
-  panel.appendChild(selectWrap);
-  wrap.appendChild(panel);
+  const manualOpt = document.createElement("option");
+  manualOpt.value = "__manual__";
+  manualOpt.textContent = "Outro (digitar manualmente)";
+  select.appendChild(manualOpt);
+  wrap.appendChild(select);
 
-  // Se autor/foto batem exatamente com um integrante cadastrado, assume que
-  // vieram de lá; senão, se há texto de autor, assume manual. Sem nenhum dos
-  // dois, fica neutro (nenhum campo mostrado, nenhum botão travado).
+  // Autor/foto batem exatamente com um integrante cadastrado -> assume que
+  // vieram de lá; senão, com texto de autor mas sem bater -> manual; sem
+  // nenhum dos dois -> "sem autor".
   const matched = article.author
     ? contentData.members.find((m) => m.name === article.author && (m.image || "") === (article.authorAvatar || ""))
     : undefined;
   if (matched) select.value = matched.id;
+  else if (article.author) select.value = "__manual__";
 
-  // Qual conjunto de campos está visível no momento — só decide o que
-  // mostrar, não trava nada por si só (ver hasManualData/hasMemberData: o
-  // travamento do outro botão vem sempre do dado de verdade nos campos,
-  // nunca de qual botão foi clicado por último).
-  let activePanel = matched ? "member" : article.author ? "manual" : null;
-  // Abre por padrão (diferente do resto dos acordeões) — o autor é um campo
-  // de conteúdo, não um detalhe secundário, então não deve depender de quem
-  // edita perceber uma setinha pequena e clicar pra descobrir que ele existe.
-  let panelOpen = true;
-
-  function hasManualData() {
-    return authorInput.value.trim() !== "" || !!avatarField.getValue();
-  }
-  function hasMemberData() {
-    return select.value !== "";
-  }
-
-  function applyPanelOpen() {
-    summary.classList.toggle("open", panelOpen);
-    setSmoothCollapse(panel, panelOpen);
-  }
-
-  // Recalcula tudo a partir do dado real dos campos (nunca do último clique)
-  // — é isso que evita o bug de travar o botão do outro modo mesmo com os
-  // campos vazios: o travamento só existe enquanto HÁ dado de fato ali.
   function refresh() {
-    const manualLocked = hasManualData();
-    const memberLocked = hasMemberData();
-    memberBtn.classList.toggle("active", activePanel === "member");
-    manualBtn.classList.toggle("active", activePanel === "manual");
-    memberBtn.disabled = manualLocked;
-    manualBtn.disabled = memberLocked;
-    setSmoothCollapse(selectWrap, panelOpen && activePanel === "member");
-    // authorField/avatarField vivem fora de `panel` (são células próprias no
-    // grid do card, não filhas deste componente) — por isso, ao contrário de
-    // selectWrap, precisam checar panelOpen explicitamente: senão ficariam
-    // visíveis mesmo com a setinha fechada.
-    setSmoothCollapse(authorField, panelOpen && activePanel === "manual");
-    setSmoothCollapse(avatarField, panelOpen && activePanel === "manual");
-    hint.textContent = authorInput.value;
+    const isManual = select.value === "__manual__";
+    authorField.hidden = !isManual;
+    avatarField.hidden = !isManual;
   }
-
-  applyPanelOpen();
   refresh();
 
-  summary.addEventListener("click", () => {
-    panelOpen = !panelOpen;
-    applyPanelOpen();
-    refresh();
-  });
-
-  memberBtn.addEventListener("click", () => {
-    if (memberBtn.disabled) return;
-    activePanel = "member";
-    refresh();
-  });
-  manualBtn.addEventListener("click", () => {
-    if (manualBtn.disabled) return;
-    activePanel = "manual";
-    refresh();
-  });
-
-  authorInput.addEventListener("input", refresh);
-  const avatarClearBtn = avatarField.querySelector(".file-upload-row button");
-  if (avatarClearBtn) avatarClearBtn.addEventListener("click", refresh);
-
   select.addEventListener("change", () => {
+    if (select.value === "__manual__") {
+      refresh();
+      authorInput.focus();
+      return;
+    }
     const member = contentData.members.find((m) => m.id === select.value);
     authorInput.value = member ? member.name || "" : "";
     avatarField.setValue(member ? member.image || "" : "");
@@ -1954,11 +1858,12 @@ function buildArticleCategoryField(article, i) {
   return wrap;
 }
 
-// Seção colapsável "Versão em português" de uma notícia — os campos que não
-// dependem de idioma (id, referências) ficam fora, direto no card (ver
-// buildArticleCard). Existe pra poder fechar sozinha quando "Versão em
-// inglês" abre (mutuamente exclusivas — ver buildArticleCard), já que os
-// dois corpos (PT/EN) abertos ao mesmo tempo deixavam o card bem extenso.
+// Seção colapsável "Versão em português" de uma notícia — categoria, título,
+// subtítulo, autor, id e referências ficam fora, direto no card (ver
+// buildArticleCard) por não serem específicos de um corpo/tradução em
+// particular. Existe pra poder fechar sozinha quando "Versão em inglês" abre
+// (mutuamente exclusivas — ver buildArticleCard), já que os dois corpos
+// (PT/EN) abertos ao mesmo tempo deixavam o card bem extenso.
 function buildArticlePortugueseSection(article, i) {
   const wrap = el("div", "field full article-pt-section");
 
@@ -1971,32 +1876,6 @@ function buildArticlePortugueseSection(article, i) {
 
   const panel = el("div", "article-lang-panel fields-grid");
   wrap.appendChild(panel);
-
-  panel.appendChild(buildArticleCategoryField(article, i));
-  panel.appendChild(buildTextarea("Título", article.title, { article: i, key: "title" }, false, 2));
-  panel.appendChild(buildTextarea("Subtítulo (opcional)", article.subtitle, { article: i, key: "subtitle" }, false, 2));
-
-  const authorField = buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro");
-  const authorInput = authorField.querySelector("input");
-
-  const avatarField = buildFileUploadField(
-    "Foto do autor (opcional)",
-    article.authorAvatar,
-    { article: i, key: "authorAvatar" },
-    {
-      accept: "image/*",
-      buttonText: "Enviar foto",
-      preview: true,
-      previewClass: "file-upload-preview--avatar",
-      allowClear: true,
-      buildPath: (file) => `images/equipe/${article.id}-autor.${fileExtension(file.name, "jpg")}`,
-      buildMessage: (path) => `admin: envia foto do autor da notícia "${article.title || article.id}" (${path})`,
-    }
-  );
-
-  panel.appendChild(buildArticleAuthorSourceField(article, authorField, authorInput, avatarField));
-  panel.appendChild(authorField);
-  panel.appendChild(avatarField);
 
   const imageField = buildFileUploadField(
     "Imagem de capa (opcional)",
@@ -2078,7 +1957,6 @@ function buildArticlePortugueseSection(article, i) {
     panel.hidden = !isOpen;
     summary.classList.toggle("open", isOpen);
   };
-  wrap.avatarField = avatarField;
   wrap.imageField = imageField;
   wrap.imageVerticalField = imageVerticalField;
   wrap.bodyField = bodyField;
@@ -2225,6 +2103,34 @@ function buildArticleCard(article, i, total, container) {
 
   grid.appendChild(buildReadOnlyField("Identificador (id)", article.id));
 
+  // Categoria/título/subtítulo/autor não são específicos de um corpo/tradução
+  // em particular, então ficam sempre visíveis, antes do toggle PT/EN.
+  grid.appendChild(buildArticleCategoryField(article, i));
+  grid.appendChild(buildTextarea("Título", article.title, { article: i, key: "title" }, false, 2));
+  grid.appendChild(buildTextarea("Subtítulo (opcional)", article.subtitle, { article: i, key: "subtitle" }, false, 2));
+
+  const authorField = buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro");
+  const authorInput = authorField.querySelector("input");
+
+  const avatarField = buildFileUploadField(
+    "Foto do autor (opcional)",
+    article.authorAvatar,
+    { article: i, key: "authorAvatar" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar foto",
+      preview: true,
+      previewClass: "file-upload-preview--avatar",
+      allowClear: true,
+      buildPath: (file) => `images/equipe/${article.id}-autor.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia foto do autor da notícia "${article.title || article.id}" (${path})`,
+    }
+  );
+
+  grid.appendChild(buildArticleAuthorSourceField(article, authorField, authorInput, avatarField));
+  grid.appendChild(authorField);
+  grid.appendChild(avatarField);
+
   const ptSection = buildArticlePortugueseSection(article, i);
   const englishSection = buildArticleEnglishSection(article, i);
 
@@ -2246,7 +2152,10 @@ function buildArticleCard(article, i, total, container) {
   });
 
   grid.appendChild(ptSection);
+  grid.appendChild(englishSection);
 
+  // Referências não são traduzidas (mesmo texto nas duas versões) — aparecem
+  // só depois das duas seções de idioma, não competindo por espaço com elas.
   const referencesField = el("div", "field full");
   referencesField.appendChild(el("label", "", 'Referências (aparecem após o corpo, antes de "Continue lendo")'));
   const referencesList = el("div", "article-references-list");
@@ -2258,13 +2167,11 @@ function buildArticleCard(article, i, total, container) {
   referencesField.appendChild(addReferenceBtn);
   grid.appendChild(referencesField);
 
-  grid.appendChild(englishSection);
-
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
   const saveBtn = buildSaveCardButton(() => {
-    ptSection.avatarField.confirmFileUpload();
+    avatarField.confirmFileUpload();
     ptSection.imageField.confirmFileUpload();
     ptSection.imageVerticalField.confirmFileUpload();
     ptSection.bodyField.confirmBodyImages();
