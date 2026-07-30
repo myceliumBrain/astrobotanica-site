@@ -1859,8 +1859,8 @@ function buildArticleCategoryField(article, i) {
 }
 
 // Seção colapsável "Versão em português" de uma notícia — categoria, título,
-// subtítulo, autor, id e referências ficam fora, direto no card (ver
-// buildArticleCard) por não serem específicos de um corpo/tradução em
+// subtítulo, autor, data/hora, id e referências ficam fora, direto no card
+// (ver buildArticleCard) por não serem específicos de um corpo/tradução em
 // particular. Existe pra poder fechar sozinha quando "Versão em inglês" abre
 // (mutuamente exclusivas — ver buildArticleCard), já que os dois corpos
 // (PT/EN) abertos ao mesmo tempo deixavam o card bem extenso.
@@ -1914,9 +1914,6 @@ function buildArticlePortugueseSection(article, i) {
   imageVerticalField.classList.add("full");
   panel.appendChild(imageVerticalField);
 
-  panel.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
-  panel.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no rss.xml)", "time", article.time, { article: i, key: "time" }));
-
   const readingTimeField = el("div", "field");
   readingTimeField.appendChild(el("label", "", "Tempo de leitura"));
   readingTimeField.appendChild(el("span", "field-hint", "Calculado automaticamente a partir da quantidade de caracteres do corpo."));
@@ -1968,16 +1965,10 @@ function buildArticlePortugueseSection(article, i) {
 // opcionais (categoryEn/titleEn/subtitleEn/imageCaptionEn/bodyEn/
 // readingTimeEn no JSON; ver localize() em src/main.ts pra como o site usa
 // isso, caindo pro campo em português quando algum não foi preenchido).
-// Fecha por padrão pra não dobrar de tamanho o formulário de toda notícia
-// que ainda não tem tradução — abre sozinha se já existir algum campo em
-// inglês preenchido; mutuamente exclusiva com "Versão em português" (ver
-// buildArticleCard).
+// Fecha por padrão (mutuamente exclusiva com "Versão em português" — ver
+// buildArticleCard, que decide o estado inicial das duas).
 function buildArticleEnglishSection(article, i) {
   const wrap = el("div", "field full article-en-section");
-
-  const hasEnContent = !!(
-    article.categoryEn || article.titleEn || article.subtitleEn || article.imageCaptionEn || article.bodyEn
-  );
 
   const summary = el("button", "article-lang-summary");
   summary.type = "button";
@@ -2052,7 +2043,6 @@ function buildArticleEnglishSection(article, i) {
 
   wrap.summary = summary;
   wrap.panel = panel;
-  wrap.hasEnContent = hasEnContent;
   wrap.setOpen = function setOpen(isOpen) {
     panel.hidden = !isOpen;
     summary.classList.toggle("open", isOpen);
@@ -2103,8 +2093,9 @@ function buildArticleCard(article, i, total, container) {
 
   grid.appendChild(buildReadOnlyField("Identificador (id)", article.id));
 
-  // Categoria/título/subtítulo/autor não são específicos de um corpo/tradução
-  // em particular, então ficam sempre visíveis, antes do toggle PT/EN.
+  // Categoria/título/subtítulo/autor/data/hora não são específicos de um
+  // corpo/tradução em particular, então ficam sempre visíveis, antes do
+  // toggle PT/EN.
   grid.appendChild(buildArticleCategoryField(article, i));
   grid.appendChild(buildTextarea("Título", article.title, { article: i, key: "title" }, false, 2));
   grid.appendChild(buildTextarea("Subtítulo (opcional)", article.subtitle, { article: i, key: "subtitle" }, false, 2));
@@ -2131,15 +2122,18 @@ function buildArticleCard(article, i, total, container) {
   grid.appendChild(authorField);
   grid.appendChild(avatarField);
 
+  grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
+  grid.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no rss.xml)", "time", article.time, { article: i, key: "time" }));
+
   const ptSection = buildArticlePortugueseSection(article, i);
   const englishSection = buildArticleEnglishSection(article, i);
 
   // Só 1 dos dois corpos (PT/EN) fica aberto de cada vez — abrir um sempre
   // fecha o outro — pra notícia com tradução não ficar com o dobro do
-  // conteúdo visível ao mesmo tempo. Abre em português por padrão, a não ser
-  // que já exista conteúdo em inglês cadastrado.
-  ptSection.setOpen(!englishSection.hasEnContent);
-  englishSection.setOpen(englishSection.hasEnContent);
+  // conteúdo visível ao mesmo tempo. Começam as duas fechadas: abrir a
+  // notícia no painel não deve já despejar um corpo inteiro na tela.
+  ptSection.setOpen(false);
+  englishSection.setOpen(false);
   ptSection.summary.addEventListener("click", () => {
     const opening = ptSection.panel.hidden;
     ptSection.setOpen(opening);

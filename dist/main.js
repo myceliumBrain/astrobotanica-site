@@ -539,6 +539,9 @@ function buildArticleMetaRow(article) {
 
     const bylineMeta = el("span", "article-byline-meta");
     bylineMeta.appendChild(document.createTextNode(formatDate(article.date)));
+    if (article.time) {
+        bylineMeta.appendChild(document.createTextNode(` ${i18next.t("artigo.publishedAt", { time: article.time })}`));
+    }
     bylineMeta.appendChild(document.createTextNode(" · "));
     bylineMeta.appendChild(document.createTextNode(localize(article.readingTime, article.readingTimeEn)));
     row.appendChild(bylineMeta);
