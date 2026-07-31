@@ -3,7 +3,7 @@
     "id": "ep-2",
     "number": 2,
     "title": "Por Que Plantar na Lua e Marte?",
-    "description": "",
+    "description": "As plantas tem um valor maior do que nós percebemos.",
     "date": "2026-07-30",
     "time": "21:50",
     "duration": "08:04",
@@ -26,7 +26,7 @@
     "id": "ep-01",
     "number": 1,
     "title": "Um Jardim e uma Biblioteca",
-    "description": "Episódio piloto. O que é astrobotânica, por que uma planta não cabe num pen-drive, e uma carta para quem estiver ouvindo isso fora da Terra.",
+    "description": "Episódio piloto. O que é astrobotânica? Uma carta para quem estiver ouvindo isso fora da Terra.",
     "date": "2026-07-20",
     "duration": "6:32 min",
     "audioSrc": "audio/episodio-01.mp3",
@@ -37,6 +37,7 @@
       "Ao longo dos episódios, serei seu acompanhante nessa jornada. No fim, esse podcast é a história de como a nossa espécie saiu para explorar o universo e percebeu que tinha que levar um reino consigo, esse reino era a base da nutrição, sensação de conforto, lembrança de casa. Esse era o reino das plantas e esse é o podcast astrobotânica."
     ],
     "image": "images/episodios/ep-01.jpg",
-    "featured": true
+    "featured": true,
+    "time": "20:05"
   }
 ]
