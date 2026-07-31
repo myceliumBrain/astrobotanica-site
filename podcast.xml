@@ -5,7 +5,7 @@
     <link>https://astrobotanica.com.br/podcast</link>
     <description>Um espaço para falar sobre a saída das plantas do primeiro jardim.</description>
     <language>pt-br</language>
-    <lastBuildDate>Fri, 31 Jul 2026 01:07:29 +0000</lastBuildDate>
+    <lastBuildDate>Fri, 31 Jul 2026 01:12:50 +0000</lastBuildDate>
     <atom:link href="https://astrobotanica.com.br/podcast.xml" rel="self" type="application/rss+xml" />
     <itunes:author>Astrobotanica</itunes:author>
     <itunes:explicit>false</itunes:explicit>
@@ -28,7 +28,7 @@
       <link>https://astrobotanica.com.br/episodio?id=ep-2</link>
       <guid isPermaLink="true">https://astrobotanica.com.br/episodio?id=ep-2</guid>
       <pubDate>Thu, 30 Jul 2026 21:50:00 -0300</pubDate>
-      <description></description>
+      <description>As plantas tem um valor maior do que nós percebemos.</description>
       <enclosure url="https://astrobotanica.com.br/audio/ep-2.mp3" type="audio/mpeg" length="8498544" />
       <itunes:duration>08:04</itunes:duration>
       <itunes:episode>2</itunes:episode>
@@ -40,8 +40,8 @@
       <title>Um Jardim e uma Biblioteca</title>
       <link>https://astrobotanica.com.br/episodio?id=ep-01</link>
       <guid isPermaLink="true">https://astrobotanica.com.br/episodio?id=ep-01</guid>
-      <pubDate>Mon, 20 Jul 2026 00:00:00 +0000</pubDate>
-      <description>Episódio piloto. O que é astrobotânica, por que uma planta não cabe num pen-drive, e uma carta para quem estiver ouvindo isso fora da Terra.</description>
+      <pubDate>Mon, 20 Jul 2026 20:05:00 -0300</pubDate>
+      <description>Episódio piloto. O que é astrobotânica? Uma carta para quem estiver ouvindo isso fora da Terra.</description>
       <enclosure url="https://astrobotanica.com.br/audio/episodio-01.mp3" type="audio/mpeg" length="15686547" />
       <itunes:duration>6:32</itunes:duration>
       <itunes:episode>1</itunes:episode>
