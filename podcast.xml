@@ -5,7 +5,7 @@
     <link>https://astrobotanica.com.br/podcast</link>
     <description>Um espaço para falar sobre a saída das plantas do primeiro jardim.</description>
     <language>pt-br</language>
-    <lastBuildDate>Fri, 31 Jul 2026 01:20:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 01 Aug 2026 11:12:57 +0000</lastBuildDate>
     <atom:link href="https://astrobotanica.com.br/podcast.xml" rel="self" type="application/rss+xml" />
     <itunes:author>Astrobotanica</itunes:author>
     <itunes:explicit>false</itunes:explicit>
@@ -17,9 +17,9 @@
     <itunes:category text="Science">
       <itunes:category text="Natural Sciences" />
     </itunes:category>
-    <itunes:image href="https://astrobotanica.com.br/images/episodios/ep-01.jpg" />
+    <itunes:image href="https://astrobotanica.com.br/images/episodios/ep-2-imagem-principal.jpg" />
     <image>
-      <url>https://astrobotanica.com.br/images/episodios/ep-01.jpg</url>
+      <url>https://astrobotanica.com.br/images/episodios/ep-2-imagem-principal.jpg</url>
       <title>Jardim em Expansão</title>
       <link>https://astrobotanica.com.br/podcast</link>
     </image>
@@ -34,6 +34,7 @@
       <itunes:episode>2</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>
       <itunes:explicit>false</itunes:explicit>
+      <itunes:image href="https://astrobotanica.com.br/images/episodios/ep-2-imagem-principal.jpg" />
     </item>
     <item>
       <title>Um Jardim e uma Biblioteca</title>

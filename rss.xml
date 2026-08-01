@@ -5,8 +5,17 @@
     <link>https://astrobotanica.com.br/noticias</link>
     <description>Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.</description>
     <language>pt-br</language>
-    <lastBuildDate>Fri, 31 Jul 2026 01:20:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 01 Aug 2026 11:12:57 +0000</lastBuildDate>
     <atom:link href="https://astrobotanica.com.br/rss.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Estudo revela que simulantes de regolito espacial não são estéreis e propõe novos protocolos.</title>
+      <link>https://astrobotanica.com.br/artigo/noticia-8/</link>
+      <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-8/</guid>
+      <pubDate>Sat, 01 Aug 2026 08:08:00 -0300</pubDate>
+      <category>Agricultura Espacial</category>
+      <description>Uma investigação abrangente publicada no Soil Science Society of America Journal estabelece um novo marco para o rigor experimental na utilização de simulantes de regolito espacial. O estudo não apenas confirma a…</description>
+      <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-8-imagem-principal.jpg" type="image/jpeg" />
+    </item>
     <item>
       <title>Fungos micorrízicos como peça chave no cultivo de grão-de-bico em regolito lunar</title>
       <link>https://astrobotanica.com.br/artigo/noticia-7/</link>
