@@ -5,8 +5,17 @@
     <link>https://astrobotanica.com.br/noticias</link>
     <description>Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.</description>
     <language>pt-br</language>
-    <lastBuildDate>Mon, 03 Aug 2026 20:48:24 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 06 Aug 2026 03:38:48 +0000</lastBuildDate>
     <atom:link href="https://astrobotanica.com.br/rss.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>A Vida Secreta das Raízes: Nova tecnologia de imagem revela a conexão íntima entre fungos e solo.</title>
+      <link>https://astrobotanica.com.br/artigo/noticia-10/</link>
+      <guid isPermaLink="true">https://astrobotanica.com.br/artigo/noticia-10/</guid>
+      <pubDate>Thu, 06 Aug 2026 00:34:00 -0300</pubDate>
+      <category>Micologia</category>
+      <description>O artigo científico intitulado "Opening the black box: in situ imaging of arbuscular mycorrhizal fungal structures in soil using synchrotron-based micro-CT", publicado na revista científica “New Phytologist”, por…</description>
+      <enclosure url="https://astrobotanica.com.br/images/noticias/noticia-10-imagem-principal.jpg" type="image/jpeg" />
+    </item>
     <item>
       <title>Antioxidantes Viabilizam Cultivo em Solo Lunar, mas Integridade do DNA é Ameaçada</title>
       <link>https://astrobotanica.com.br/artigo/noticia-9/</link>
