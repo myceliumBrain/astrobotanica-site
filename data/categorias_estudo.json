@@ -1,0 +1,26 @@
+[
+  {
+    "id": "categoria-1",
+    "nome": "Geologia e solo espacial",
+    "slug": "geologia-e-solo-espacial",
+    "descricao": ""
+  },
+  {
+    "id": "categoria-2",
+    "nome": "Técnicas de laboratório",
+    "slug": "tecnicas-de-laboratorio",
+    "descricao": ""
+  },
+  {
+    "id": "categoria-3",
+    "nome": "Fisiologia vegetal",
+    "slug": "fisiologia-vegetal",
+    "descricao": ""
+  },
+  {
+    "id": "categoria-4",
+    "nome": "Astrobiologia",
+    "slug": "astrobiologia",
+    "descricao": ""
+  }
+]

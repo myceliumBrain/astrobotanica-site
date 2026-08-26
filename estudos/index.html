@@ -14,9 +14,16 @@
 </script>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title data-text="contato.metaTitle">Contato — Astrobotânica</title>
-<meta name="description" data-text="contato.metaDescription" data-text-attr="content" content="Fale com o podcast Astrobotânica — sugestões de pauta, correções ou propostas de entrevista." />
-<link rel="stylesheet" href="css/style.css" />
+<!-- Esta página vive em /estudos/ (pasta de verdade, ver
+     scripts/generate_estudos_seo.py, que gera as subpastas de categoria/
+     verbete ao lado dela) — sem <base>, os fetch() relativos de src/main.ts
+     (ex: "data/site.json") resolveriam para /estudos/data/site.json (404),
+     igual ao problema que /artigo/<id>/ resolve do mesmo jeito (ver
+     scripts/generate_seo.py). -->
+<base href="/" />
+<title data-text="estudos.metaTitle">Estudos — Astrobotânica</title>
+<meta name="description" data-text="estudos.metaDescription" data-text-attr="content" content="Verbetes de referência sobre os conceitos e técnicas por trás da astrobotânica." />
+<link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
 
@@ -33,11 +40,12 @@
   <hr class="header-divider" />
   <nav class="wrap header-nav">
     <a href="/noticias" data-text="nav.articles"></a>
-    <a href="/estudos" data-text="nav.estudos"></a>
+    <a href="/estudos" aria-current="page" data-text="nav.estudos"></a>
     <a href="/podcast" data-text="nav.podcast"></a>
     <a href="/sobre" data-text="nav.about"></a>
-    <a href="/contato" aria-current="page" data-text="nav.contact"></a>
+    <a href="/contato" data-text="nav.contact"></a>
     <div class="header-nav-right">
+      <a href="/rss.xml" class="rss-link" data-text="common.rssFeed"></a>
       <div class="lang-switch" role="group" data-text-attr="aria-label" data-text="common.language" aria-label="Idioma">
         <button type="button" class="lang-btn" data-lang="pt" aria-label="Português">🇧🇷</button>
         <button type="button" class="lang-btn" data-lang="en" aria-label="English">🇺🇸</button>
@@ -50,10 +58,10 @@
   <nav class="nav-overlay-panel">
     <button type="button" class="nav-overlay-close" aria-label="Fechar menu" data-text="common.closeMenu" data-text-attr="aria-label">✕</button>
     <a href="/noticias" data-text="nav.articles"></a>
-    <a href="/estudos" data-text="nav.estudos"></a>
+    <a href="/estudos" aria-current="page" data-text="nav.estudos"></a>
     <a href="/podcast" data-text="nav.podcast"></a>
     <a href="/sobre" data-text="nav.about"></a>
-    <a href="/contato" aria-current="page" data-text="nav.contact"></a>
+    <a href="/contato" data-text="nav.contact"></a>
     <div class="lang-switch" role="group" data-text-attr="aria-label" data-text="common.language" aria-label="Idioma">
       <button type="button" class="lang-btn" data-lang="pt" aria-label="Português">🇧🇷</button>
       <button type="button" class="lang-btn" data-lang="en" aria-label="English">🇺🇸</button>
@@ -62,19 +70,16 @@
 </div>
 
 <main>
-  <section class="wrap contact-grid" style="padding-block:2.5rem">
-    <div>
-      <h1 style="font-size:2rem;text-transform:uppercase;margin:0.75rem 0" data-text="contato.title"></h1>
-      <p style="font-size:1rem;color:var(--ink-dim);line-height:1.6;max-width:38ch" data-text="contato.intro"></p>
-    </div>
+  <section class="page-header wrap">
+    <h1 data-text="estudos.title"></h1>
+    <p data-text="estudos.intro"></p>
+  </section>
 
-    <div style="display:flex;flex-direction:column;gap:1.5rem">
-      <div class="card" style="border:none;padding:0">
-        <div class="card-kicker" data-text="contato.emailKicker"></div>
-        <div class="contact-placeholder" data-text="contato.email"></div>
-        <p class="card-body" data-text="contato.emailNote"></p>
-      </div>
+  <section class="section wrap">
+    <div class="estudos-search-row">
+      <input type="search" id="estudos-search" class="estudos-search-input" data-text-attr="placeholder" data-text="estudos.searchPlaceholder" placeholder="Buscar por título..." />
     </div>
+    <div id="estudos-list"></div>
   </section>
 </main>
 
@@ -103,6 +108,6 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/i18next@23.16.8/dist/umd/i18next.min.js"></script>
-<script type="module" src="dist/main.js"></script>
+<script type="module" src="/dist/main.js"></script>
 </body>
 </html>

@@ -2,7 +2,9 @@
 
 Site estático (HTML + CSS + TypeScript), multi-página. O foco principal do
 site é divulgação científica em **Notícias**; em paralelo, o **Podcast** trata
-dos mesmos temas em áudio. Todo o conteúdo é editado pelo painel em `/admin`.
+dos mesmos temas em áudio, e **Estudos** reúne verbetes de referência
+(definições/conceitos técnicos, agrupados por categoria) para o conteúdo que
+não é cronológico. Todo o conteúdo é editado pelo painel em `/admin`.
 
 ## Estrutura
 
@@ -13,6 +15,9 @@ site/
 ├── noticia.html          → detalhe de uma notícia (?id=...)
 ├── podcast.html          → lista de episódios
 ├── episodio.html          → detalhe de um episódio (?id=ep-01), inclui a transcrição
+├── estudos/
+│   └── index.html         → lista de verbetes de estudo, agrupados por categoria (/estudos)
+├── estudo.html           → detalhe de um verbete (?slug=...), também usado como template pelo gerador (ver abaixo)
 ├── sobre.html
 ├── contato.html
 ├── admin/                → painel de administração de conteúdo (ver abaixo)
@@ -20,12 +25,17 @@ site/
 ├── data/
 │   ├── episodes.json      → CONTEÚDO: episódios
 │   ├── articles.json       → CONTEÚDO: notícias
+│   ├── estudos.json         → CONTEÚDO: verbetes de estudo
+│   ├── categorias_estudo.json → CONTEÚDO: categorias de estudo (ordem = ordem de exibição)
 │   ├── site.json            → todo o texto fixo do site em português (nav, rodapé, títulos, textos de cada página) — editável pelo painel
 │   ├── site.en.json          → tradução em inglês do mesmo conteúdo (ver "Idioma" abaixo) — não editável pelo painel, só manualmente
 │   └── auth.json            → acessos do painel (tokens criptografados, não em texto puro)
 ├── src/main.ts            → lógica do site: busca os JSON e preenche cada página
 ├── dist/main.js            → JavaScript compilado (gerado a partir de src/)
 ├── audio/                 → arquivos .mp3 dos episódios
+├── scripts/
+│   ├── generate_seo.py            → gera artigo/<id>/index.html e rss.xml
+│   └── generate_estudos_seo.py    → gera estudos/<categoria>/<verbete>/index.html
 ├── robots.txt             → impede que buscadores indexem /admin
 ├── serve.py               → servidor local com URLs limpas (ver "Como visualizar localmente")
 └── tsconfig.json
@@ -106,15 +116,17 @@ tanto rodando localmente quanto no site já publicado. Não existe link para
 
 **Layout**: barra lateral com o conteúdo agrupado —
 
-- **Conteúdo**: Notícias, Episódios (listas com card por item, expansível)
+- **Conteúdo**: Notícias, Episódios, Integrantes, Categorias de estudo,
+  Estudos (listas com card por item, expansível)
 - **Geral**: Marca & navegação (nome do site, menu, rodapé, textos de
   "em breve" das plataformas)
 - **Páginas**: um item por página (Home, Podcast, Episódio, Notícias, Notícia,
-  Sobre, Contato) com os textos fixos daquela página
+  Estudos, Verbete de estudo, Sobre, Contato) com os textos fixos daquela página
 - **Sistema**: Acessos
 
 **Como funciona**: o painel não tem servidor próprio, e edita em memória —
-`data/episodes.json`, `data/articles.json` e `data/site.json` só são
+`data/episodes.json`, `data/articles.json`, `data/estudos.json`,
+`data/categorias_estudo.json` e `data/site.json` só são
 gravados no GitHub quando você clica em **"Salvar no GitHub"**, no topo da
 tela. Reordenar (setas ▲▼), adicionar e remover notícia/episódio já contam
 como alteração na hora. Já **editar campos de um card** (texto, checkbox,
@@ -285,6 +297,48 @@ arquivo não envia nada ainda — só fica "selecionado" até você clicar em
 `audio/`, `images/episodios/` ou `images/noticias/` (via Git Data API do
 GitHub, já que a Contents API não serve para arquivos grandes) quando você
 clica em "Salvar no GitHub".
+
+### Formato de uma categoria de estudo e de um verbete
+
+```json
+// data/categorias_estudo.json — ordem do array = ordem de exibição em /estudos
+{ "id": "categoria-1", "nome": "Geologia e solo espacial", "slug": "geologia-e-solo-espacial", "descricao": "" }
+```
+
+```json
+// data/estudos.json
+{
+  "id": "verbete-1",
+  "titulo": "Regolito simulado",
+  "slug": "regolito-simulado",
+  "categoriaId": "categoria-1",
+  "definicaoCurta": "1-2 frases — aparece nos cards e no topo do verbete.",
+  "conteudo": "<p>HTML gerado pelo editor de formatação (mesmo mecanismo do corpo de notícia)...</p>",
+  "fontes": [{ "text": "...", "url": "https://..." }],
+  "termosRelacionadosIds": ["verbete-2"],
+  "imagemCapa": "images/estudos/verbete-1-capa.jpg",
+  "publicado": true,
+  "dataAtualizacao": "2026-08-26"
+}
+```
+
+`categoriaId` referencia o `id` de uma categoria (seleção no painel, não
+texto livre). `termosRelacionadosIds` guarda `id` de outros verbetes (não
+`slug`) — renomear o slug de um verbete depois não quebra o link relacionado
+de outro. `publicado` permite salvar rascunhos sem publicar; `dataAtualizacao`
+é preenchida sozinha (data de hoje) a cada "Salvar alterações" do card,
+mesma lógica do `readingTime` de notícia. `imagemCapa` pode ser enviada
+direto pelo painel, mesmo fluxo do resto (ver acima).
+
+URLs: `/estudos` (índice, agrupado por categoria, com busca por título) e
+`/estudos/<categoria-slug>/<verbete-slug>/` (verbete — página estática
+gerada por `scripts/generate_estudos_seo.py`, mesmo mecanismo de
+`artigo/<id>/` para notícias, rodado pela mesma GitHub Action). Diferente de
+`noticia.html`/`artigo/`, aqui `estudos/index.html` (a listagem) e as
+subpastas geradas (`estudos/<categoria>/<verbete>/`) dividem a mesma pasta
+de propósito — o índice é um arquivo comum ali dentro, não gerado, e o
+script cuida de nunca apagá-lo ao regenerar (ver comentário em
+`generate_estudos_seo.py`).
 
 ## Como recompilar depois de editar `src/main.ts`
 

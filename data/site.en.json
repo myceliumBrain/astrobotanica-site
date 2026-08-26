@@ -12,6 +12,7 @@
   },
   "nav": {
     "articles": "Articles",
+    "estudos": "Studies",
     "podcast": "Podcast",
     "about": "About",
     "contact": "Contact"
@@ -80,6 +81,26 @@
     "shareOn": "Share on {{network}}",
     "linkCopied": "Link copied! Paste it on Instagram.",
     "authorCta": "About"
+  },
+  "estudos": {
+    "metaTitle": "Studies — Astrobotanica",
+    "metaDescription": "Reference entries on the concepts and techniques behind astrobotany: space geology and soil, lab techniques, plant physiology and astrobiology.",
+    "tag": "Studies",
+    "title": "Studies",
+    "intro": "Reference entries on the concepts and techniques behind astrobotany.",
+    "searchPlaceholder": "Search by title...",
+    "loadError": "Couldn't load the studies right now.",
+    "emptyList": "No entries published yet. Check back soon.",
+    "emptySearch": "No entries found for that search."
+  },
+  "estudo": {
+    "metaTitle": "Study — Astrobotanica",
+    "backLink": "← Back to Studies",
+    "updatedAt": "Updated on {{date}}",
+    "relatedHeading": "Related terms",
+    "sourcesHeading": "Sources and further reading",
+    "loadError": "Couldn't load the entry right now.",
+    "notFound": "Entry not found."
   },
   "sobre": {
     "metaTitle": "About — Astrobotanica",

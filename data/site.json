@@ -18,6 +18,7 @@
   },
   "nav": {
     "articles": "Notícias",
+    "estudos": "Estudos",
     "podcast": "Podcast",
     "about": "Sobre",
     "contact": "Contato"
@@ -88,6 +89,26 @@
     "shareOn": "Compartilhar no {{network}}",
     "linkCopied": "Link copiado! Cole no Instagram.",
     "authorCta": "Sobre"
+  },
+  "estudos": {
+    "metaTitle": "Estudos — Astrobotânica",
+    "metaDescription": "Verbetes de referência sobre os conceitos e técnicas por trás da astrobotânica: geologia e solo espacial, técnicas de laboratório, fisiologia vegetal e astrobiologia.",
+    "tag": "Estudos",
+    "title": "Estudos",
+    "intro": "Verbetes de referência sobre os conceitos e técnicas por trás da astrobotânica.",
+    "searchPlaceholder": "Buscar por título...",
+    "loadError": "Não foi possível carregar os estudos agora.",
+    "emptyList": "Nenhum verbete publicado ainda. Volte em breve.",
+    "emptySearch": "Nenhum verbete encontrado para essa busca."
+  },
+  "estudo": {
+    "metaTitle": "Estudo — Astrobotânica",
+    "backLink": "← Voltar a Estudos",
+    "updatedAt": "Atualizado em {{date}}",
+    "relatedHeading": "Termos relacionados",
+    "sourcesHeading": "Fontes e leitura complementar",
+    "loadError": "Não foi possível carregar o verbete agora.",
+    "notFound": "Verbete não encontrado."
   },
   "sobre": {
     "metaTitle": "Sobre — Astrobotânica",

@@ -362,6 +362,23 @@ a, button { cursor: pointer; }
 .file-upload-status[data-kind="ok"] { color: var(--adm-accent); }
 .file-upload-status[data-kind="err"] { color: var(--adm-danger); }
 .file-upload-status[data-kind="pending"] { color: #e8c547; }
+.file-upload-previews {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-top: 0.4rem;
+}
+.file-upload-preview-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.file-upload-preview-caption {
+  font-family: var(--adm-mono);
+  font-size: 0.68rem;
+  color: var(--adm-muted);
+  max-width: 20rem;
+}
 .file-upload-preview {
   width: 100%;
   max-width: 20rem;
@@ -369,7 +386,6 @@ a, button { cursor: pointer; }
   object-fit: cover;
   border: 1px solid var(--adm-border);
   border-radius: 3px;
-  margin-top: 0.4rem;
 }
 .file-upload-preview--avatar {
   width: 5rem;
@@ -380,6 +396,11 @@ a, button { cursor: pointer; }
   width: 12rem;
   max-width: 12rem;
   aspect-ratio: 3 / 4;
+}
+.file-upload-preview--split {
+  width: 14rem;
+  max-width: 14rem;
+  aspect-ratio: 4 / 3;
 }
 
 /* ── NOTÍCIA: seções colapsáveis "Versão em português"/"Versão em inglês"

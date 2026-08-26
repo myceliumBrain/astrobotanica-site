@@ -33,6 +33,17 @@ function getArticleIdFromPath() {
     return match ? decodeURIComponent(match[1]) : null;
 }
 
+// Verbetes de estudo são servidos em /estudos/<categoria-slug>/<verbete-slug>/
+// (páginas estáticas geradas por scripts/generate_estudos_seo.py). Resolve
+// pelo último segmento (slug do verbete, único) — não valida o segmento de
+// categoria, então um verbete movido de categoria continua acessível pelo
+// link antigo até a próxima regeneração. ?slug= continua funcionando (usado
+// em estudo.html para pré-visualização local).
+function getVerbeteSlugFromPath() {
+    const match = location.pathname.match(/^\/estudos\/[^/]+\/([^/]+)\/?$/);
+    return match ? decodeURIComponent(match[1]) : null;
+}
+
 async function loadJSON(path) {
     try {
         // "no-cache" força revalidação com o servidor a cada carga (ver
@@ -53,6 +64,8 @@ const loadEpisodes = () => loadJSON("data/episodes.json");
 const loadArticles = () => loadJSON("data/articles.json");
 const loadMembers = () => loadJSON("data/members.json");
 const loadPageviews = () => loadJSON("data/pageviews.json");
+const loadEstudos = () => loadJSON("data/estudos.json");
+const loadCategoriasEstudo = () => loadJSON("data/categorias_estudo.json");
 
 // ----------------------------------------------------------------------------
 // Idioma: pt/en via i18next. Os textos fixos do site vivem em data/site.json
@@ -793,6 +806,179 @@ function renderArticleDetail(articles, members, pageviews) {
 }
 
 // ----------------------------------------------------------------------------
+// Estudos: verbetes de referência agrupados por categoria (/estudos e
+// /estudos/<categoria-slug>/<verbete-slug>/). Sem tradução em inglês (só a
+// interface fixa, como o resto do site que não é notícia/episódio).
+// ----------------------------------------------------------------------------
+
+function findCategoriaEstudo(categorias, id) {
+    return categorias.find((c) => c.id === id);
+}
+
+function buildVerbeteCard(verbete, categoria) {
+    const card = document.createElement("a");
+    card.className = "article-card";
+    card.href = `/estudos/${categoria?.slug ?? ""}/${verbete.slug}/`;
+
+    const image = el("div", "article-card-image");
+    if (verbete.imagemCapa) {
+        const img = document.createElement("img");
+        img.src = verbete.imagemCapa;
+        img.alt = "";
+        img.loading = "lazy";
+        image.appendChild(img);
+    }
+    card.appendChild(image);
+
+    if (categoria) card.appendChild(el("div", "article-card-kicker", categoria.nome));
+    card.appendChild(el("div", "article-card-title", verbete.titulo));
+    card.appendChild(el("div", "article-card-meta", verbete.definicaoCurta));
+
+    return card;
+}
+
+// Lista de estudos (estudos/index.html): agrupa os verbetes publicados por
+// categoria, na ordem de data/categorias_estudo.json, e permite filtrar por
+// título (#estudos-search) — some com categorias que ficarem sem nenhum
+// resultado, em vez de mostrar um cabeçalho vazio.
+function renderEstudosIndex(estudos, categorias) {
+    const list = document.getElementById("estudos-list");
+    if (!list) return;
+
+    if (estudos.failed || categorias.failed) {
+        list.innerHTML = "";
+        list.appendChild(el("p", "empty-state", i18next.t("estudos.loadError")));
+        return;
+    }
+
+    const published = estudos.items.filter((v) => v.publicado);
+
+    function render(query) {
+        if (!list) return;
+        list.innerHTML = "";
+        const q = query.trim().toLowerCase();
+        const filtered = q ? published.filter((v) => v.titulo.toLowerCase().includes(q)) : published;
+
+        if (published.length === 0) {
+            list.appendChild(el("p", "empty-state", i18next.t("estudos.emptyList")));
+            return;
+        }
+        if (filtered.length === 0) {
+            list.appendChild(el("p", "empty-state", i18next.t("estudos.emptySearch")));
+            return;
+        }
+
+        for (const categoria of categorias.items) {
+            const items = filtered.filter((v) => v.categoriaId === categoria.id);
+            if (items.length === 0) continue;
+            const section = el("section", "estudos-category");
+            section.appendChild(el("h2", "estudos-category-heading", categoria.nome));
+            const grid = el("div", "article-grid");
+            items.forEach((v) => grid.appendChild(buildVerbeteCard(v, categoria)));
+            section.appendChild(grid);
+            list.appendChild(section);
+        }
+    }
+
+    render("");
+
+    const search = document.getElementById("estudos-search");
+    if (search) {
+        search.addEventListener("input", () => render(search.value));
+    }
+}
+
+// Detalhe de verbete (estudo.html?slug=... ou /estudos/<cat>/<slug>/).
+// Ordem fixa (ver especificação): título, definição curta, corpo, termos
+// relacionados, fontes, data de atualização.
+function renderVerbeteDetail(estudos, categorias) {
+    const root = document.getElementById("verbete-content");
+    if (!root) return;
+    root.innerHTML = "";
+
+    if (estudos.failed || categorias.failed) {
+        root.appendChild(el("p", "empty-state", i18next.t("estudo.loadError")));
+        return;
+    }
+
+    const slug = getParam("slug") ?? getVerbeteSlugFromPath();
+    const verbete = slug ? estudos.items.find((v) => v.slug === slug && v.publicado) : undefined;
+
+    if (!verbete) {
+        root.appendChild(el("p", "empty-state", i18next.t("estudo.notFound")));
+        return;
+    }
+
+    const categoria = findCategoriaEstudo(categorias.items, verbete.categoriaId);
+
+    if (categoria) root.appendChild(el("span", "tag tag-accent", categoria.nome));
+    root.appendChild(el("h1", "", verbete.titulo));
+    root.appendChild(el("p", "verbete-lede", verbete.definicaoCurta));
+
+    if (verbete.imagemCapa) {
+        const cover = el("div", "article-cover");
+        const img = document.createElement("img");
+        img.src = verbete.imagemCapa;
+        img.alt = "";
+        cover.appendChild(img);
+        root.appendChild(cover);
+    }
+
+    const body = el("div", "article-body");
+    body.innerHTML = verbete.conteudo;
+    root.appendChild(body);
+
+    const relatedIds = verbete.termosRelacionadosIds ?? [];
+    const relatedVerbetes = relatedIds
+        .map((id) => estudos.items.find((v) => v.id === id && v.publicado))
+        .filter((v) => v !== undefined);
+    if (relatedVerbetes.length > 0) {
+        const section = el("div", "article-references");
+        section.appendChild(el("h2", "article-references-heading", i18next.t("estudo.relatedHeading")));
+        const list = document.createElement("ul");
+        list.className = "article-references-list";
+        for (const related of relatedVerbetes) {
+            const relatedCategoria = findCategoriaEstudo(categorias.items, related.categoriaId);
+            const li = document.createElement("li");
+            const a = document.createElement("a");
+            a.href = `/estudos/${relatedCategoria?.slug ?? ""}/${related.slug}/`;
+            a.textContent = related.titulo;
+            li.appendChild(a);
+            list.appendChild(li);
+        }
+        section.appendChild(list);
+        root.appendChild(section);
+    }
+
+    if (verbete.fontes && verbete.fontes.length > 0) {
+        const section = el("div", "article-references");
+        section.appendChild(el("h2", "article-references-heading", i18next.t("estudo.sourcesHeading")));
+        const list = document.createElement("ol");
+        list.className = "article-references-list";
+        for (const fonte of verbete.fontes) {
+            const li = document.createElement("li");
+            if (fonte.url) {
+                const a = document.createElement("a");
+                a.href = fonte.url;
+                a.target = "_blank";
+                a.rel = "noopener noreferrer";
+                a.textContent = fonte.text;
+                li.appendChild(a);
+            } else {
+                li.textContent = fonte.text;
+            }
+            list.appendChild(li);
+        }
+        section.appendChild(list);
+        root.appendChild(section);
+    }
+
+    root.appendChild(el("p", "article-byline-meta", i18next.t("estudo.updatedAt", { date: formatDate(verbete.dataAtualizacao) })));
+
+    document.title = `${verbete.titulo} — Astrobotânica`;
+}
+
+// ----------------------------------------------------------------------------
 // Home: destaques
 // ----------------------------------------------------------------------------
 
@@ -982,11 +1168,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     applyTranslations();
     renderFooterSocial();
 
-    const [episodes, articles, members, pageviews] = await Promise.all([
+    const [episodes, articles, members, pageviews, estudos, categoriasEstudo] = await Promise.all([
         loadEpisodes(),
         loadArticles(),
         loadMembers(),
         loadPageviews(),
+        loadEstudos(),
+        loadCategoriasEstudo(),
     ]);
 
     function renderAll() {
@@ -996,6 +1184,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         renderArticleDetail(articles, members, pageviews);
         renderHomeHighlights(episodes, articles);
         renderMembersList(members);
+        renderEstudosIndex(estudos, categoriasEstudo);
+        renderVerbeteDetail(estudos, categoriasEstudo);
     }
 
     renderAll();

@@ -917,6 +917,47 @@ body.nav-open { overflow: hidden; }
 }
 
 /* ============================================================================
+   ESTUDOS (verbetes de referência — /estudos e /estudos/<categoria>/<verbete>/)
+   Reaproveita .article-card/.article-grid/.article-references/.page-header/
+   .tag do resto do site; só o essencial é novo aqui.
+============================================================================ */
+
+/* Definição curta, sempre logo abaixo do título do verbete — mesmo peso
+   visual do .article-subtitle, mas em caixa própria (fundo suave), pra
+   funcionar como resumo mesmo quando o corpo abaixo é bem mais longo. */
+.verbete-lede {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--bg-panel);
+  border-left: 3px solid var(--accent);
+  padding: var(--space-2) var(--space-3);
+  margin: var(--space-2) 0 var(--space-3);
+}
+
+.estudos-search-row { margin-bottom: var(--space-3); }
+.estudos-search-input {
+  width: 100%;
+  max-width: 24rem;
+  padding: var(--space-1) var(--space-2);
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.estudos-search-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.estudos-category { padding-block: var(--space-3); }
+.estudos-category + .estudos-category { border-top: 1px solid var(--line); }
+.estudos-category-heading {
+  font-size: 1.4rem;
+  margin-bottom: var(--space-2);
+}
+
+/* ============================================================================
    RESPONSIVO
 ============================================================================ */
 @media (max-width: 860px) {

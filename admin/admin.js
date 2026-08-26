@@ -24,6 +24,8 @@ const CONFIG = {
   membersPath: "data/members.json",
   sitePath: "data/site.json",
   siteEnPath: "data/site.en.json",
+  estudosPath: "data/estudos.json",
+  categoriasEstudoPath: "data/categorias_estudo.json",
 };
 
 const PATHS = {
@@ -32,6 +34,8 @@ const PATHS = {
   members: CONFIG.membersPath,
   site: CONFIG.sitePath,
   siteEn: CONFIG.siteEnPath,
+  estudos: CONFIG.estudosPath,
+  categoriasEstudo: CONFIG.categoriasEstudoPath,
 };
 
 // Quantos episódios marcados como "destaque" cabem na Home (ver
@@ -72,6 +76,7 @@ const GENERAL_SCHEMA = [
     heading: "Menu de navegação",
     fields: [
       { key: "nav.articles", label: "Notícias", type: "text" },
+      { key: "nav.estudos", label: "Estudos", type: "text" },
       { key: "nav.podcast", label: "Podcast", type: "text" },
       { key: "nav.about", label: "Sobre", type: "text" },
       { key: "nav.contact", label: "Contato", type: "text" },
@@ -122,6 +127,27 @@ const PAGE_SCHEMA = [
       { key: "artigo.byLine", label: "Texto do autor (use {{author}})", type: "text" },
       { key: "artigo.latestHeading", label: "Título da barra lateral \"mais recentes\"", type: "text" },
       { key: "artigo.relatedHeading", label: "Título \"continue lendo\"", type: "text" },
+    ],
+  },
+  {
+    key: "estudos",
+    label: "Estudos",
+    fields: [
+      { key: "estudos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "estudos.tag", label: "Selo", type: "text" },
+      { key: "estudos.title", label: "Título", type: "text" },
+      { key: "estudos.intro", label: "Texto de introdução", type: "textarea" },
+      { key: "estudos.searchPlaceholder", label: "Placeholder do campo de busca", type: "text" },
+    ],
+  },
+  {
+    key: "estudo",
+    label: "Verbete de estudo",
+    fields: [
+      { key: "estudo.backLink", label: "Link \"voltar\"", type: "text" },
+      { key: "estudo.updatedAt", label: "Texto \"atualizado em\" (use {{date}})", type: "text" },
+      { key: "estudo.relatedHeading", label: "Título \"termos relacionados\"", type: "text" },
+      { key: "estudo.sourcesHeading", label: "Título \"fontes\"", type: "text" },
     ],
   },
   {
@@ -658,6 +684,8 @@ async function enterApp() {
   document.getElementById("add-article-btn").addEventListener("click", addArticle);
   document.getElementById("add-episode-btn").addEventListener("click", addEpisode);
   document.getElementById("add-member-btn").addEventListener("click", addMember);
+  document.getElementById("add-categoria-estudo-btn").addEventListener("click", addCategoriaEstudo);
+  document.getElementById("add-estudo-btn").addEventListener("click", addEstudo);
   document.getElementById("access-submit").addEventListener("click", addAccess);
 
   await loadContent();
@@ -670,7 +698,7 @@ async function enterApp() {
 // Conteúdo: carregar, salvar, marcar sujo
 // ----------------------------------------------------------------------------
 
-let contentData = { articles: null, episodes: null, members: null, site: null, siteEn: null };
+let contentData = { articles: null, episodes: null, members: null, site: null, siteEn: null, estudos: null, categoriasEstudo: null };
 const dirty = new Set();
 
 // Campo de upload do banner de evento da Home (ver renderHomeEventBanner) —
@@ -767,30 +795,40 @@ function stripLegacyFields(items, keys) {
 async function loadContent() {
   setSaveStatus("carregando…");
   try {
-    const [articles, episodes, members, site, siteEn] = await Promise.all([
+    const [articles, episodes, members, site, siteEn, estudos, categoriasEstudo] = await Promise.all([
       getFile(CONFIG.articlesPath),
       getFile(CONFIG.episodesPath),
       getFileOrEmpty(CONFIG.membersPath, []),
       getFile(CONFIG.sitePath),
       getFileOrEmpty(CONFIG.siteEnPath, {}),
+      getFileOrEmpty(CONFIG.estudosPath, []),
+      getFileOrEmpty(CONFIG.categoriasEstudoPath, []),
     ]);
     contentData.articles = articles.content;
     contentData.episodes = episodes.content;
     contentData.members = members.content || [];
     contentData.site = site.content;
     contentData.siteEn = siteEn.content || {};
+    contentData.estudos = estudos.content || [];
+    contentData.categoriasEstudo = categoriasEstudo.content || [];
     dirty.clear();
     let fixedArticles = normalizeIds(contentData.articles);
     if (stripLegacyFields(contentData.articles, ["excerpt"])) fixedArticles = true;
     const fixedEpisodes = normalizeIds(contentData.episodes);
+    const fixedEstudos = normalizeIds(contentData.estudos);
+    const fixedCategoriasEstudo = normalizeIds(contentData.categoriasEstudo);
     if (fixedArticles) dirty.add("articles");
     if (fixedEpisodes) dirty.add("episodes");
+    if (fixedEstudos) dirty.add("estudos");
+    if (fixedCategoriasEstudo) dirty.add("categoriasEstudo");
     renderArticlesList();
     renderEpisodesList();
     renderMembersList();
+    renderCategoriasEstudoList();
+    renderEstudosList();
     renderGeneralForm();
     renderSiteSocialLinks();
-    if (fixedArticles || fixedEpisodes) {
+    if (fixedArticles || fixedEpisodes || fixedEstudos || fixedCategoriasEstudo) {
       document.getElementById("save-btn").disabled = false;
       setSaveStatus("alterações pendentes", "pending");
       toast('Encontrei alguma coisa desatualizada (identificador fora do padrão ou campo removido) e já corrigi — clique em "Salvar no GitHub" para confirmar.', "ok");
@@ -942,6 +980,43 @@ function applyMemberField(input) {
   record[key] = input.value;
 }
 
+function applyCategoriaEstudoField(input) {
+  const i = Number(input.dataset.categoriaEstudo);
+  const key = input.dataset.key;
+  const record = contentData.categoriasEstudo[i];
+  if (!record) return;
+  if (key === "descricao" && !input.value) { delete record[key]; return; }
+  record[key] = input.value;
+}
+
+// Diferente de "featured" (article/episode), "publicado" é sempre gravado
+// como true/false explícito, nunca omitido — é o campo que distingue
+// rascunho de publicado (ver Verbete em src/main.ts), então precisa
+// continuar existindo mesmo desmarcado, em vez de sumir do JSON.
+function applyEstudoField(input) {
+  const i = Number(input.dataset.verbete);
+  const key = input.dataset.key;
+  const record = contentData.estudos[i];
+  if (!record) return;
+  if (input.type === "checkbox") {
+    record[key] = input.checked;
+    return;
+  }
+  if (input.dataset.richtext === "html") {
+    const newHtml = finalizeRichTextHtml(input);
+    const oldPaths = extractImagePaths(record[key]);
+    const newPaths = extractImagePaths(newHtml);
+    oldPaths.forEach((path) => {
+      if (!newPaths.has(path)) {
+        pendingDeletions.push({ path, message: `admin: remove imagem não usada mais no conteúdo (${path})` });
+      }
+    });
+    record[key] = newHtml;
+    return;
+  }
+  record[key] = input.value;
+}
+
 // collectAll(): sincroniza TUDO que está na tela pra dentro de contentData —
 // usado antes de reordenar/remover/adicionar (e no salvamento final), pra
 // não perder edição em outros cards quando a lista é redesenhada do zero.
@@ -951,6 +1026,10 @@ function collectAll() {
   document.querySelectorAll("[data-episode]").forEach(applyEpisodeField);
   document.querySelectorAll("[data-member]").forEach(applyMemberField);
   collectMemberLinks();
+  document.querySelectorAll("[data-categoria-estudo]").forEach(applyCategoriaEstudoField);
+  document.querySelectorAll("[data-verbete]").forEach(applyEstudoField);
+  collectVerbeteFontes();
+  collectVerbeteTermosRelacionados();
   if (homeEventBannerField) homeEventBannerField.confirmFileUpload();
   document.querySelectorAll("[data-site]").forEach((input) => {
     setByPath(contentData.site, input.dataset.site, input.value);
@@ -975,6 +1054,14 @@ function collectEpisodeCardFields(i) {
 function collectMemberCardFields(i) {
   document.querySelectorAll(`[data-member="${i}"]`).forEach(applyMemberField);
   collectMemberLinks();
+}
+function collectCategoriaEstudoCardFields(i) {
+  document.querySelectorAll(`[data-categoria-estudo="${i}"]`).forEach(applyCategoriaEstudoField);
+}
+function collectEstudoCardFields(i) {
+  document.querySelectorAll(`[data-verbete="${i}"]`).forEach(applyEstudoField);
+  collectVerbeteFontes();
+  collectVerbeteTermosRelacionados();
 }
 
 async function saveAll() {
@@ -1184,15 +1271,41 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   const status = el("span", "file-upload-status");
   wrap.appendChild(status);
 
-  let preview;
-  if (opts.preview) {
-    preview = document.createElement("img");
-    preview.className = opts.previewClass ? `file-upload-preview ${opts.previewClass}` : "file-upload-preview";
-    preview.style.display = currentValue ? "" : "none";
+  // Um upload pode ser recortado de formas diferentes pelo site (ver
+  // article-cover x article-card-split-image, 16:9 x 4:3) — por isso um
+  // campo pode pedir mais de uma prévia (opts.extraPreviews), cada uma com
+  // a proporção/recorte real daquele lugar, pra não esconder um recorte
+  // ruim que só apareceria depois de publicado.
+  const previews = [];
+  function makePreviewImg(className) {
+    const img = document.createElement("img");
+    img.className = className ? `file-upload-preview ${className}` : "file-upload-preview";
+    img.style.display = currentValue ? "" : "none";
     // O painel vive em /admin/; os caminhos salvos são relativos à raiz do
     // site, então a pré-visualização precisa subir um nível.
-    if (currentValue) preview.src = /^https?:\/\//i.test(currentValue) ? currentValue : `../${currentValue}`;
-    wrap.appendChild(preview);
+    if (currentValue) img.src = /^https?:\/\//i.test(currentValue) ? currentValue : `../${currentValue}`;
+    return img;
+  }
+  if (opts.preview) {
+    const previewsWrap = el("div", "file-upload-previews");
+
+    const mainGroup = el("div", "file-upload-preview-group");
+    const mainImg = makePreviewImg(opts.previewClass);
+    mainGroup.appendChild(mainImg);
+    if (opts.previewCaption) mainGroup.appendChild(el("span", "file-upload-preview-caption", opts.previewCaption));
+    previewsWrap.appendChild(mainGroup);
+    previews.push(mainImg);
+
+    for (const extra of opts.extraPreviews || []) {
+      const group = el("div", "file-upload-preview-group");
+      const img = makePreviewImg(extra.className);
+      group.appendChild(img);
+      if (extra.caption) group.appendChild(el("span", "file-upload-preview-caption", extra.caption));
+      previewsWrap.appendChild(group);
+      previews.push(img);
+    }
+
+    wrap.appendChild(previewsWrap);
   }
 
   // O arquivo escolhido só fica "pendente" aqui — nada é enviado ainda.
@@ -1227,9 +1340,12 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     pending = { path, file, message: opts.buildMessage(path) };
     status.textContent = `Selecionado: ${path} — clique em "Salvar alterações" para confirmar.`;
     status.dataset.kind = "pending";
-    if (preview) {
-      preview.src = URL.createObjectURL(file);
-      preview.style.display = "";
+    if (previews.length) {
+      const objectUrl = URL.createObjectURL(file);
+      for (const img of previews) {
+        img.src = objectUrl;
+        img.style.display = "";
+      }
     }
     fileInput.value = "";
     updateButtonStates();
@@ -1244,7 +1360,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
         ? `Marcado para remover — clique em "Salvar alterações" para confirmar.`
         : "";
       status.dataset.kind = currentValue ? "pending" : "";
-      if (preview) preview.style.display = "none";
+      for (const img of previews) img.style.display = "none";
       updateButtonStates();
     });
   }
@@ -1288,12 +1404,12 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     textInput.value = path || "";
     status.textContent = "";
     delete status.dataset.kind;
-    if (preview) {
+    for (const img of previews) {
       if (path) {
-        preview.src = /^https?:\/\//i.test(path) ? path : `../${path}`;
-        preview.style.display = "";
+        img.src = /^https?:\/\//i.test(path) ? path : `../${path}`;
+        img.style.display = "";
       } else {
-        preview.style.display = "none";
+        img.style.display = "none";
       }
     }
     updateButtonStates();
@@ -1858,6 +1974,104 @@ function buildArticleCategoryField(article, i) {
   return wrap;
 }
 
+// Categoria de um verbete de estudo: diferente de buildArticleCategoryField
+// (texto livre), aqui é uma FK de verdade — o <select> guarda o id da
+// categoria (data-key="categoriaId"), sincronizado pelo mecanismo genérico
+// de applyEstudoField, sem lógica especial.
+function buildVerbeteCategoriaField(verbete, i) {
+  const wrap = el("div", "field");
+  wrap.appendChild(el("label", "", "Categoria"));
+
+  const select = document.createElement("select");
+  select.className = "input";
+  select.dataset.verbete = i;
+  select.dataset.key = "categoriaId";
+
+  if (contentData.categoriasEstudo.length === 0) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "— cadastre uma categoria primeiro —";
+    select.appendChild(opt);
+  }
+  contentData.categoriasEstudo.forEach((categoria) => {
+    const opt = document.createElement("option");
+    opt.value = categoria.id;
+    opt.textContent = categoria.nome || categoria.id;
+    select.appendChild(opt);
+  });
+  select.value = verbete.categoriaId || "";
+
+  wrap.appendChild(select);
+  return wrap;
+}
+
+// Termos relacionados: multi-seleção por checkbox entre os demais verbetes
+// (exclui o próprio) — guarda uma lista de ids, não de slugs (ver
+// termosRelacionadosIds em src/main.ts), então renomear o slug de um verbete
+// não quebra o link relacionado de outro. Sem precedente de multi-seleção no
+// painel; a coleta (collectVerbeteTermosRelacionados) segue o mesmo padrão de
+// varredura por card usado em collectMemberLinks/collectArticleReferences.
+function buildTermosRelacionadosField(verbete, i) {
+  const wrap = el("div", "field full");
+  wrap.appendChild(el("label", "", "Termos relacionados (opcional)"));
+
+  const others = contentData.estudos.filter((v) => v !== verbete);
+  if (others.length === 0) {
+    wrap.appendChild(el("p", "field-hint", "Cadastre outros verbetes para linkar aqui."));
+    return wrap;
+  }
+
+  const selected = new Set(verbete.termosRelacionadosIds || []);
+  const list = el("div", "admin-item-list verbete-related-list");
+  others.forEach((other) => {
+    const row = el("label", "checkbox-row verbete-related-row");
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.className = "verbete-related-checkbox";
+    input.value = other.id;
+    input.checked = selected.has(other.id);
+    row.appendChild(input);
+    row.appendChild(document.createTextNode(other.titulo || "(sem título)"));
+    list.appendChild(row);
+  });
+  wrap.appendChild(list);
+  return wrap;
+}
+
+function collectVerbeteTermosRelacionados() {
+  document.querySelectorAll('.card[id^="estudo-card-"]').forEach((card) => {
+    const i = Number(card.id.slice("estudo-card-".length));
+    const record = contentData.estudos[i];
+    if (!record) return;
+    const ids = Array.from(card.querySelectorAll(".verbete-related-checkbox:checked")).map((cb) => cb.value);
+    if (ids.length > 0) record.termosRelacionadosIds = ids;
+    else delete record.termosRelacionadosIds;
+  });
+}
+
+// Fontes de um verbete: mesmo formato/linha de buildArticleReferenceRow
+// (texto + url opcional) — reaproveitada diretamente, já que a própria
+// função não tem nada específico de notícia (só monta a linha; quem
+// amarra à entidade certa é o collector). collectArticleReferences não
+// serve aqui porque é hardcoded para ".card[id^='article-card-']" e
+// "record.references".
+function collectVerbeteFontes() {
+  document.querySelectorAll('.card[id^="estudo-card-"]').forEach((card) => {
+    const i = Number(card.id.slice("estudo-card-".length));
+    const record = contentData.estudos[i];
+    if (!record) return;
+    const fontes = Array.from(card.querySelectorAll(".article-reference-row"))
+      .map((row) => ({
+        text: row.querySelector(".article-reference-text").value.trim(),
+        url: row.querySelector(".article-reference-url").value.trim(),
+      }))
+      .filter((f) => f.text || f.url)
+      .map((f) => (f.url ? f : { text: f.text }));
+    if (fontes.length > 0) record.fontes = fontes;
+    else delete record.fontes;
+  });
+}
+
 // Seção colapsável "Versão em português" de uma notícia — categoria, título,
 // subtítulo, autor, data/hora, id e referências ficam fora, direto no card
 // (ver buildArticleCard) por não serem específicos de um corpo/tradução em
@@ -1885,6 +2099,10 @@ function buildArticlePortugueseSection(article, i) {
       accept: "image/*",
       buttonText: "Enviar imagem",
       preview: true,
+      previewCaption: "Página da notícia (16:9)",
+      extraPreviews: [
+        { className: "file-upload-preview--split", caption: "Destaque na Home (4:3)" },
+      ],
       allowClear: true,
       hint: "Tamanho recomendado: 1600×900px (proporção 16:9)",
       buildPath: (file) => `images/noticias/${article.id}-imagem-principal.${fileExtension(file.name, "jpg")}`,
@@ -1905,6 +2123,7 @@ function buildArticlePortugueseSection(article, i) {
       buttonText: "Enviar imagem",
       preview: true,
       previewClass: "file-upload-preview--vertical",
+      previewCaption: "Card em grade (3:4)",
       allowClear: true,
       hint: "Tamanho recomendado: 900×1200px (proporção 3:4)",
       buildPath: (file) => `images/noticias/${article.id}-imagem-vertical.${fileExtension(file.name, "jpg")}`,
@@ -2634,6 +2853,283 @@ function addMember() {
   renderMembersList();
   markDirty("members");
   const card = document.getElementById("member-card-0");
+  if (card) card.classList.add("open");
+}
+
+// ----------------------------------------------------------------------------
+// Categorias de estudo
+// ----------------------------------------------------------------------------
+
+function renderCategoriasEstudoList() {
+  const container = document.getElementById("categorias-estudo-list");
+  container.innerHTML = "";
+  const items = contentData.categoriasEstudo;
+  document.getElementById("nav-count-categorias-estudo").textContent = items.length || "";
+  document.getElementById("count-categorias-estudo").textContent = `${items.length} ${items.length === 1 ? "categoria" : "categorias"}`;
+
+  if (items.length === 0) {
+    container.appendChild(el("p", "empty-state", "Nenhuma categoria cadastrada ainda."));
+    return;
+  }
+
+  items.forEach((categoria, i) => container.appendChild(buildCategoriaEstudoCard(categoria, i, items.length)));
+}
+
+function buildCategoriaEstudoCard(categoria, i, total) {
+  const card = el("div", "card");
+  card.id = `categoria-estudo-card-${i}`;
+
+  const header = el("div", "card-header");
+  const left = el("div", "card-header-left");
+  left.appendChild(buildReorderButtons(i, total, () => moveCategoriaEstudo(i, i - 1), () => moveCategoriaEstudo(i, i + 1)));
+  left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
+  left.appendChild(el("span", "card-name", categoria.nome || "(sem nome)"));
+  header.appendChild(left);
+  header.appendChild(el("span", "card-chevron", "▼"));
+  card.appendChild(header);
+
+  const body = el("div", "card-body");
+  wireCardAccordion(card, header, body);
+  const grid = el("div", "fields-grid");
+
+  grid.appendChild(buildReadOnlyField("Identificador (id)", categoria.id));
+
+  const slugField = buildInput("Slug (usado na URL)", "text", categoria.slug, { categoriaEstudo: i, key: "slug" }, "geologia-e-solo-espacial");
+  const nomeField = buildInput("Nome", "text", categoria.nome, { categoriaEstudo: i, key: "nome" });
+  nomeField.querySelector("input").addEventListener("blur", (e) => {
+    const slugInput = slugField.querySelector("input");
+    if (!slugInput.value.trim()) slugInput.value = slugify(e.target.value);
+  });
+  grid.appendChild(nomeField);
+  grid.appendChild(slugField);
+
+  const descricao = buildTextarea("Descrição (opcional)", categoria.descricao, { categoriaEstudo: i, key: "descricao" }, false, 2);
+  descricao.classList.add("full");
+  grid.appendChild(descricao);
+
+  body.appendChild(grid);
+
+  const actions = el("div", "card-actions");
+  const saveBtn = buildSaveCardButton(() => {
+    collectCategoriaEstudoCardFields(i);
+    markDirty("categoriasEstudo");
+    toast('Alterações da categoria prontas — clique em "Salvar no GitHub" para enviar.', "ok");
+  });
+  actions.appendChild(saveBtn);
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover categoria");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => removeCategoriaEstudo(i));
+  actions.appendChild(removeBtn);
+  body.appendChild(actions);
+
+  card.appendChild(body);
+  return card;
+}
+
+function moveCategoriaEstudo(from, to) {
+  if (to < 0 || to >= contentData.categoriasEstudo.length) return;
+  collectAll();
+  const [item] = contentData.categoriasEstudo.splice(from, 1);
+  contentData.categoriasEstudo.splice(to, 0, item);
+  renderCategoriasEstudoList();
+  markDirty("categoriasEstudo");
+  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
+
+function removeCategoriaEstudo(i) {
+  collectAll();
+  const categoria = contentData.categoriasEstudo[i];
+  const inUse = contentData.estudos.some((v) => v.categoriaId === categoria.id);
+  if (inUse) {
+    toast(`Não é possível remover "${categoria.nome || categoria.id}": ainda há verbetes cadastrados nessa categoria.`, "error");
+    return;
+  }
+  if (!confirm(`Remover a categoria "${categoria.nome || "(sem nome)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  contentData.categoriasEstudo.splice(i, 1);
+  renderCategoriasEstudoList();
+  markDirty("categoriasEstudo");
+  toast('Categoria removida — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
+
+function addCategoriaEstudo() {
+  collectAll();
+  const id = `categoria-${nextIdNumber(contentData.categoriasEstudo, "categoria")}`;
+  // Ao fim da lista (não no início, diferente de notícia/episódio): categoria
+  // é uma lista curta e curada, não um feed cronológico — a ordem de exibição
+  // é decidida pelas setas ▲▼, não pela ordem de cadastro.
+  contentData.categoriasEstudo.push({ id, nome: "", slug: "", descricao: "" });
+  renderCategoriasEstudoList();
+  markDirty("categoriasEstudo");
+  const card = document.getElementById(`categoria-estudo-card-${contentData.categoriasEstudo.length - 1}`);
+  if (card) card.classList.add("open");
+}
+
+// ----------------------------------------------------------------------------
+// Estudos (verbetes)
+// ----------------------------------------------------------------------------
+
+function renderEstudosList() {
+  const container = document.getElementById("estudos-list");
+  container.innerHTML = "";
+  const items = contentData.estudos;
+  document.getElementById("nav-count-estudos").textContent = items.length || "";
+  document.getElementById("count-estudos").textContent = `${items.length} ${items.length === 1 ? "verbete" : "verbetes"}`;
+
+  if (items.length === 0) {
+    container.appendChild(el("p", "empty-state", "Nenhum verbete cadastrado ainda."));
+    return;
+  }
+
+  items.forEach((verbete, i) => container.appendChild(buildEstudoCard(verbete, i, items.length, container)));
+}
+
+function buildEstudoCard(verbete, i, total, container) {
+  const card = el("div", "card");
+  card.id = `estudo-card-${i}`;
+
+  const categoria = contentData.categoriasEstudo.find((c) => c.id === verbete.categoriaId);
+
+  const header = el("div", "card-header");
+  const left = el("div", "card-header-left");
+  left.appendChild(buildReorderButtons(i, total, () => moveEstudo(i, i - 1), () => moveEstudo(i, i + 1)));
+  left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
+  left.appendChild(el("span", "card-name", verbete.titulo || "(sem título)"));
+  left.appendChild(el("span", "card-meta", `${categoria ? categoria.nome : "sem categoria"} · ${verbete.publicado ? "publicado" : "rascunho"}`));
+  header.appendChild(left);
+  header.appendChild(el("span", "card-chevron", "▼"));
+  card.appendChild(header);
+
+  const body = el("div", "card-body");
+  wireCardAccordion(card, header, body, container);
+  const grid = el("div", "fields-grid");
+
+  grid.appendChild(buildReadOnlyField("Identificador (id)", verbete.id));
+  grid.appendChild(buildVerbeteCategoriaField(verbete, i));
+
+  const slugField = buildInput("Slug (usado na URL)", "text", verbete.slug, { verbete: i, key: "slug" }, "regolito-simulado");
+  const tituloField = buildTextarea("Título", verbete.titulo, { verbete: i, key: "titulo" }, false, 2);
+  tituloField.querySelector("textarea").addEventListener("blur", (e) => {
+    const slugInput = slugField.querySelector("input");
+    if (!slugInput.value.trim()) slugInput.value = slugify(e.target.value);
+  });
+  grid.appendChild(tituloField);
+  grid.appendChild(slugField);
+
+  const definicaoCurta = buildTextarea(
+    "Definição curta (1-2 frases — aparece nos cards e no topo do verbete)",
+    verbete.definicaoCurta,
+    { verbete: i, key: "definicaoCurta" },
+    false,
+    2
+  );
+  definicaoCurta.classList.add("full");
+  grid.appendChild(definicaoCurta);
+
+  const imagemCapaField = buildFileUploadField(
+    "Imagem de capa (opcional)",
+    verbete.imagemCapa,
+    { verbete: i, key: "imagemCapa" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar imagem",
+      preview: true,
+      allowClear: true,
+      buildPath: (file) => `images/estudos/${verbete.id}-capa.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia imagem de capa do verbete "${verbete.titulo || verbete.id}" (${path})`,
+    }
+  );
+  imagemCapaField.classList.add("full");
+  grid.appendChild(imagemCapaField);
+
+  const conteudoField = buildRichTextField(
+    "Conteúdo (contexto, como funciona, por que importa para a astrobotânica)",
+    verbete.conteudo,
+    { verbete: i, key: "conteudo" },
+    {
+      folder: "images/estudos",
+      id: verbete.id,
+      buildImageMessage: (path) => `admin: envia imagem do conteúdo do verbete "${verbete.titulo || verbete.id}" (${path})`,
+    }
+  );
+  conteudoField.classList.add("full");
+  grid.appendChild(conteudoField);
+
+  grid.appendChild(buildTermosRelacionadosField(verbete, i));
+
+  const fontesField = el("div", "field full");
+  fontesField.appendChild(el("label", "", "Fontes e leitura complementar (opcional)"));
+  const fontesList = el("div", "article-references-list");
+  (verbete.fontes || []).forEach((fonte) => fontesList.appendChild(buildArticleReferenceRow(fonte)));
+  fontesField.appendChild(fontesList);
+  const addFonteBtn = el("button", "btn btn-secondary btn-small", "+ adicionar fonte");
+  addFonteBtn.type = "button";
+  addFonteBtn.addEventListener("click", () => fontesList.appendChild(buildArticleReferenceRow()));
+  fontesField.appendChild(addFonteBtn);
+  grid.appendChild(fontesField);
+
+  grid.appendChild(buildCheckboxField("Publicado", verbete.publicado, { verbete: i, key: "publicado" }));
+
+  body.appendChild(grid);
+
+  const actions = el("div", "card-actions");
+  const saveBtn = buildSaveCardButton(() => {
+    imagemCapaField.confirmFileUpload();
+    conteudoField.confirmBodyImages();
+    collectEstudoCardFields(i);
+    // dataAtualizacao não tem campo próprio no formulário — é sempre a data
+    // deste "Salvar alterações", igual a como readingTime é recalculado a
+    // cada confirmação de card de notícia.
+    contentData.estudos[i].dataAtualizacao = new Date().toISOString().slice(0, 10);
+    markDirty("estudos");
+    toast('Alterações do verbete prontas — clique em "Salvar no GitHub" para enviar.', "ok");
+  });
+  actions.appendChild(saveBtn);
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover verbete");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => removeEstudo(i));
+  actions.appendChild(removeBtn);
+  body.appendChild(actions);
+
+  card.appendChild(body);
+  return card;
+}
+
+function moveEstudo(from, to) {
+  if (to < 0 || to >= contentData.estudos.length) return;
+  collectAll();
+  const [item] = contentData.estudos.splice(from, 1);
+  contentData.estudos.splice(to, 0, item);
+  renderEstudosList();
+  markDirty("estudos");
+  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
+
+function removeEstudo(i) {
+  const verbete = contentData.estudos[i];
+  if (!confirm(`Remover o verbete "${verbete.titulo || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  collectAll();
+  contentData.estudos.splice(i, 1);
+  renderEstudosList();
+  markDirty("estudos");
+  toast('Verbete removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+}
+
+function addEstudo() {
+  collectAll();
+  const id = `verbete-${nextIdNumber(contentData.estudos, "verbete")}`;
+  contentData.estudos.unshift({
+    id,
+    titulo: "",
+    slug: "",
+    categoriaId: contentData.categoriasEstudo[0]?.id || "",
+    definicaoCurta: "",
+    conteudo: "",
+    publicado: false,
+    dataAtualizacao: new Date().toISOString().slice(0, 10),
+  });
+  renderEstudosList();
+  markDirty("estudos");
+  const card = document.getElementById("estudo-card-0");
   if (card) card.classList.add("open");
 }
 
