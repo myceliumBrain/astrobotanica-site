@@ -1,5 +1,14 @@
 [
   {
+    "id": "noticia-12",
+    "category": "Agricultura Espacial",
+    "title": "Estudo Revela Replicação Microbiana em Regolito Marciano com Extrema Restrição de Água",
+    "date": "2026-08-31",
+    "time": "00:50",
+    "readingTime": "1 min",
+    "body": "<p>Uma equipe internacional de pesquisadores das universidades de Aberdeen, Northumbria, Centro de Astrobiologia (CAB) de Madri e do Instituto Andaluz de Ciências de Terra publicou um estudo inovador que desafia as fronteiras biológicas clássicas da vida na Terra e redefine os parâmetros para a busca de vida em Marte12. A pesquisa demonstra, pela primeira vez, que microrganismos conseguem persistir e acumular DNA em matrizes sólidas de regolito sob atividades de água tão baixas quanto $a_w = 0,34$</p><p>Até então, o limite canônico aceito de atividade de água ($a_w$) para a replicação celular na Terra era de &gt;= 0,585$, estabelecido a partir da germinação do fungo xerofílico Aspergillus penicillioides em meios líquidos viscosos ricos em glicerol13. O novo estudo prova que, dentro de matrizes minerais porosas de regolito, a dinâmica termodinâmica da água permite a atividade biológica em níveis de aridez muito superiores aos anteriormente documentados.</p>"
+  },
+  {
     "id": "noticia-11",
     "category": "Agricultura Espacial",
     "title": "Avaliação da fertilidade e desempenho produtivo de feijão-fava em regolito marciano",
