@@ -73,19 +73,21 @@
 
   <div class="adm-layout">
     <aside class="adm-sidebar">
-      <span class="sidebar-section">Conteúdo</span>
-      <button type="button" class="nav-btn active" data-panel="articles">Notícias <span class="nav-count" id="nav-count-articles"></span></button>
-      <button type="button" class="nav-btn" data-panel="episodes">Episódios <span class="nav-count" id="nav-count-episodes"></span></button>
-      <button type="button" class="nav-btn" data-panel="members">Integrantes <span class="nav-count" id="nav-count-members"></span></button>
-      <button type="button" class="nav-btn" data-panel="categorias-estudo">Categorias de estudo <span class="nav-count" id="nav-count-categorias-estudo"></span></button>
-      <button type="button" class="nav-btn" data-panel="estudos">Estudos <span class="nav-count" id="nav-count-estudos"></span></button>
-      <span class="sidebar-section">Páginas</span>
-      <div id="sidebar-pages"></div>
-      <hr class="sidebar-divider" />
-      <span class="sidebar-section">Geral</span>
-      <button type="button" class="nav-btn" data-panel="general">Marca &amp; navegação</button>
-      <span class="sidebar-section">Sistema</span>
-      <button type="button" class="nav-btn" data-panel="access">Acessos</button>
+      <button type="button" class="sidebar-section" data-group="conteudo" aria-expanded="true">Conteúdo</button>
+      <div class="sidebar-group">
+        <button type="button" class="nav-btn active" data-panel="articles">Notícias <span class="nav-count" id="nav-count-articles"></span></button>
+        <button type="button" class="nav-btn" data-panel="episodes">Episódios <span class="nav-count" id="nav-count-episodes"></span></button>
+        <button type="button" class="nav-btn" data-panel="estudos">Estudos <span class="nav-count" id="nav-count-estudos"></span></button>
+      </div>
+      <button type="button" class="sidebar-section admin-only" data-group="paginas" aria-expanded="false">Páginas</button>
+      <div class="sidebar-group admin-only" id="sidebar-pages"></div>
+      <hr class="sidebar-divider admin-only" />
+      <button type="button" class="sidebar-section admin-only" data-group="sistema" aria-expanded="false">Sistema</button>
+      <div class="sidebar-group admin-only">
+        <button type="button" class="nav-btn" data-panel="general">Marca &amp; navegação</button>
+        <button type="button" class="nav-btn" data-panel="members">Integrantes <span class="nav-count" id="nav-count-members"></span></button>
+        <button type="button" class="nav-btn" data-panel="access">Acessos</button>
+      </div>
     </aside>
 
     <main class="adm-content">
@@ -113,7 +115,7 @@
         <button type="button" class="add-btn" id="add-episode-btn">+ adicionar episódio</button>
       </div>
 
-      <div class="section-panel" id="panel-members">
+      <div class="section-panel admin-only" id="panel-members">
         <div class="panel-header">
           <span class="panel-title">Integrantes</span>
           <div class="panel-header-counts">
@@ -122,17 +124,6 @@
         </div>
         <div id="members-list"></div>
         <button type="button" class="add-btn" id="add-member-btn">+ adicionar integrante</button>
-      </div>
-
-      <div class="section-panel" id="panel-categorias-estudo">
-        <div class="panel-header">
-          <span class="panel-title">Categorias de estudo</span>
-          <div class="panel-header-counts">
-            <span class="panel-count" id="count-categorias-estudo"></span>
-          </div>
-        </div>
-        <div id="categorias-estudo-list"></div>
-        <button type="button" class="add-btn" id="add-categoria-estudo-btn">+ adicionar categoria</button>
       </div>
 
       <div class="section-panel" id="panel-estudos">
@@ -144,9 +135,13 @@
         </div>
         <div id="estudos-list"></div>
         <button type="button" class="add-btn" id="add-estudo-btn">+ adicionar verbete</button>
+
+        <h3 class="section-heading">Categorias de estudo <span class="panel-count" id="count-categorias-estudo"></span></h3>
+        <div id="categorias-estudo-list"></div>
+        <button type="button" class="add-btn" id="add-categoria-estudo-btn">+ adicionar categoria</button>
       </div>
 
-      <div class="section-panel" id="panel-general">
+      <div class="section-panel admin-only" id="panel-general">
         <div class="panel-header"><span class="panel-title">Marca &amp; navegação</span></div>
         <div id="general-form"></div>
 
@@ -157,15 +152,21 @@
         </div>
       </div>
 
-      <div id="page-panels"></div>
+      <div id="page-panels" class="admin-only"></div>
 
-      <div class="section-panel" id="panel-access">
+      <div class="section-panel admin-only" id="panel-access">
         <div class="panel-header"><span class="panel-title">Acessos</span></div>
         <p class="admin-hint">
           Cada acesso é um token do GitHub próprio, criptografado com a senha
           de quem vai usá-lo. Revogar aqui remove o registro do
           <code>data/auth.json</code> — se o token vazou de verdade, revogue
           também no GitHub (Settings → Developer settings → tokens).
+        </p>
+        <p class="admin-hint">
+          <strong>Admin</strong> vê o painel inteiro; <strong>colaborador</strong>
+          vê só a seção "Conteúdo". A restrição é do painel: o token do GitHub
+          de um colaborador continua podendo alterar qualquer arquivo do
+          repositório direto pelo GitHub.
         </p>
         <div id="access-list" class="admin-item-list"></div>
 
@@ -180,9 +181,16 @@
               <label for="access-token">Token de acesso pessoal do GitHub dela</label>
               <input class="input" id="access-token" type="password" autocomplete="off" placeholder="github_pat_..." />
             </div>
-            <div class="field full">
+            <div class="field">
               <label for="access-password">Senha que essa pessoa vai usar</label>
               <input class="input" id="access-password" type="password" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="access-role">Categoria</label>
+              <select class="input" id="access-role">
+                <option value="colaborador">Colaborador (só Conteúdo)</option>
+                <option value="admin">Admin (painel inteiro)</option>
+              </select>
             </div>
           </div>
           <div class="card-actions" style="justify-content:flex-start">

@@ -114,15 +114,15 @@ tanto rodando localmente quanto no site já publicado. Não existe link para
 `/admin` em nenhuma página pública; para acessar, digite a URL diretamente
 (ex: `http://localhost:8000/admin/` ou `https://seu-dominio/admin/`).
 
-**Layout**: barra lateral com o conteúdo agrupado —
+**Layout**: barra lateral com o conteúdo agrupado em seções que podem ser
+retraídas/expandidas clicando no título (o estado fica salvo no navegador) —
 
-- **Conteúdo**: Notícias, Episódios, Integrantes, Categorias de estudo,
-  Estudos (listas com card por item, expansível)
-- **Geral**: Marca & navegação (nome do site, menu, rodapé, textos de
-  "em breve" das plataformas)
+- **Conteúdo**: Notícias, Episódios, Estudos (listas com card por item,
+  expansível; as categorias de estudo são editadas dentro do painel Estudos)
 - **Páginas**: um item por página (Home, Podcast, Episódio, Notícias, Notícia,
   Estudos, Verbete de estudo, Sobre, Contato) com os textos fixos daquela página
-- **Sistema**: Acessos
+- **Sistema**: Marca & navegação (nome do site, menu, rodapé, textos de
+  "em breve" das plataformas), Integrantes, Acessos
 
 **Como funciona**: o painel não tem servidor próprio, e edita em memória —
 `data/episodes.json`, `data/articles.json`, `data/estudos.json`,
@@ -191,6 +191,13 @@ registro criptografado é adicionado — sem que ninguém precise saber a senha
 de mais ninguém. "Revogar" ali remove o registro de `data/auth.json`, mas
 **não** revoga o token no GitHub — se algum token vazou de verdade, revogue
 também em github.com/settings/tokens.
+
+Cada acesso tem uma categoria (campo `role` em `data/auth.json`, alterável
+na própria lista de Acessos): **admin** vê o painel inteiro; **colaborador**
+vê só a seção "Conteúdo". Registros sem `role` contam como admin, e o painel
+não deixa ficar sem nenhum admin. A restrição é só do painel — o token do
+GitHub do colaborador ainda pode alterar qualquer arquivo do repositório
+direto pelo GitHub.
 
 **O token decifrado nunca é salvo** em `localStorage`/`sessionStorage` —
 fica só na memória da aba enquanto ela estiver aberta. Fechar a aba ou

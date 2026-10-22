@@ -23,6 +23,12 @@ class CleanURLHandler(http.server.SimpleHTTPRequestHandler):
             return html_candidate
         return translated
 
+    def end_headers(self):
+        # Sem cache local: senão o navegador continua usando CSS/JS antigos
+        # depois de uma edição.
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000

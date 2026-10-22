@@ -183,7 +183,14 @@ a, button { cursor: pointer; }
   overflow-y: auto;
 }
 .sidebar-section {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
   font-family: var(--adm-mono);
   font-size: 0.6rem;
   letter-spacing: 0.18em;
@@ -195,10 +202,18 @@ a, button { cursor: pointer; }
   border-top: 1px solid var(--adm-border);
 }
 .sidebar-section:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+.sidebar-section:hover { opacity: 1; color: var(--adm-off-white); }
+/* Seta indicando se o grupo está aberto (▾) ou retraído (▸). */
+.sidebar-section::after { content: "▾"; font-size: 0.75rem; letter-spacing: 0; }
+.sidebar-section[aria-expanded="false"]::after { content: "▸"; }
+.sidebar-section[aria-expanded="false"] + .sidebar-group { display: none; }
+
+/* Colaborador só vê a seção "Conteúdo" (ver ROLE em admin.js). */
+body[data-role="colaborador"] .admin-only { display: none !important; }
 
 /* Corte de prioridade entre o grupo de uso frequente (Páginas — conteúdo
    textual que acompanha o ritmo de publicação) e o que raramente muda depois
-   de configurado uma vez (Geral, Sistema) — bem mais grosso que a borda fina
+   de configurado uma vez (Sistema) — bem mais grosso que a borda fina
    de .sidebar-section, pra marcar essa fronteira com mais peso visual. */
 .sidebar-divider {
   border: none;
@@ -538,6 +553,7 @@ a, button { cursor: pointer; }
 .admin-item-main { flex: 1; min-width: 0; }
 .admin-item-title { font-family: var(--adm-mono); font-size: 0.86rem; }
 .admin-item-actions { display: flex; gap: 6px; flex: none; }
+.admin-item-actions .role-select { width: auto; padding-top: 0.3rem; padding-bottom: 0.3rem; font-size: 0.75rem; }
 
 .admin-subform {
   background: var(--adm-surface);

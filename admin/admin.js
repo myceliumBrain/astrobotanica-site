@@ -59,6 +59,11 @@ const LOCKOUT = {
 };
 
 let TOKEN = ""; // token decifrado, só em memória — nunca persistido
+// Categoria de quem entrou: "admin" (painel inteiro) ou "colaborador" (só a
+// seção Conteúdo). Acessos antigos, sem "role" no auth.json, contam como admin.
+let ROLE = "admin";
+const ROLES = { admin: "Admin", colaborador: "Colaborador" };
+const roleOf = (entry) => (entry.role === "colaborador" ? "colaborador" : "admin");
 
 // Textos do site: cada campo é uma chave "a.b.c" dentro de data/site.json.
 // GENERAL_SCHEMA vira o painel "Marca & navegação"; cada item de
@@ -559,7 +564,7 @@ function setupSetupScreen() {
     try {
       const fresh = await getFile(CONFIG.authPath);
       const encrypted = await encryptToken(token, password);
-      const updated = { tokens: [...(fresh.content?.tokens || []), { label, ...encrypted }] };
+      const updated = { tokens: [...(fresh.content?.tokens || []), { label, role: "admin", ...encrypted }] };
       await putFile(CONFIG.authPath, updated, fresh.sha, `admin: configura autenticação (${label})`);
       await enterApp();
     } catch (err) {
@@ -601,7 +606,10 @@ function setupLoginScreen() {
       let recovered = null;
       for (const entry of tokens) {
         recovered = await decryptToken(entry, password);
-        if (recovered) break;
+        if (recovered) {
+          ROLE = roleOf(entry);
+          break;
+        }
       }
       if (!recovered) {
         const remaining = recordFailedAttempt();
@@ -631,8 +639,40 @@ function setupLoginScreen() {
 // App: navegação por abas laterais
 // ----------------------------------------------------------------------------
 
+// Grupos da barra lateral (Conteúdo, Páginas, Sistema) podem ser
+// retraídos; o estado de cada um fica salvo no localStorage deste navegador.
+const SIDEBAR_GROUPS_KEY = "adm-sidebar-groups";
+
+function loadSidebarGroups() {
+  try {
+    return JSON.parse(localStorage.getItem(SIDEBAR_GROUPS_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function setSidebarGroup(toggle, expanded) {
+  toggle.setAttribute("aria-expanded", String(expanded));
+  const state = loadSidebarGroups();
+  state[toggle.dataset.group] = expanded;
+  try {
+    localStorage.setItem(SIDEBAR_GROUPS_KEY, JSON.stringify(state));
+  } catch {}
+}
+
 function setupNav() {
-  document.querySelector(".adm-sidebar").addEventListener("click", (e) => {
+  const sidebar = document.querySelector(".adm-sidebar");
+  const saved = loadSidebarGroups();
+  sidebar.querySelectorAll(".sidebar-section[data-group]").forEach((toggle) => {
+    if (toggle.dataset.group in saved) toggle.setAttribute("aria-expanded", String(saved[toggle.dataset.group]));
+  });
+
+  sidebar.addEventListener("click", (e) => {
+    const toggle = e.target.closest(".sidebar-section[data-group]");
+    if (toggle) {
+      setSidebarGroup(toggle, toggle.getAttribute("aria-expanded") !== "true");
+      return;
+    }
     const btn = e.target.closest(".nav-btn");
     if (!btn) return;
     showPanel(btn.dataset.panel);
@@ -640,12 +680,18 @@ function setupNav() {
 }
 
 function showPanel(name) {
+  if (ROLE !== "admin" && document.getElementById("panel-" + name)?.closest(".admin-only")) return;
   document.querySelectorAll(".section-panel").forEach((p) => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
   const panel = document.getElementById("panel-" + name);
   if (panel) panel.classList.add("active");
   const btn = document.querySelector(`.nav-btn[data-panel="${name}"]`);
-  if (btn) btn.classList.add("active");
+  if (btn) {
+    btn.classList.add("active");
+    // Se a aba ativa estiver num grupo retraído, abre o grupo pra ela aparecer.
+    const toggle = btn.closest(".sidebar-group")?.previousElementSibling;
+    if (toggle?.getAttribute("aria-expanded") === "false") setSidebarGroup(toggle, true);
+  }
 }
 
 function setupPagePanels() {
@@ -673,6 +719,7 @@ function setupPagePanels() {
 }
 
 async function enterApp() {
+  document.body.dataset.role = ROLE;
   showScreen("app-screen");
   setupPagePanels();
   setupNav();
@@ -691,7 +738,7 @@ async function enterApp() {
   await loadContent();
   renderPageForms();
   renderHomeEventBanner();
-  await loadAccess();
+  if (ROLE === "admin") await loadAccess();
 }
 
 // ----------------------------------------------------------------------------
@@ -2864,7 +2911,6 @@ function renderCategoriasEstudoList() {
   const container = document.getElementById("categorias-estudo-list");
   container.innerHTML = "";
   const items = contentData.categoriasEstudo;
-  document.getElementById("nav-count-categorias-estudo").textContent = items.length || "";
   document.getElementById("count-categorias-estudo").textContent = `${items.length} ${items.length === 1 ? "categoria" : "categorias"}`;
 
   if (items.length === 0) {
@@ -3342,6 +3388,17 @@ function renderAccessList() {
     row.appendChild(main);
 
     const actions = el("div", "admin-item-actions");
+    const roleSelect = el("select", "input role-select");
+    roleSelect.setAttribute("aria-label", `Categoria de ${entry.label || "sem nome"}`);
+    for (const [value, text] of Object.entries(ROLES)) {
+      const option = el("option", null, text);
+      option.value = value;
+      roleSelect.appendChild(option);
+    }
+    roleSelect.value = roleOf(entry);
+    roleSelect.addEventListener("change", () => changeAccessRole(index, entry.label, roleSelect));
+    actions.appendChild(roleSelect);
+
     const delBtn = el("button", "btn btn-danger btn-small", "Revogar");
     delBtn.type = "button";
     delBtn.addEventListener("click", () => revokeAccess(index, entry.label));
@@ -3356,9 +3413,11 @@ async function addAccess() {
   const labelInput = document.getElementById("access-label");
   const tokenInput = document.getElementById("access-token");
   const passwordInput = document.getElementById("access-password");
+  const roleInput = document.getElementById("access-role");
   const submit = document.getElementById("access-submit");
 
   const label = labelInput.value.trim();
+  const role = roleInput.value;
   const token = tokenInput.value.trim();
   const password = passwordInput.value;
 
@@ -3371,12 +3430,13 @@ async function addAccess() {
   try {
     const fresh = await getFile(CONFIG.authPath);
     const encrypted = await encryptToken(token, password);
-    const updated = { tokens: [...(fresh.content?.tokens || []), { label, ...encrypted }] };
-    await putFile(CONFIG.authPath, updated, fresh.sha, `admin: adiciona acesso "${label}"`);
+    const updated = { tokens: [...(fresh.content?.tokens || []), { label, role, ...encrypted }] };
+    await putFile(CONFIG.authPath, updated, fresh.sha, `admin: adiciona acesso "${label}" (${role})`);
     toast(`Acesso de "${label}" adicionado.`, "ok");
     labelInput.value = "";
     tokenInput.value = "";
     passwordInput.value = "";
+    roleInput.value = "colaborador";
     await loadAccess();
   } catch (err) {
     toast(`Erro ao adicionar acesso: ${err.message}`, "error");
@@ -3396,11 +3456,36 @@ async function revokeAccess(index, label) {
     const fresh = await getFile(CONFIG.authPath);
     const tokens = [...(fresh.content?.tokens || [])];
     tokens.splice(index, 1);
+    if (tokens.length > 0 && !tokens.some((t) => roleOf(t) === "admin")) {
+      throw new Error("precisa sobrar pelo menos um admin");
+    }
     await putFile(CONFIG.authPath, { tokens }, fresh.sha, `admin: revoga acesso "${label}"`);
     toast(`Acesso de "${label}" revogado.`, "ok");
     await loadAccess();
   } catch (err) {
     toast(`Erro ao revogar: ${err.message}`, "error");
+  }
+}
+
+async function changeAccessRole(index, label, select) {
+  const role = select.value;
+  select.disabled = true;
+  try {
+    const fresh = await getFile(CONFIG.authPath);
+    const tokens = [...(fresh.content?.tokens || [])];
+    if (!tokens[index] || tokens[index].label !== label) {
+      throw new Error("a lista de acessos mudou — recarregue a página");
+    }
+    tokens[index] = { ...tokens[index], role };
+    if (!tokens.some((t) => roleOf(t) === "admin")) {
+      throw new Error("precisa sobrar pelo menos um admin");
+    }
+    await putFile(CONFIG.authPath, { tokens }, fresh.sha, `admin: muda categoria de "${label}" para ${role}`);
+    toast(`"${label}" agora é ${ROLES[role].toLowerCase()}.`, "ok");
+    await loadAccess();
+  } catch (err) {
+    toast(`Erro ao mudar categoria: ${err.message}`, "error");
+    await loadAccess();
   }
 }
 
