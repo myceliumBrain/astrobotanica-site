@@ -64,6 +64,10 @@ let TOKEN = ""; // token decifrado, só em memória — nunca persistido
 let ROLE = "admin";
 const ROLES = { admin: "Admin", colaborador: "Colaborador" };
 const roleOf = (entry) => (entry.role === "colaborador" ? "colaborador" : "admin");
+// Registros antigos, sem uid, usam o salt como identificador até o uid ser
+// gravado (migrateCurrentEntry/saveAccount gravam exatamente esse valor), então
+// a posse dos integrantes não depende de essa gravação ter dado certo.
+const uidOf = (entry) => entry.uid || entry.salt;
 // Registro do auth.json de quem entrou, identificado pelo salt (único por
 // registro e trocado só quando a senha muda). Usado em "Dados de acesso".
 let CURRENT_SALT = null;
@@ -455,17 +459,30 @@ async function getFile(path) {
   return { content: safeJsonParse(base64ToUtf8(data.content)), sha: data.sha };
 }
 
+// O GitHub responde 404 (ou 403) a uma escrita quando o token não tem
+// permissão de escrita no repositório — "Not Found" sozinho não ajuda ninguém.
+function explainWriteError(err) {
+  if (err.status === 404 || err.status === 403) {
+    err.message = `seu token do GitHub não tem permissão de escrita no repositório ${CONFIG.owner}/${CONFIG.repo} (${err.message})`;
+  }
+  return err;
+}
+
 async function putFile(path, contentObj, sha, message) {
   const content = JSON.stringify(contentObj, null, 2) + "\n";
-  return ghRequest(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      message,
-      content: utf8ToBase64(content),
-      sha,
-      branch: CONFIG.branch,
-    }),
-  });
+  try {
+    return await ghRequest(`/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        message,
+        content: utf8ToBase64(content),
+        sha,
+        branch: CONFIG.branch,
+      }),
+    });
+  } catch (err) {
+    throw explainWriteError(err);
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -500,11 +517,15 @@ async function commitTreeChange(entries, message) {
 
 async function commitBinaryFile(path, base64Content, message) {
   const repoBase = `/repos/${CONFIG.owner}/${CONFIG.repo}`;
-  const blob = await ghRequest(`${repoBase}/git/blobs`, {
-    method: "POST",
-    body: JSON.stringify({ content: base64Content, encoding: "base64" }),
-  });
-  await commitTreeChange([{ path, mode: "100644", type: "blob", sha: blob.sha }], message);
+  try {
+    const blob = await ghRequest(`${repoBase}/git/blobs`, {
+      method: "POST",
+      body: JSON.stringify({ content: base64Content, encoding: "base64" }),
+    });
+    await commitTreeChange([{ path, mode: "100644", type: "blob", sha: blob.sha }], message);
+  } catch (err) {
+    throw explainWriteError(err);
+  }
   return path;
 }
 
@@ -613,8 +634,8 @@ async function migrateCurrentEntry(password) {
     const weak = (entry.iterations || LEGACY_PBKDF2_ITERATIONS) < PBKDF2_ITERATIONS;
     if (!weak && entry.uid) return;
     tokens[index] = {
-      uid: entry.uid || crypto.randomUUID(),
       ...entry,
+      uid: uidOf(entry),
       ...(weak ? await encryptToken(TOKEN, password) : {}),
     };
     await putFile(CONFIG.authPath, { tokens }, fresh.sha, `admin: atualiza registro do acesso "${entry.label}"`);
@@ -622,6 +643,7 @@ async function migrateCurrentEntry(password) {
     CURRENT_UID = tokens[index].uid;
   } catch (err) {
     console.warn("Não foi possível atualizar o registro do acesso:", err);
+    toast(`Não foi possível atualizar seu registro de acesso: ${err.message}`, "error");
   }
 }
 
@@ -654,7 +676,7 @@ function setupLoginScreen() {
           ROLE = roleOf(entry);
           CURRENT_SALT = entry.salt;
           CURRENT_LABEL = entry.label || "";
-          CURRENT_UID = entry.uid || null;
+          CURRENT_UID = uidOf(entry);
           break;
         }
       }
@@ -783,6 +805,20 @@ async function enterApp() {
   document.getElementById("add-estudo-btn").addEventListener("click", addEstudo);
   document.getElementById("access-submit").addEventListener("click", addAccess);
   document.getElementById("account-submit").addEventListener("click", saveAccount);
+  document.getElementById("account-cancel").addEventListener("click", resetAccountForm);
+  document.getElementById("account-edit-label").addEventListener("click", () => {
+    const input = document.getElementById("account-label");
+    input.disabled = false;
+    input.focus();
+    document.getElementById("account-edit-label").hidden = true;
+    document.getElementById("account-confirm").hidden = false;
+  });
+  document.getElementById("account-edit-password").addEventListener("click", () => {
+    document.getElementById("account-password-fields").hidden = false;
+    document.getElementById("account-edit-password").hidden = true;
+    document.getElementById("account-confirm").hidden = false;
+    document.getElementById("account-new-password").focus();
+  });
   document.getElementById("user-btn").addEventListener("click", () => showPanel("account"));
   renderCurrentUser();
 
@@ -2767,10 +2803,45 @@ function buildMemberReadOnlyCard(member, i) {
   const grid = el("div", "fields-grid");
   grid.appendChild(buildReadOnlyField("Identificador (id)", member.id));
   grid.appendChild(buildReadOnlyField("Nome", member.name));
-  const description = el("div", "field full");
-  description.appendChild(el("label", "", "Descrição"));
-  description.appendChild(el("p", "card-readonly-text", member.description || "—"));
-  grid.appendChild(description);
+  const readOnlyText = (label, text) => {
+    const field = el("div", "field full");
+    field.appendChild(el("label", "", label));
+    field.appendChild(el("p", "card-readonly-text", text || "—"));
+    return field;
+  };
+  grid.appendChild(readOnlyText("Descrição", member.description));
+  grid.appendChild(readOnlyText("Descrição (EN)", member.descriptionEn));
+
+  const photo = el("div", "field full");
+  photo.appendChild(el("label", "", "Foto"));
+  if (member.image) {
+    const img = el("img", "file-upload-preview");
+    img.src = /^https?:\/\//i.test(member.image) ? member.image : `../${member.image}`;
+    img.alt = member.name || "";
+    photo.appendChild(img);
+  } else {
+    photo.appendChild(el("p", "card-readonly-text", "—"));
+  }
+  grid.appendChild(photo);
+
+  const links = el("div", "field full");
+  links.appendChild(el("label", "", "Links"));
+  if (member.links?.length) {
+    const list = el("ul", "card-readonly-links");
+    for (const link of member.links) {
+      const item = el("li");
+      const a = el("a", "", link.label || link.url);
+      a.href = link.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      item.appendChild(a);
+      list.appendChild(item);
+    }
+    links.appendChild(list);
+  } else {
+    links.appendChild(el("p", "card-readonly-text", "—"));
+  }
+  grid.appendChild(links);
   body.appendChild(grid);
   card.appendChild(body);
 
@@ -2992,10 +3063,6 @@ function removeMember(i) {
 }
 
 function addMember() {
-  if (!CURRENT_UID) {
-    toast("Seu acesso ainda não tem identificador — saia e entre de novo para adicionar integrantes.", "error");
-    return;
-  }
   collectAll();
   const id = uniqueSlug(contentData.members.map((m) => m.id), "novo-integrante");
   // _isNew é só uma marca em memória (nunca vai pro JSON, ver saveAll): libera
@@ -3621,7 +3688,22 @@ async function changeAccessRole(index, label, select) {
 
 function renderCurrentUser() {
   document.getElementById("user-btn").textContent = CURRENT_LABEL || "sem nome";
-  document.getElementById("account-label").value = CURRENT_LABEL;
+  resetAccountForm();
+}
+
+// Volta "Dados de acesso" ao estado inicial: nome travado, campos de senha
+// e confirmação escondidos e vazios.
+function resetAccountForm() {
+  const labelInput = document.getElementById("account-label");
+  labelInput.value = CURRENT_LABEL;
+  labelInput.disabled = true;
+  document.getElementById("account-edit-label").hidden = false;
+  document.getElementById("account-edit-password").hidden = false;
+  document.getElementById("account-password-fields").hidden = true;
+  document.getElementById("account-confirm").hidden = true;
+  for (const id of ["account-new-password", "account-confirm-password", "account-current-password"]) {
+    document.getElementById(id).value = "";
+  }
 }
 
 async function saveAccount() {
@@ -3660,7 +3742,7 @@ async function saveAccount() {
       throw new Error("senha atual incorreta");
     }
 
-    let entry = { ...tokens[index], label };
+    let entry = { ...tokens[index], uid: uidOf(tokens[index]), label };
     if (newPassword) {
       // O login usa o primeiro registro que a senha abre — duas pessoas com
       // a mesma senha entrariam uma na conta da outra.
@@ -3677,9 +3759,6 @@ async function saveAccount() {
     CURRENT_SALT = entry.salt;
     CURRENT_LABEL = label;
     renderCurrentUser();
-    newInput.value = "";
-    confirmInput.value = "";
-    currentInput.value = "";
     toast("Dados de acesso atualizados.", "ok");
     if (ROLE === "admin") await loadAccess();
   } catch (err) {

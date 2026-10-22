@@ -212,16 +212,22 @@
       <div class="section-panel" id="panel-account">
         <div class="panel-header"><span class="panel-title">Dados de acesso</span></div>
         <p class="admin-hint">
-          Nome e senha que você usa para entrar no painel. A senha atual é
-          sempre pedida para confirmar a alteração. Deixe os campos de nova
-          senha em branco para mudar só o nome.
+          Nome e senha que você usa para entrar no painel. Clique em
+          "Modificar nome" ou "Modificar senha" para alterar; a senha atual é
+          pedida para confirmar.
         </p>
         <div class="admin-subform">
-          <div class="fields-grid">
-            <div class="field full">
-              <label for="account-label">Nome</label>
-              <input class="input" id="account-label" type="text" />
+          <div class="field">
+            <label for="account-label">Nome</label>
+            <div class="account-inline">
+              <input class="input" id="account-label" type="text" disabled />
+              <button type="button" id="account-edit-label" class="btn btn-secondary btn-small">Modificar nome</button>
             </div>
+          </div>
+          <div class="card-actions" style="justify-content:flex-start">
+            <button type="button" id="account-edit-password" class="btn btn-secondary btn-small">Modificar senha</button>
+          </div>
+          <div class="fields-grid" id="account-password-fields" hidden>
             <div class="field">
               <label for="account-new-password">Nova senha</label>
               <input class="input" id="account-new-password" type="password" autocomplete="new-password" />
@@ -230,13 +236,16 @@
               <label for="account-confirm-password">Repita a nova senha</label>
               <input class="input" id="account-confirm-password" type="password" autocomplete="new-password" />
             </div>
-            <div class="field full">
+          </div>
+          <div id="account-confirm" hidden>
+            <div class="field">
               <label for="account-current-password">Senha atual</label>
               <input class="input" id="account-current-password" type="password" autocomplete="current-password" />
             </div>
-          </div>
-          <div class="card-actions" style="justify-content:flex-start">
-            <button type="button" id="account-submit" class="btn btn-primary btn-small">Salvar dados de acesso</button>
+            <div class="card-actions" style="justify-content:flex-start">
+              <button type="button" id="account-submit" class="btn btn-primary btn-small">Salvar dados de acesso</button>
+              <button type="button" id="account-cancel" class="btn btn-secondary btn-small">Cancelar</button>
+            </div>
           </div>
         </div>
       </div>
