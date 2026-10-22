@@ -3,10 +3,10 @@ name: Gerar páginas de notícia (SEO), RSS e feed de podcast
 # O site é publicado direto do branch main pelo GitHub Pages (sem passo de
 # build) — este workflow regenera artigo/<id>/index.html, estudos/<categoria>/
 # <verbete>/index.html (ver scripts/generate_estudos_seo.py), rss.xml (ver
-# scripts/generate_seo.py) e podcast.xml (ver scripts/generate_podcast_feed.py)
-# e commita o resultado de volta, para que fiquem sempre em sincronia com
-# data/articles.json, data/episodes.json, data/estudos.json e
-# data/categorias_estudo.json.
+# scripts/generate_seo.py), podcast.xml (ver scripts/generate_podcast_feed.py)
+# e sitemap.xml (ver scripts/generate_sitemap.py) e commita o resultado de
+# volta, para que fiquem sempre em sincronia com data/articles.json,
+# data/episodes.json, data/estudos.json e data/categorias_estudo.json.
 on:
   push:
     branches: [main]
@@ -21,6 +21,7 @@ on:
       - scripts/generate_seo.py
       - scripts/generate_estudos_seo.py
       - scripts/generate_podcast_feed.py
+      - scripts/generate_sitemap.py
   workflow_dispatch: {}
 
 permissions:
@@ -48,6 +49,9 @@ jobs:
       - name: Rodar gerador do feed de podcast
         run: python3 scripts/generate_podcast_feed.py
 
+      - name: Rodar gerador do sitemap
+        run: python3 scripts/generate_sitemap.py
+
       - name: Commitar arquivos gerados
         run: |
           git config user.name "github-actions[bot]"
@@ -56,7 +60,7 @@ jobs:
           # merge=ours (ver .gitattributes) evita conflito nesses arquivos
           # ao rebasear contra origin/main.
           git config merge.ours.driver true
-          git add artigo estudos rss.xml podcast.xml
+          git add artigo estudos rss.xml podcast.xml sitemap.xml
           if git diff --cached --quiet; then
             echo "Nada mudou, sem commit."
           else
