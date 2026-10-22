@@ -66,6 +66,7 @@
     <span class="adm-topbar-logo">astrobotânica / admin</span>
     <div class="adm-topbar-right">
       <span id="save-status" class="adm-save-status">carregando…</span>
+      <button type="button" class="adm-user" id="user-btn" title="Dados de acesso"></button>
       <button type="button" class="btn btn-primary" id="save-btn" disabled>Salvar no GitHub</button>
       <button type="button" class="btn btn-secondary btn-small" id="logout-btn">Sair</button>
     </div>
@@ -82,11 +83,15 @@
       <button type="button" class="sidebar-section admin-only" data-group="paginas" aria-expanded="false">Páginas</button>
       <div class="sidebar-group admin-only" id="sidebar-pages"></div>
       <hr class="sidebar-divider admin-only" />
-      <button type="button" class="sidebar-section admin-only" data-group="sistema" aria-expanded="false">Sistema</button>
-      <div class="sidebar-group admin-only">
-        <button type="button" class="nav-btn" data-panel="general">Marca &amp; navegação</button>
+      <button type="button" class="sidebar-section" data-group="sistema" aria-expanded="false">Sistema</button>
+      <div class="sidebar-group">
+        <button type="button" class="nav-btn admin-only" data-panel="general">Marca &amp; navegação</button>
         <button type="button" class="nav-btn" data-panel="members">Integrantes <span class="nav-count" id="nav-count-members"></span></button>
-        <button type="button" class="nav-btn" data-panel="access">Acessos</button>
+        <button type="button" class="nav-btn admin-only" data-panel="access">Acessos</button>
+      </div>
+      <button type="button" class="sidebar-section" data-group="conta" aria-expanded="false">Conta</button>
+      <div class="sidebar-group">
+        <button type="button" class="nav-btn" data-panel="account">Dados de acesso</button>
       </div>
     </aside>
 
@@ -99,8 +104,8 @@
             <span class="panel-count" id="featured-count-articles"></span>
           </div>
         </div>
+        <button type="button" class="add-btn add-btn-top" id="add-article-btn">+ adicionar notícia</button>
         <div id="articles-list"></div>
-        <button type="button" class="add-btn" id="add-article-btn">+ adicionar notícia</button>
       </div>
 
       <div class="section-panel" id="panel-episodes">
@@ -111,17 +116,21 @@
             <span class="panel-count" id="featured-count-episodes"></span>
           </div>
         </div>
+        <button type="button" class="add-btn add-btn-top" id="add-episode-btn">+ adicionar episódio</button>
         <div id="episodes-list"></div>
-        <button type="button" class="add-btn" id="add-episode-btn">+ adicionar episódio</button>
       </div>
 
-      <div class="section-panel admin-only" id="panel-members">
+      <div class="section-panel" id="panel-members">
         <div class="panel-header">
           <span class="panel-title">Integrantes</span>
           <div class="panel-header-counts">
             <span class="panel-count" id="count-members"></span>
           </div>
         </div>
+        <p class="admin-hint collaborator-only">
+          Você pode editar e remover apenas os integrantes que você adicionou;
+          os demais aparecem só para leitura.
+        </p>
         <div id="members-list"></div>
         <button type="button" class="add-btn" id="add-member-btn">+ adicionar integrante</button>
       </div>
@@ -133,8 +142,8 @@
             <span class="panel-count" id="count-estudos"></span>
           </div>
         </div>
+        <button type="button" class="add-btn add-btn-top" id="add-estudo-btn">+ adicionar verbete</button>
         <div id="estudos-list"></div>
-        <button type="button" class="add-btn" id="add-estudo-btn">+ adicionar verbete</button>
 
         <h3 class="section-heading">Categorias de estudo <span class="panel-count" id="count-categorias-estudo"></span></h3>
         <div id="categorias-estudo-list"></div>
@@ -164,7 +173,8 @@
         </p>
         <p class="admin-hint">
           <strong>Admin</strong> vê o painel inteiro; <strong>colaborador</strong>
-          vê só a seção "Conteúdo". A restrição é do painel: o token do GitHub
+          vê a seção "Conteúdo" e "Integrantes" — nesta, só pode editar ou
+          remover os integrantes que ele mesmo adicionou. A restrição é do painel: o token do GitHub
           de um colaborador continua podendo alterar qualquer arquivo do
           repositório direto pelo GitHub.
         </p>
@@ -195,6 +205,38 @@
           </div>
           <div class="card-actions" style="justify-content:flex-start">
             <button type="button" id="access-submit" class="btn btn-primary btn-small">+ adicionar acesso</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-panel" id="panel-account">
+        <div class="panel-header"><span class="panel-title">Dados de acesso</span></div>
+        <p class="admin-hint">
+          Nome e senha que você usa para entrar no painel. A senha atual é
+          sempre pedida para confirmar a alteração. Deixe os campos de nova
+          senha em branco para mudar só o nome.
+        </p>
+        <div class="admin-subform">
+          <div class="fields-grid">
+            <div class="field full">
+              <label for="account-label">Nome</label>
+              <input class="input" id="account-label" type="text" />
+            </div>
+            <div class="field">
+              <label for="account-new-password">Nova senha</label>
+              <input class="input" id="account-new-password" type="password" autocomplete="new-password" />
+            </div>
+            <div class="field">
+              <label for="account-confirm-password">Repita a nova senha</label>
+              <input class="input" id="account-confirm-password" type="password" autocomplete="new-password" />
+            </div>
+            <div class="field full">
+              <label for="account-current-password">Senha atual</label>
+              <input class="input" id="account-current-password" type="password" autocomplete="current-password" />
+            </div>
+          </div>
+          <div class="card-actions" style="justify-content:flex-start">
+            <button type="button" id="account-submit" class="btn btn-primary btn-small">Salvar dados de acesso</button>
           </div>
         </div>
       </div>

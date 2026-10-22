@@ -167,7 +167,7 @@ sairia se houvesse mais de 6.
 Cada pessoa usa **seu próprio token de acesso pessoal do GitHub** — nunca um
 token compartilhado, e nunca em texto puro. O token é criptografado no
 próprio navegador (AES-GCM 256 bits, chave derivada da senha escolhida via
-PBKDF2/100.000 iterações) e o resultado — que sozinho não serve pra nada sem
+PBKDF2-SHA256/600.000 iterações; registros antigos, de 100.000, são atualizados sozinhos no próximo login) e o resultado — que sozinho não serve pra nada sem
 a senha — é o que fica salvo em `data/auth.json`, versionado no repositório
 junto com o resto do conteúdo.
 
@@ -194,10 +194,18 @@ também em github.com/settings/tokens.
 
 Cada acesso tem uma categoria (campo `role` em `data/auth.json`, alterável
 na própria lista de Acessos): **admin** vê o painel inteiro; **colaborador**
-vê só a seção "Conteúdo". Registros sem `role` contam como admin, e o painel
+vê a seção "Conteúdo" e o painel Integrantes — neste, só edita/remove os
+integrantes que ele mesmo criou (campo `ownerUid` do integrante, igual ao `uid`
+do acesso; os demais aparecem só para leitura, e ao salvar o painel mantém
+intactos, a partir da versão do GitHub, os integrantes dos outros). Registros
+sem `role` contam como admin, e o painel
 não deixa ficar sem nenhum admin. A restrição é só do painel — o token do
 GitHub do colaborador ainda pode alterar qualquer arquivo do repositório
 direto pelo GitHub.
+
+Cada pessoa troca o próprio nome e senha em **Conta → Dados de acesso**
+(também aberto clicando no nome, no topo do painel). A senha atual é pedida
+para confirmar; trocar a senha recriptografa o mesmo token com a senha nova.
 
 **O token decifrado nunca é salvo** em `localStorage`/`sessionStorage` —
 fica só na memória da aba enquanto ela estiver aberta. Fechar a aba ou

@@ -64,6 +64,14 @@ let TOKEN = ""; // token decifrado, só em memória — nunca persistido
 let ROLE = "admin";
 const ROLES = { admin: "Admin", colaborador: "Colaborador" };
 const roleOf = (entry) => (entry.role === "colaborador" ? "colaborador" : "admin");
+// Registro do auth.json de quem entrou, identificado pelo salt (único por
+// registro e trocado só quando a senha muda). Usado em "Dados de acesso".
+let CURRENT_SALT = null;
+let CURRENT_LABEL = "";
+// Identificador fixo do acesso ("uid" no auth.json — não muda com nome nem
+// senha). Gravado como ownerUid em cada integrante criado, pra que um
+// colaborador só edite os integrantes que ele mesmo adicionou.
+let CURRENT_UID = null;
 
 // Textos do site: cada campo é uma chave "a.b.c" dentro de data/site.json.
 // GENERAL_SCHEMA vira o painel "Marca & navegação"; cada item de
@@ -306,7 +314,13 @@ function b64ToBytes(b64) {
   return bytes;
 }
 
-async function deriveKey(password, salt) {
+// Repetições do PBKDF2 (recomendação da OWASP para PBKDF2-SHA256). Cada
+// registro do auth.json guarda as suas em "iterations"; os antigos, sem o
+// campo, usam LEGACY_PBKDF2_ITERATIONS e são atualizados no próximo login.
+const PBKDF2_ITERATIONS = 600000;
+const LEGACY_PBKDF2_ITERATIONS = 100000;
+
+async function deriveKey(password, salt, iterations) {
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
     textEncoder.encode(password),
@@ -315,7 +329,7 @@ async function deriveKey(password, salt) {
     ["deriveKey"]
   );
   return crypto.subtle.deriveKey(
-    { name: "PBKDF2", salt, iterations: 100000, hash: "SHA-256" },
+    { name: "PBKDF2", salt, iterations, hash: "SHA-256" },
     keyMaterial,
     { name: "AES-GCM", length: 256 },
     false,
@@ -326,16 +340,16 @@ async function deriveKey(password, salt) {
 async function encryptToken(token, password) {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(password, salt);
+  const key = await deriveKey(password, salt, PBKDF2_ITERATIONS);
   const encrypted = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, textEncoder.encode(token));
-  return { salt: bytesToB64(salt), iv: bytesToB64(iv), data: bytesToB64(encrypted) };
+  return { salt: bytesToB64(salt), iv: bytesToB64(iv), data: bytesToB64(encrypted), iterations: PBKDF2_ITERATIONS };
 }
 
 async function decryptToken(entry, password) {
   try {
     const salt = b64ToBytes(entry.salt);
     const iv = b64ToBytes(entry.iv);
-    const key = await deriveKey(password, salt);
+    const key = await deriveKey(password, salt, entry.iterations || LEGACY_PBKDF2_ITERATIONS);
     const decrypted = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, b64ToBytes(entry.data));
     return textDecoder.decode(decrypted);
   } catch {
@@ -564,8 +578,12 @@ function setupSetupScreen() {
     try {
       const fresh = await getFile(CONFIG.authPath);
       const encrypted = await encryptToken(token, password);
-      const updated = { tokens: [...(fresh.content?.tokens || []), { label, role: "admin", ...encrypted }] };
+      const uid = crypto.randomUUID();
+      const updated = { tokens: [...(fresh.content?.tokens || []), { uid, label, role: "admin", ...encrypted }] };
       await putFile(CONFIG.authPath, updated, fresh.sha, `admin: configura autenticação (${label})`);
+      CURRENT_SALT = encrypted.salt;
+      CURRENT_LABEL = label;
+      CURRENT_UID = uid;
       await enterApp();
     } catch (err) {
       TOKEN = "";
@@ -579,6 +597,32 @@ function setupSetupScreen() {
   passwordInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") attempt();
   });
+}
+
+// Atualiza o registro de quem acabou de entrar, se ele for de uma versão
+// antiga do painel: recriptografa com PBKDF2_ITERATIONS (se usar menos
+// repetições) e/ou cria o uid. Falhar aqui não impede o login — tenta de
+// novo na próxima vez.
+async function migrateCurrentEntry(password) {
+  try {
+    const fresh = await getFile(CONFIG.authPath);
+    const tokens = [...(fresh.content?.tokens || [])];
+    const index = tokens.findIndex((t) => t.salt === CURRENT_SALT);
+    if (index === -1) return;
+    const entry = tokens[index];
+    const weak = (entry.iterations || LEGACY_PBKDF2_ITERATIONS) < PBKDF2_ITERATIONS;
+    if (!weak && entry.uid) return;
+    tokens[index] = {
+      uid: entry.uid || crypto.randomUUID(),
+      ...entry,
+      ...(weak ? await encryptToken(TOKEN, password) : {}),
+    };
+    await putFile(CONFIG.authPath, { tokens }, fresh.sha, `admin: atualiza registro do acesso "${entry.label}"`);
+    CURRENT_SALT = tokens[index].salt;
+    CURRENT_UID = tokens[index].uid;
+  } catch (err) {
+    console.warn("Não foi possível atualizar o registro do acesso:", err);
+  }
 }
 
 function setupLoginScreen() {
@@ -608,6 +652,9 @@ function setupLoginScreen() {
         recovered = await decryptToken(entry, password);
         if (recovered) {
           ROLE = roleOf(entry);
+          CURRENT_SALT = entry.salt;
+          CURRENT_LABEL = entry.label || "";
+          CURRENT_UID = entry.uid || null;
           break;
         }
       }
@@ -621,6 +668,7 @@ function setupLoginScreen() {
       }
       clearLoginState();
       TOKEN = recovered;
+      await migrateCurrentEntry(password);
       await enterApp();
     } catch (err) {
       error.textContent = `Não foi possível entrar: ${err.message}`;
@@ -734,6 +782,9 @@ async function enterApp() {
   document.getElementById("add-categoria-estudo-btn").addEventListener("click", addCategoriaEstudo);
   document.getElementById("add-estudo-btn").addEventListener("click", addEstudo);
   document.getElementById("access-submit").addEventListener("click", addAccess);
+  document.getElementById("account-submit").addEventListener("click", saveAccount);
+  document.getElementById("user-btn").addEventListener("click", () => showPanel("account"));
+  renderCurrentUser();
 
   await loadContent();
   renderPageForms();
@@ -1124,6 +1175,11 @@ async function saveAll() {
   saveBtn.disabled = true;
   setSaveStatus("salvando…", "pending");
   try {
+    // Antes dos envios: um id de integrante repetido faria a foto de um
+    // sobrescrever a do outro (o caminho da foto vem do id).
+    const memberIds = contentData.members?.map((m) => m.id) || [];
+    const duplicate = memberIds.find((id, i) => memberIds.indexOf(id) !== i);
+    if (duplicate) throw new Error(`dois integrantes com o mesmo identificador ("${duplicate}")`);
     for (const upload of pendingUploads) {
       await uploadBinaryFile(upload.path, upload.file, upload.message);
     }
@@ -1149,6 +1205,10 @@ async function saveAll() {
       // salvamento de data/members.json) faz o PUT criar o arquivo em vez de
       // atualizar um existente — ver getFileOrEmpty.
       const fresh = await getFileOrEmpty(PATHS[section], null);
+      if (section === "members" && ROLE !== "admin") {
+        contentData.members = mergeOwnMembers(fresh.content || []);
+        savedNewMembers = true; // redesenha com a lista mesclada
+      }
       await putFile(PATHS[section], contentData[section], fresh.sha, `admin: atualiza ${section}`);
     }
     dirty.clear();
@@ -2675,7 +2735,46 @@ function renderMembersList() {
     return;
   }
 
-  items.forEach((member, i) => container.appendChild(buildMemberCard(member, i, items.length)));
+  items.forEach((member, i) =>
+    container.appendChild(canEditMember(member) ? buildMemberCard(member, i, items.length) : buildMemberReadOnlyCard(member, i))
+  );
+}
+
+// Admin edita todos; colaborador só os integrantes que ele criou (ownerUid).
+function canEditMember(member) {
+  return ROLE === "admin" || (!!CURRENT_UID && member.ownerUid === CURRENT_UID);
+}
+
+// Card só de leitura (integrante de outra pessoa, visto por um colaborador).
+// O id não começa com "member-card-" de propósito, e não há nenhum campo
+// data-member: collectAll/collectMemberLinks ignoram esse card, então nada
+// dele é relido do DOM pra contentData.
+function buildMemberReadOnlyCard(member, i) {
+  const card = el("div", "card");
+  card.id = `member-view-${i}`;
+
+  const header = el("div", "card-header");
+  const left = el("div", "card-header-left");
+  left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
+  left.appendChild(el("span", "card-name", member.name || "(sem nome)"));
+  header.appendChild(left);
+  header.appendChild(el("span", "card-meta", "só leitura"));
+  header.appendChild(el("span", "card-chevron", "▼"));
+  card.appendChild(header);
+
+  const body = el("div", "card-body");
+  wireCardAccordion(card, header, body);
+  const grid = el("div", "fields-grid");
+  grid.appendChild(buildReadOnlyField("Identificador (id)", member.id));
+  grid.appendChild(buildReadOnlyField("Nome", member.name));
+  const description = el("div", "field full");
+  description.appendChild(el("label", "", "Descrição"));
+  description.appendChild(el("p", "card-readonly-text", member.description || "—"));
+  grid.appendChild(description);
+  body.appendChild(grid);
+  card.appendChild(body);
+
+  return card;
 }
 
 // Lê o valor atual do campo "id" direto do DOM (pode ter sido editado e
@@ -2788,7 +2887,10 @@ function buildMemberCard(member, i, total) {
 
   const header = el("div", "card-header");
   const left = el("div", "card-header-left");
-  left.appendChild(buildReorderButtons(i, total, () => moveMember(i, i - 1), () => moveMember(i, i + 1)));
+  // Reordenar mexe na posição dos integrantes dos outros — só admin.
+  if (ROLE === "admin") {
+    left.appendChild(buildReorderButtons(i, total, () => moveMember(i, i - 1), () => moveMember(i, i + 1)));
+  }
   left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
   left.appendChild(el("span", "card-name", member.name || "(sem nome)"));
   header.appendChild(left);
@@ -2868,6 +2970,7 @@ function buildMemberCard(member, i, total) {
 }
 
 function moveMember(from, to) {
+  if (ROLE !== "admin") return;
   if (to < 0 || to >= contentData.members.length) return;
   collectAll();
   const [item] = contentData.members.splice(from, 1);
@@ -2879,6 +2982,7 @@ function moveMember(from, to) {
 
 function removeMember(i) {
   const member = contentData.members[i];
+  if (!canEditMember(member)) return;
   if (!confirm(`Remover o integrante "${member.name || "(sem nome)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
   collectAll();
   contentData.members.splice(i, 1);
@@ -2888,6 +2992,10 @@ function removeMember(i) {
 }
 
 function addMember() {
+  if (!CURRENT_UID) {
+    toast("Seu acesso ainda não tem identificador — saia e entre de novo para adicionar integrantes.", "error");
+    return;
+  }
   collectAll();
   const id = uniqueSlug(contentData.members.map((m) => m.id), "novo-integrante");
   // _isNew é só uma marca em memória (nunca vai pro JSON, ver saveAll): libera
@@ -2896,11 +3004,29 @@ function addMember() {
   // o id trava pra sempre (ver buildMemberCard) — como já é o caso de artigo e
   // episódio, e pelo mesmo motivo: outras coisas passam a depender dele
   // (caminho da foto, correspondência por nome no seletor de autor da notícia).
-  contentData.members.unshift({ id, name: "", description: "", _isNew: true });
+  contentData.members.unshift({ id, name: "", description: "", ownerUid: CURRENT_UID, _isNew: true });
   renderMembersList();
   markDirty("members");
   const card = document.getElementById("member-card-0");
   if (card) card.classList.add("open");
+}
+
+// Salvamento de um colaborador: parte da versão do GitHub e troca só os
+// integrantes dele (editados, removidos ou novos, no topo) — os dos outros
+// ficam exatamente como estão lá, mesmo que algo tenha mudado em memória.
+function mergeOwnMembers(remote) {
+  const mine = contentData.members.filter((m) => m.ownerUid === CURRENT_UID);
+  // Alguém criou, nesse meio-tempo, um integrante com o mesmo id de um novo.
+  const clash = mine.find((m) => remote.some((r) => r.id === m.id && r.ownerUid !== CURRENT_UID));
+  if (clash) throw new Error(`o identificador "${clash.id}" já existe — remova esse integrante e adicione de novo`);
+  const mineById = new Map(mine.map((m) => [m.id, m]));
+  const remoteIds = new Set(remote.map((m) => m.id));
+  const added = mine.filter((m) => !remoteIds.has(m.id));
+  const kept = remote.flatMap((m) => {
+    if (m.ownerUid !== CURRENT_UID) return [m];
+    return mineById.has(m.id) ? [mineById.get(m.id)] : [];
+  });
+  return [...added, ...kept];
 }
 
 // ----------------------------------------------------------------------------
@@ -3430,7 +3556,7 @@ async function addAccess() {
   try {
     const fresh = await getFile(CONFIG.authPath);
     const encrypted = await encryptToken(token, password);
-    const updated = { tokens: [...(fresh.content?.tokens || []), { label, role, ...encrypted }] };
+    const updated = { tokens: [...(fresh.content?.tokens || []), { uid: crypto.randomUUID(), label, role, ...encrypted }] };
     await putFile(CONFIG.authPath, updated, fresh.sha, `admin: adiciona acesso "${label}" (${role})`);
     toast(`Acesso de "${label}" adicionado.`, "ok");
     labelInput.value = "";
@@ -3486,6 +3612,80 @@ async function changeAccessRole(index, label, select) {
   } catch (err) {
     toast(`Erro ao mudar categoria: ${err.message}`, "error");
     await loadAccess();
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Dados de acesso: nome e senha de quem está logado (commita na hora)
+// ----------------------------------------------------------------------------
+
+function renderCurrentUser() {
+  document.getElementById("user-btn").textContent = CURRENT_LABEL || "sem nome";
+  document.getElementById("account-label").value = CURRENT_LABEL;
+}
+
+async function saveAccount() {
+  const labelInput = document.getElementById("account-label");
+  const newInput = document.getElementById("account-new-password");
+  const confirmInput = document.getElementById("account-confirm-password");
+  const currentInput = document.getElementById("account-current-password");
+  const submit = document.getElementById("account-submit");
+
+  const label = labelInput.value.trim();
+  const newPassword = newInput.value;
+  if (!label) {
+    toast("O nome não pode ficar vazio.", "error");
+    return;
+  }
+  if (newPassword !== confirmInput.value) {
+    toast("As duas novas senhas não são iguais.", "error");
+    return;
+  }
+  if (label === CURRENT_LABEL && !newPassword) {
+    toast("Nada mudou.", "error");
+    return;
+  }
+  if (!currentInput.value) {
+    toast("Digite a senha atual para confirmar.", "error");
+    return;
+  }
+
+  submit.disabled = true;
+  try {
+    const fresh = await getFile(CONFIG.authPath);
+    const tokens = [...(fresh.content?.tokens || [])];
+    const index = tokens.findIndex((t) => t.salt === CURRENT_SALT);
+    if (index === -1) throw new Error("seu acesso não está mais no auth.json — recarregue a página");
+    if ((await decryptToken(tokens[index], currentInput.value)) !== TOKEN) {
+      throw new Error("senha atual incorreta");
+    }
+
+    let entry = { ...tokens[index], label };
+    if (newPassword) {
+      // O login usa o primeiro registro que a senha abre — duas pessoas com
+      // a mesma senha entrariam uma na conta da outra.
+      for (const [i, other] of tokens.entries()) {
+        if (i !== index && (await decryptToken(other, newPassword))) {
+          throw new Error("essa senha já é usada por outro acesso");
+        }
+      }
+      entry = { ...entry, ...(await encryptToken(TOKEN, newPassword)) };
+    }
+    tokens[index] = entry;
+    await putFile(CONFIG.authPath, { tokens }, fresh.sha, `admin: atualiza dados de acesso de "${label}"`);
+
+    CURRENT_SALT = entry.salt;
+    CURRENT_LABEL = label;
+    renderCurrentUser();
+    newInput.value = "";
+    confirmInput.value = "";
+    currentInput.value = "";
+    toast("Dados de acesso atualizados.", "ok");
+    if (ROLE === "admin") await loadAccess();
+  } catch (err) {
+    toast(`Erro ao salvar: ${err.message}`, "error");
+  } finally {
+    submit.disabled = false;
   }
 }
 
