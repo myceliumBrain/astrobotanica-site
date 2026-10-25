@@ -1,5 +1,19 @@
 [
   {
+    "id": "novo-integrante",
+    "name": "Eduardo Dreyer Simões Saraiva",
+    "description": "Graduando em Ciências Ambientais pela Universidade Federal do Estado do Rio de Janeiro (UNIRIO), com interesse nas áreas de restauração ecológica, agroecologia e botânica. Atualmente, é bolsista de iniciação científica (IC/UNIRIO) no Laboratório de Biologia Molecular de Plantas e Fungos (LBMPF) da UNIRIO, desenvolvendo pesquisas em astrobotânica vinculadas à rede Space Farming. Atua como monitor voluntário da disciplina de Introdução à Agroecologia e como encarregado no projeto Hortas Cariocas, desenvolvendo atividades pedagógicas relacionadas ao manejo agroflorestal no CIEP Presidente Agostinho Neto. Entre 2024 e 2026, desenvolveu projeto de pesquisa no Instituto Resgatando o Verde (IRV), com foco em bioacústica comportamental de saguis (*Callithrix* sp.) em áreas urbanas, projeto reconhecido como melhor proposta inicial em 2024. Em 2024, também participou como voluntário do projeto de extensão Agroecologia para Todos, vinculado ao Núcleo de Pesquisas em Sistemas Agrícolas (NuPSA) da UNIRIO.",
+    "ownerUid": "WRzyvgYazMxzbpiuHErZjA==",
+    "descriptionEn": "Undergraduate student in Environmental Sciences at the Federal University of the State of Rio de Janeiro (UNIRIO), with interests in ecological restoration, agroecology, and botany. Currently an undergraduate research scholarship recipient (IC/UNIRIO) at UNIRIO’s Laboratory of Plant and Fungal Molecular Biology (LBMPF), conducting research in astrobotany linked to the Space Farming network. Serves as a volunteer teaching assistant for the Introduction to Agroecology course and as a coordinator in the Hortas Cariocas project, developing educational activities related to agroforestry management at CIEP Presidente Agostinho Neto. From 2024 to 2026, conducted a research project at the Resgatando o Verde Institute (IRV), focusing on the behavioral bioacoustics of marmosets (*Callithrix* sp.) in urban areas. The project was awarded Best Initial Proposal in 2024. In 2024, also volunteered in the Agroecologia para Todos outreach project, affiliated with UNIRIO’s Center for Research in Agricultural Systems (NuPSA).",
+    "image": "images/integrantes/novo-integrante.jpg",
+    "links": [
+      {
+        "label": "Currículo Lattes",
+        "url": "http://lattes.cnpq.br/2847590238543532"
+      }
+    ]
+  },
+  {
     "id": "integrante-pedro",
     "name": "Pedro Henrique Tenorio Alvarenga",
     "description": "Apaixonado por conhecimento, graduou-se em biologia, com foco em microbiologia e plantas. Desde antes da graduação, sempre flertou com a astronomia, e a oportunidade de juntar todos os campos de conhecimento veio com a entrada no Laboratório de Biologia Molecular de Plantas e Fungos da UNIRIO, onde passou a atuar em pesquisas de astrobotânica na área de Space Farming. Fundador do blog \"Astrobotânica\", atua como editor de conteúdo para as notícias e o Podcast Jardim em Construção.",
