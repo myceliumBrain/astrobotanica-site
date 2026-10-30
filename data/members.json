@@ -1,5 +1,18 @@
 [
   {
+    "id": "integrante-pedro",
+    "name": "Pedro Henrique Tenorio Alvarenga",
+    "description": "Apaixonado por conhecimento, graduou-se em biologia, com foco em microbiologia e plantas. Desde antes da graduação, sempre flertou com a astronomia, e a oportunidade de juntar todos os campos de conhecimento veio com a entrada no Laboratório de Biologia Molecular de Plantas e Fungos da UNIRIO, onde passou a atuar em pesquisas de astrobotânica na área de Space Farming. Fundador do blog \"Astrobotânica\", atua como editor de conteúdo para as notícias e o Podcast Jardim em Construção.",
+    "image": "images/integrantes/integrante-pedro.jpeg",
+    "links": [
+      {
+        "label": "Currículo Lattes",
+        "url": "http://lattes.cnpq.br/3569412519597121"
+      }
+    ],
+    "descriptionEn": "Passionate about knowledge, he earned a degree in biology with a focus on microbiology and plants. He had long held an interest in astronomy, and the opportunity to combine these fields arose when he joined the Plant and Fungal Molecular Biology Laboratory at UNIRIO, where he began conducting astrobotany research in the field of space farming. Founder of the \"Astrobotânica\" blog, he serves as content editor for the news and the Jardim em Construção Podcast."
+  },
+  {
     "id": "novo-integrante",
     "name": "Eduardo Dreyer Simões Saraiva",
     "description": "Graduando em Ciências Ambientais pela Universidade Federal do Estado do Rio de Janeiro (UNIRIO), com interesse nas áreas de restauração ecológica, agroecologia e botânica. Atualmente, é bolsista de iniciação científica (IC/UNIRIO) no Laboratório de Biologia Molecular de Plantas e Fungos (LBMPF) da UNIRIO, desenvolvendo pesquisas em astrobotânica vinculadas à rede Space Farming. Atua como monitor voluntário da disciplina de Introdução à Agroecologia e como encarregado no projeto Hortas Cariocas, desenvolvendo atividades pedagógicas relacionadas ao manejo agroflorestal no CIEP Presidente Agostinho Neto. Entre 2024 e 2026, desenvolveu projeto de pesquisa no Instituto Resgatando o Verde (IRV), com foco em bioacústica comportamental de saguis (*Callithrix* sp.) em áreas urbanas, projeto reconhecido como melhor proposta inicial em 2024. Em 2024, também participou como voluntário do projeto de extensão Agroecologia para Todos, vinculado ao Núcleo de Pesquisas em Sistemas Agrícolas (NuPSA) da UNIRIO.",
@@ -12,18 +25,5 @@
         "url": "http://lattes.cnpq.br/2847590238543532"
       }
     ]
-  },
-  {
-    "id": "integrante-pedro",
-    "name": "Pedro Henrique Tenorio Alvarenga",
-    "description": "Apaixonado por conhecimento, graduou-se em biologia, com foco em microbiologia e plantas. Desde antes da graduação, sempre flertou com a astronomia, e a oportunidade de juntar todos os campos de conhecimento veio com a entrada no Laboratório de Biologia Molecular de Plantas e Fungos da UNIRIO, onde passou a atuar em pesquisas de astrobotânica na área de Space Farming. Fundador do blog \"Astrobotânica\", atua como editor de conteúdo para as notícias e o Podcast Jardim em Construção.",
-    "image": "images/integrantes/integrante-pedro.jpeg",
-    "links": [
-      {
-        "label": "Currículo Lattes",
-        "url": "http://lattes.cnpq.br/3569412519597121"
-      }
-    ],
-    "descriptionEn": "Passionate about knowledge, he earned a degree in biology with a focus on microbiology and plants. He had long held an interest in astronomy, and the opportunity to combine these fields arose when he joined the Plant and Fungal Molecular Biology Laboratory at UNIRIO, where he began conducting astrobotany research in the field of space farming. Founder of the \"Astrobotânica\" blog, he serves as content editor for the news and the Jardim em Construção Podcast."
   }
 ]
