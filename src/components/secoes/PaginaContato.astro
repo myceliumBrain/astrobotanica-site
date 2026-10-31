@@ -1,0 +1,28 @@
+---
+// /contato, com a mesma marcação de contato.html.
+import Base from "../../layouts/Base.astro";
+import { t, type Lang } from "../../lib/i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+
+<Base lang={lang} title={t(lang, "contato.metaTitle")} description={t(lang, "contato.metaDescription")} path="/contato">
+  <section class="wrap contact-grid" style="padding-block:2.5rem">
+    <div>
+      <h1 style="font-size:2rem;text-transform:uppercase;margin:0.75rem 0">{t(lang, "contato.title")}</h1>
+      <p style="font-size:1rem;color:var(--ink-dim);line-height:1.6;max-width:38ch">{t(lang, "contato.intro")}</p>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:1.5rem">
+      <div class="card" style="border:none;padding:0">
+        <div class="card-kicker">{t(lang, "contato.emailKicker")}</div>
+        <div class="contact-placeholder">{t(lang, "contato.email")}</div>
+        <p class="card-body">{t(lang, "contato.emailNote")}</p>
+      </div>
+    </div>
+  </section>
+</Base>
