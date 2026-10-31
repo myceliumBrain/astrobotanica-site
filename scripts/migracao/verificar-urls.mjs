@@ -145,8 +145,13 @@ if (!soUrls) {
     `${locs.length} URLs${quebradas.length ? `; quebradas: ${quebradas.join(", ")}` : ""}`
   );
   const antigas = tags(fs.readFileSync(path.join(RAIZ, "sitemap.xml"), "utf8"), "loc");
-  const faltando = antigas.filter((u) => !locs.includes(u));
-  checar("sitemap.xml: contém as URLs do sitemap atual", faltando.length === 0, `${antigas.length} atuais${faltando.length ? `; faltando: ${faltando.join(", ")}` : ""}`);
+  // Uma URL antiga que hoje é 301 (ex.: /estudos → /estudos/) conta se o destino estiver no sitemap.
+  const faltando = antigas.filter((u) => {
+    if (locs.includes(u)) return false;
+    const r = abrir(caminhoDe(u) ?? "/__fora__");
+    return !(r.saltos.length && locs.includes(BASE_URL + r.saltos.at(-1)));
+  });
+  checar("sitemap.xml: contém as URLs do sitemap atual (ou o destino do 301)", faltando.length === 0, `${antigas.length} atuais${faltando.length ? `; faltando: ${faltando.join(", ")}` : ""}`);
 
   // robots.txt
   const robots = ler("robots.txt");

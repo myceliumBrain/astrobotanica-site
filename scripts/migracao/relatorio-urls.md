@@ -146,8 +146,8 @@
 
 | Checagem | Resultado | Detalhe |
 |---|---|---|
-| sitemap.xml: toda <loc> e <xhtml:link> existe | OK | 45 URLs |
-| sitemap.xml: contém as URLs do sitemap atual | OK | 20 atuais |
+| sitemap.xml: toda <loc> e <xhtml:link> existe | OK | 41 URLs |
+| sitemap.xml: contém as URLs do sitemap atual (ou o destino do 301) | OK | 20 atuais |
 | robots.txt aponta para o sitemap | OK |  |
 | robots.txt bloqueia /admin/ | OK |  |
 | 404.html própria existe (noindex) | OK |  |
