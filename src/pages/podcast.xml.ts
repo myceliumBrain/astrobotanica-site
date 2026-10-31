@@ -1,10 +1,8 @@
 // /podcast.xml — igual ao gerado por scripts/generate_podcast_feed.py, salvo
 // o <link> de cada item, que passa a ser a página estática /episodios/<id>/.
 // O <guid> continua /episodio?id=<id> para os apps não duplicarem episódios.
-import fs from "node:fs";
-import path from "node:path";
 import { episodios, urlEpisodio, type Episodio } from "../lib/episodios";
-import { BASE_URL, NOME_MARCA, agoraRfc822, dataPublicacao, respostaXml, urlAbsoluta, xmlEscape } from "../lib/feeds";
+import { BASE_URL, NOME_MARCA, agoraRfc822, dataPublicacao, respostaXml, tamanhoArquivo, urlAbsoluta, xmlEscape } from "../lib/feeds";
 import sitePt from "../../data/site.json";
 
 // Taxonomia fixa do Apple Podcasts.
@@ -14,11 +12,6 @@ const ITUNES_SUBCATEGORIA = "Natural Sciences";
 // "6:32 min" → "6:32" (itunes:duration aceita HH:MM:SS, MM:SS ou segundos).
 function duracaoItunes(duracao: string): string {
   return duracao.match(/\d{1,2}(:\d{2}){1,2}/)?.[0] ?? duracao;
-}
-
-// Tamanho do MP3 no repositório (o build roda na raiz do projeto).
-function tamanhoAudio(audioSrc: string): number {
-  return fs.statSync(path.join(process.cwd(), audioSrc), { throwIfNoEntry: false })?.size ?? 0;
 }
 
 function item(e: Episodio): string {
@@ -31,7 +24,7 @@ function item(e: Episodio): string {
       <guid isPermaLink="true">${xmlEscape(guid)}</guid>
       <pubDate>${dataPublicacao(e.date, e.time)}</pubDate>
       <description>${xmlEscape(e.description ?? "")}</description>
-      <enclosure url="${xmlEscape(urlAbsoluta(e.audioSrc))}" type="audio/mpeg" length="${tamanhoAudio(e.audioSrc)}" />
+      <enclosure url="${xmlEscape(urlAbsoluta(e.audioSrc))}" type="audio/mpeg" length="${tamanhoArquivo(e.audioSrc)}" />
       <itunes:duration>${xmlEscape(duracaoItunes(e.duration))}</itunes:duration>
       <itunes:episode>${e.number}</itunes:episode>
       <itunes:episodeType>full</itunes:episodeType>

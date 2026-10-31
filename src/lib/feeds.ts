@@ -1,6 +1,8 @@
 // Utilidades comuns aos arquivos de máquina (rss.xml, podcast.xml,
 // sitemap.xml), no mesmo formato que os scripts Python antigos geravam
 // (scripts/generate_seo.py, generate_podcast_feed.py, generate_sitemap.py).
+import fs from "node:fs";
+import path from "node:path";
 import sitePt from "../../data/site.json";
 
 export const BASE_URL = "https://astrobotanica.com.br";
@@ -57,6 +59,12 @@ export function tipoImagem(caminho: string): string {
   if (ext === "webp") return "image/webp";
   if (ext === "gif") return "image/gif";
   return "image/jpeg";
+}
+
+// Tamanho em bytes de um arquivo do repositório (o build roda na raiz do
+// projeto), para o atributo length do <enclosure>.
+export function tamanhoArquivo(caminho: string): number {
+  return fs.statSync(path.join(process.cwd(), caminho), { throwIfNoEntry: false })?.size ?? 0;
 }
 
 export function respostaXml(xml: string): Response {

@@ -1,6 +1,7 @@
 // /rss.xml — mesmo canal, itens, guid, pubDate, category, description e
 // enclosure do feed gerado por scripts/generate_seo.py, mais o texto
-// completo de cada notícia em <content:encoded>.
+// completo de cada notícia em <content:encoded> e o length do enclosure
+// (exigido pelo RSS 2.0, faltava no feed antigo).
 import { corpoHtml, noticiasDoIdioma, resumo, type Noticia } from "../lib/noticias";
 import {
   BASE_URL,
@@ -8,6 +9,7 @@ import {
   agoraRfc822,
   dataPublicacao,
   respostaXml,
+  tamanhoArquivo,
   tipoImagem,
   urlAbsoluta,
   xmlEscape,
@@ -32,7 +34,7 @@ function item(n: Noticia): string {
   const d = n.data;
   const url = `${BASE_URL}/artigo/${d.id}/`;
   const enclosure = d.image
-    ? `\n      <enclosure url="${xmlEscape(urlAbsoluta(d.image))}" type="${tipoImagem(d.image)}" />`
+    ? `\n      <enclosure url="${xmlEscape(urlAbsoluta(d.image))}" type="${tipoImagem(d.image)}" length="${tamanhoArquivo(d.image)}" />`
     : "";
   return `    <item>
       <title>${xmlEscape(d.title)}</title>
