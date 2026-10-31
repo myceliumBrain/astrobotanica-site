@@ -10,6 +10,7 @@ import { t, caminhoNoIdioma, type Lang } from "../lib/i18n";
 import { corpoHtml, formatarData, resumo, type Noticia } from "../lib/noticias";
 import { citacaoAbnt, doiNormalizado, urlLattes, urlOrcid } from "../lib/citacao";
 import { dataIso, noticiaJsonLd } from "../lib/seo";
+import { srcsetCapa as srcsetDaCapa } from "../lib/capa";
 
 interface Props {
   noticia: Noticia;
@@ -41,6 +42,7 @@ const licencaUrl =
 // só por notícia (em PT); sem capa, vale a imagem padrão do site.
 const tituloPagina = `${n.title} — Astrobotânica`;
 const descricao = resumo(noticia);
+const srcsetCapa = n.image ? await srcsetDaCapa(n.id, n.image) : undefined;
 const ogImagem = n.image ? new URL(`/artigo/${n.id}/og-image.jpg`, Astro.site).href : undefined;
 const jsonLd = noticiaJsonLd(noticia, {
   url: urlCanonica,
@@ -130,7 +132,15 @@ const publicadoIso = dataIso(n.date, n.time);
         n.image && (
           <>
             <div class="article-cover">
-              <img src={`/${n.image}`} alt="" />
+              <img
+                src={`/${n.image}`}
+                srcset={srcsetCapa}
+                sizes="100vw"
+                width="1200"
+                height="675"
+                fetchpriority="high"
+                alt=""
+              />
             </div>
             {n.imageCaption && <p class="article-cover-caption">{n.imageCaption}</p>}
           </>
