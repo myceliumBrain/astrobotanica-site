@@ -7,13 +7,15 @@ import { fileURLToPath } from "node:url";
 const RAIZ = path.dirname(fileURLToPath(import.meta.url));
 
 // Arquivos estáticos que continuam na raiz do repositório (o painel /admin
-// grava em images/ e audio/, e as URLs /css/style.css, /images/... precisam
-// continuar as mesmas). Em vez de mover para public/, são servidos no
+// grava em images/ e audio/, e as URLs /css/style.css, /images/..., /admin/
+// precisam continuar as mesmas). Em vez de mover para public/, são servidos no
 // `astro dev` e copiados para a saída no build. O CNAME fica em public/
 // (cópia do CNAME da raiz, que não é tocado).
-const ARQUIVOS_DA_RAIZ = ["css", "images", "audio", "robots.txt"];
+const ARQUIVOS_DA_RAIZ = ["css", "images", "audio", "admin", "robots.txt"];
 
 const TIPOS = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".txt": "text/plain; charset=utf-8",
   ".jpg": "image/jpeg",
@@ -31,7 +33,8 @@ function arquivosDaRaiz() {
     hooks: {
       "astro:server:setup": ({ server }) => {
         server.middlewares.use((req, res, next) => {
-          const rel = decodeURIComponent((req.url ?? "").split("?")[0]).replace(/^\/+/, "");
+          let rel = decodeURIComponent((req.url ?? "").split("?")[0]).replace(/^\/+/, "");
+          if (rel.endsWith("/")) rel += "index.html";
           if (!ARQUIVOS_DA_RAIZ.some((item) => rel === item || rel.startsWith(`${item}/`))) return next();
           const arquivo = path.join(RAIZ, rel);
           if (!arquivo.startsWith(RAIZ + path.sep) || !fs.statSync(arquivo, { throwIfNoEntry: false })?.isFile()) {

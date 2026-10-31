@@ -1,0 +1,56 @@
+---
+// Página de redirecionamento para endereços antigos com query string
+// (/noticia?id=..., /episodio?id=..., /estudo?slug=...). O GitHub Pages não
+// redireciona pelo servidor e não enxerga a query string, então:
+// - com JavaScript: lê o parâmetro e vai direto para a URL nova
+//   (location.replace, que os buscadores tratam como redirecionamento);
+// - sem JavaScript: meta refresh para a lista da seção.
+// A tabela parâmetro → URL fica num <script type="application/json"> para
+// que scripts/migracao/verificar-urls.mjs consiga conferir cada destino.
+import { BASE_URL } from "../lib/feeds";
+
+interface Props {
+  /** Nome do parâmetro na URL antiga ("id" ou "slug"). */
+  parametro: string;
+  /** valor do parâmetro → caminho novo. */
+  destinos: Record<string, string>;
+  /** Destino quando o parâmetro falta ou é desconhecido (o mesmo comportamento do site antigo). */
+  padrao: string;
+  /** Lista da seção, para quem está sem JavaScript. */
+  lista: string;
+  rotuloLista: string;
+}
+
+const { parametro, destinos, padrao, lista, rotuloLista } = Astro.props;
+const tabela = JSON.stringify({ parametro, destinos, padrao });
+---
+
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Redirecionando… — Astrobotânica</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={`${BASE_URL}${lista}`} />
+    <script type="application/json" id="redirecionamentos" set:html={tabela} />
+    <script is:inline>
+      (function () {
+        var t = JSON.parse(document.getElementById("redirecionamentos").textContent);
+        var valor = new URLSearchParams(location.search).get(t.parametro);
+        var destino = (valor && Object.prototype.hasOwnProperty.call(t.destinos, valor) && t.destinos[valor]) || t.padrao;
+        var canonico = document.querySelector('link[rel="canonical"]');
+        if (canonico) canonico.href = location.origin + destino;
+        location.replace(destino + location.hash);
+      })();
+    </script>
+    <noscript><meta http-equiv="refresh" content={`0; url=${lista}`} /></noscript>
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body>
+    <main class="wrap" style="padding-top:2.5rem;padding-bottom:2.5rem">
+      <p>Este endereço mudou. <a href={lista}>{rotuloLista}</a></p>
+      <p lang="en">This address has moved. <a href={`/en${lista}`}>English version</a></p>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,12 @@
+---
+// /noticia?id=<id> e /noticia.html?id=<id> (formato antigo) → /artigo/<id>/.
+// Sem id ou com id desconhecido, o site antigo mostrava a primeira notícia.
+import PaginaRedirecionamento from "../components/PaginaRedirecionamento.astro";
+import { noticiasDoIdioma } from "../lib/noticias";
+
+const noticias = await noticiasDoIdioma("pt");
+const destinos = Object.fromEntries(noticias.map((n) => [n.data.id, `/artigo/${n.data.id}/`]));
+const padrao = noticias.length > 0 ? `/artigo/${noticias[0].data.id}/` : "/noticias";
+---
+
+<PaginaRedirecionamento parametro="id" destinos={destinos} padrao={padrao} lista="/noticias" rotuloLista="Ver todas as notícias" />
