@@ -1,0 +1,37 @@
+---
+// Linha de episódio, como buildEpisodeRow: na lista do podcast (com
+// descrição) e no painel da página inicial (sem).
+import { t, type Lang } from "../lib/i18n";
+import { formatarData } from "../lib/noticias";
+import { urlEpisodio, type Episodio } from "../lib/episodios";
+import { pad } from "../lib/listas";
+
+interface Props {
+  episodio: Episodio;
+  lang: Lang;
+  comDescricao?: boolean;
+}
+
+const { episodio: e, lang, comDescricao = false } = Astro.props;
+// Episódios ainda não têm versão EN: o áudio e os textos são em português.
+const idioma = lang === "en" ? "pt" : undefined;
+---
+
+<a class="episode-row" href={urlEpisodio(e.id)}>
+  {
+    e.image && (
+      <div class="episode-row-image">
+        <img src={`/${e.image}`} alt="" loading="lazy" />
+      </div>
+    )
+  }
+  <span class="episode-row-number">{t(lang, "episodio.epNumber", { number: pad(e.number) })}</span>
+  <div class="episode-row-main">
+    <div class="episode-row-title" lang={idioma}>{e.title}</div>
+    {comDescricao && <p class="episode-row-desc" lang={idioma}>{e.description}</p>}
+  </div>
+  <div class="episode-row-meta">
+    <span>{formatarData(e.date, lang)}</span>
+    <span>{e.duration}</span>
+  </div>
+</a>

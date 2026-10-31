@@ -1,0 +1,47 @@
+---
+// Notícia de destaque da página inicial, card 50/50 (texto | imagem), como
+// buildArticleSplitCard. A imagem é a primeira grande da página: sem lazy.
+import { t, type Lang } from "../lib/i18n";
+import { formatarData } from "../lib/noticias";
+import type { ItemNoticia } from "../lib/listas";
+
+interface Props {
+  item: ItemNoticia;
+  lang: Lang;
+}
+
+const { item, lang } = Astro.props;
+const n = item.noticia.data;
+const imagem = n.image || n.imageVertical;
+const meta = [formatarData(n.date, lang), n.readingTime].filter(Boolean).join(" · ");
+const idioma = item.soPortugues ? "pt" : undefined;
+---
+
+<a class="article-card-split" href={item.href}>
+  <div class="article-card-split-info">
+    <div class="article-card-kicker">{n.category}</div>
+    <div class="article-card-split-title" lang={idioma}>{n.title}</div>
+    {n.subtitle && <p class="article-card-split-subtitle" lang={idioma}>{n.subtitle}</p>}
+    <div class="article-card-meta">
+      {meta}
+      {item.soPortugues && <span class="article-card-selo">{t(lang, "listas.soPortugues")}</span>}
+    </div>
+    {n.author && <div class="article-card-author">{t(lang, "artigo.byLine", { author: n.author })}</div>}
+  </div>
+  <div class="article-card-split-image">{imagem && <img src={`/${imagem}`} alt="" fetchpriority="high" />}</div>
+</a>
+
+<style>
+  /* Lista EN: notícia ainda sem tradução. */
+  .article-card-selo {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+</style>
