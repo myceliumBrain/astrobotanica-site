@@ -1,6 +1,8 @@
 ---
 // Página institucional a partir de src/content/paginas/<lang>/<slug>.md.
 // Enquanto o Markdown de uma página não existir, mostra a página provisória.
+// Conteúdo extra passado como filho (ex.: integrantes em Sobre) vem depois
+// do texto.
 import { getEntry, render } from "astro:content";
 import Base from "../layouts/Base.astro";
 import PaginaProvisoria from "./PaginaProvisoria.astro";
@@ -34,6 +36,7 @@ const { Content } = pagina ? await render(pagina) : { Content: null };
           <Content />
         </div>
       </section>
+      <slot />
     </Base>
   ) : (
     <PaginaProvisoria lang={lang} path={path} />
@@ -65,5 +68,33 @@ const { Content } = pagina ? await render(pagina) : { Content: null };
   }
   .pagina-texto :global(a) {
     color: var(--accent-700);
+  }
+  .pagina-texto :global(h3) {
+    margin-top: var(--space-4);
+  }
+  .pagina-texto :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--space-3);
+    font-size: 0.95rem;
+  }
+  .pagina-texto :global(th),
+  .pagina-texto :global(td) {
+    text-align: left;
+    vertical-align: top;
+    padding: var(--space-1) var(--space-2) var(--space-1) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .pagina-texto :global(th) {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .pagina-texto :global(td:first-child) {
+    white-space: nowrap;
+    color: var(--ink-dim);
   }
 </style>

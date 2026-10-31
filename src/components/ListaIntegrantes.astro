@@ -1,0 +1,51 @@
+---
+// Integrantes (data/members.json) — mesma marcação de renderMembersList()/
+// buildMemberCard() no src/main.ts antigo, agora no HTML.
+import integrantes from "../../data/members.json";
+import { t, type Lang } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+}
+
+interface Integrante {
+  name: string;
+  description: string;
+  descriptionEn?: string;
+  image?: string;
+  links?: { label: string; url: string }[];
+}
+
+const { lang } = Astro.props;
+const lista = integrantes as Integrante[];
+---
+
+<section class="section wrap">
+  <h2 style="font-size:clamp(2rem, 4vw, 2.6rem);margin-bottom:1.5rem">{t(lang, "sobre.membersHeading")}</h2>
+  {
+    lista.length === 0 ? (
+      <p class="empty-state">{t(lang, "sobre.noMembers")}</p>
+    ) : (
+      <div id="members-list" class="members-grid">
+        {lista.map((m) => (
+          <div class="member-card">
+            <div class="member-photo">{m.image && <img src={`/${m.image}`} alt="" loading="lazy" />}</div>
+            <div class="card member-info">
+              <div class="card-title">{m.name}</div>
+              <p class="card-body">{lang === "en" && m.descriptionEn ? m.descriptionEn : m.description}</p>
+              {m.links && m.links.length > 0 && (
+                <div class="member-links">
+                  {m.links.map((link) => (
+                    <a class="text-link" href={link.url} target="_blank" rel="noopener noreferrer">
+                      {link.label}
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+</section>
