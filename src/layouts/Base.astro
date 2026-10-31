@@ -135,6 +135,7 @@ const licencaUrl =
           ))
         }
         <div class="header-nav-right">
+          <slot name="nav-direita" />
           <div class="lang-switch" role="group" aria-label={t(lang, "common.language")}>
             <a class="lang-btn" href={lang === "pt" ? caminhoNoIdioma(path, "pt") : hrefOutro} hreflang="pt-BR" lang="pt-BR" aria-label="Português" aria-current={lang === "pt" ? "true" : undefined}>🇧🇷</a>
             <a class="lang-btn" href={lang === "en" ? caminhoNoIdioma(path, "en") : hrefOutro} hreflang="en" lang="en" aria-label="English" aria-current={lang === "en" ? "true" : undefined}>🇺🇸</a>

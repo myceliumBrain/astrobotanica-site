@@ -1,0 +1,31 @@
+---
+// /podcast: todos os episódios, com descrição (renderEpisodeList).
+import Base from "../../layouts/Base.astro";
+import LinhaEpisodio from "../LinhaEpisodio.astro";
+import { t, type Lang } from "../../lib/i18n";
+import { episodios } from "../../lib/episodios";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+---
+
+<Base lang={lang} title={t(lang, "podcast.metaTitle")} description={t(lang, "podcast.metaDescription")} path="/podcast">
+  <link slot="head" rel="alternate" type="application/rss+xml" title="Jardim em Expansão — Podcast Astrobotânica" href="/podcast.xml" />
+  <a slot="nav-direita" href="/podcast.xml" class="rss-link">{t(lang, "podcast.rssLabel")}</a>
+
+  <section class="page-header wrap">
+    <h1 style="text-transform:none">{t(lang, "podcast.title")}</h1>
+    <p>{t(lang, "podcast.intro")}</p>
+  </section>
+
+  <section class="section wrap">
+    <h2 style="font-size:1.4rem;margin-bottom:1.5rem">{t(lang, "podcast.episodesHeading")}</h2>
+    <div id="episode-list">
+      {episodios.length === 0 && <p class="empty-state">{t(lang, "podcast.emptyList")}</p>}
+      {episodios.map((e) => <LinhaEpisodio episodio={e} lang={lang} comDescricao />)}
+    </div>
+  </section>
+</Base>
