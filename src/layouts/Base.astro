@@ -15,9 +15,13 @@ interface Props {
   temOutroIdioma?: boolean;
   /** Para onde o seletor de idioma leva quando temOutroIdioma é false. */
   destinoSemTraducao?: string;
+  /** false: noindex, sem canonical nem hreflang (ex.: 404). */
+  indexavel?: boolean;
+  /** Item do menu marcado como atual, quando não é o 1º segmento do caminho (ex.: episódios → "/podcast"). */
+  secao?: string;
 }
 
-const { lang, title, description, path, temOutroIdioma = true, destinoSemTraducao } = Astro.props;
+const { lang, title, description, path, temOutroIdioma = true, destinoSemTraducao, indexavel = true, secao } = Astro.props;
 const outro: Lang = lang === "pt" ? "en" : "pt";
 const site = Astro.site!;
 const urlAqui = new URL(caminhoNoIdioma(path, lang), site).href;
@@ -26,7 +30,7 @@ const urlEn = new URL(caminhoNoIdioma(path, "en"), site).href;
 const hrefOutro = temOutroIdioma ? caminhoNoIdioma(path, outro) : caminhoNoIdioma(destinoSemTraducao ?? "/", outro);
 
 const link = (p: string) => caminhoNoIdioma(p, lang);
-const secaoAtual = "/" + (path.split("/")[1] ?? "");
+const secaoAtual = secao ?? "/" + (path.split("/")[1] ?? "");
 
 const navItens = [
   { href: "/noticias", texto: t(lang, "nav.articles") },
@@ -60,9 +64,9 @@ const licencaUrl =
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     {description && <meta name="description" content={description} />}
-    <link rel="canonical" href={urlAqui} />
+    {indexavel ? <link rel="canonical" href={urlAqui} /> : <meta name="robots" content="noindex" />}
     {
-      temOutroIdioma && (
+      indexavel && temOutroIdioma && (
         <>
           <link rel="alternate" hreflang="pt-BR" href={urlPt} />
           <link rel="alternate" hreflang="en" href={urlEn} />
@@ -73,6 +77,7 @@ const licencaUrl =
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="/css/style.css" />
+    <link rel="alternate" type="application/rss+xml" title="Astrobotânica — Notícias" href="/rss.xml" />
     <slot name="head" />
   </head>
   <body>
