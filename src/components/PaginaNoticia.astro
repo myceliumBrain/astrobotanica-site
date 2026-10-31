@@ -1,0 +1,81 @@
+---
+// Página de uma notícia: mesma estrutura e classes de renderArticleDetail()
+// no src/main.ts antigo, agora no HTML. Ainda faltam (próximas fases):
+// compartilhar, card do autor, barra lateral e "Continue lendo".
+import Base from "../layouts/Base.astro";
+import { t, type Lang } from "../lib/i18n";
+import { corpoHtml, formatarData, resumo, type Noticia } from "../lib/noticias";
+
+interface Props {
+  noticia: Noticia;
+  temOutroIdioma: boolean;
+}
+
+const { noticia, temOutroIdioma } = Astro.props;
+const n = noticia.data;
+const lang = n.lang as Lang;
+const path = `/artigo/${n.id}/`;
+---
+
+<Base
+  lang={lang}
+  title={`${n.title} — Astrobotânica`}
+  description={resumo(noticia)}
+  path={path}
+  temOutroIdioma={temOutroIdioma}
+  destinoSemTraducao="/noticias"
+>
+  {/* O corpo das notícias usa caminhos relativos (src="images/..."), como no
+      site antigo — que também usava <base href="/"> em /artigo/<id>/. */}
+  <base slot="head" href="/" />
+  <article class="wrap" style="padding-top:2.5rem;padding-bottom:1.5rem">
+    <a href={lang === "en" ? "/en/noticias" : "/noticias"} class="btn btn-ghost" style="margin-bottom:1rem;display:inline-block">
+      {t(lang, "artigo.backLink")}
+    </a>
+    <div id="artigo-content">
+      {n.category && <span class="tag tag-accent">{n.category}</span>}
+      <h1>{n.title}</h1>
+      {n.subtitle && <p class="article-subtitle">{n.subtitle}</p>}
+      <div class="article-meta-row">
+        <span class="article-byline-meta">
+          {formatarData(n.date, lang)}{n.time && ` ${t(lang, "artigo.publishedAt", { time: n.time })}`} · {n.readingTime}
+        </span>
+      </div>
+      {
+        n.image && (
+          <>
+            <div class="article-cover">
+              <img src={`/${n.image}`} alt="" />
+            </div>
+            {n.imageCaption && <p class="article-cover-caption">{n.imageCaption}</p>}
+          </>
+        )
+      }
+      <div class="article-layout">
+        <div class="article-main">
+          <div class="article-body" set:html={corpoHtml(noticia)} />
+          {
+            n.references && n.references.length > 0 && (
+              <div class="article-references">
+                <h2 class="article-references-heading">{t(lang, "artigo.referencesHeading")}</h2>
+                <ol class="article-references-list">
+                  {n.references.map((ref) => (
+                    <li>
+                      {ref.url ? (
+                        <a href={ref.url} target="_blank" rel="noopener noreferrer">
+                          {ref.text}
+                        </a>
+                      ) : (
+                        ref.text
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )
+          }
+        </div>
+      </div>
+    </div>
+  </article>
+</Base>
