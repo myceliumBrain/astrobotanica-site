@@ -25,7 +25,8 @@ const noticias = defineCollection({
     tags: z.array(z.string()),
     lang: z.enum(["pt", "en"]),
     boletim: z.object({ volume: z.string(), numero: z.string() }),
-    erratas: z.array(z.unknown()),
+    // Cada errata: data da correção e o que foi corrigido.
+    erratas: z.array(z.object({ data, texto: z.string().min(1) })),
 
     // Campos do site atual
     id: z.string().regex(/^noticia-\d+$/),

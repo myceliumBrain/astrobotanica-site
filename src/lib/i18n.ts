@@ -24,6 +24,22 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
     provisorio: {
       aviso: "Página provisória — conteúdo em preparação.",
     },
+    artigo: {
+      publishedOn: "Publicado em {{date}}",
+      updatedOn: "Atualizado em {{date}}",
+      reviewedBy: "Revisão técnica por",
+      fonteHeading: "Fonte original",
+      fonteLink: "Acessar a fonte",
+      citeHeading: "Como citar (ABNT)",
+      citeCopy: "Copiar",
+      citeCopied: "Copiado!",
+      accessedPlaceholder: "[data de acesso]",
+      erratasHeading: "Erratas",
+      licenseHeading: "Licença",
+      licenseText:
+        "Este texto está licenciado sob a {{license}}: pode ser copiado, distribuído e adaptado, para qualquer fim, desde que seja dado o crédito à autoria e ao Astrobotânica.",
+      licenseName: "Creative Commons Atribuição 4.0 Internacional (CC BY 4.0)",
+    },
   },
   en: {
     footer: {
@@ -36,6 +52,22 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
     },
     provisorio: {
       aviso: "Provisional page — content in preparation.",
+    },
+    artigo: {
+      publishedOn: "Published on {{date}}",
+      updatedOn: "Updated on {{date}}",
+      reviewedBy: "Technical review by",
+      fonteHeading: "Original source",
+      fonteLink: "Go to the source",
+      citeHeading: "How to cite (ABNT)",
+      citeCopy: "Copy",
+      citeCopied: "Copied!",
+      accessedPlaceholder: "[access date]",
+      erratasHeading: "Errata",
+      licenseHeading: "License",
+      licenseText:
+        "This text is licensed under {{license}}: it may be copied, distributed and adapted for any purpose, as long as credit is given to the author and to Astrobotânica.",
+      licenseName: "Creative Commons Attribution 4.0 International (CC BY 4.0)",
     },
   },
 };

@@ -1,10 +1,14 @@
 ---
 // Página de uma notícia: mesma estrutura e classes de renderArticleDetail()
-// no src/main.ts antigo, agora no HTML. Ainda faltam (próximas fases):
-// compartilhar, card do autor, barra lateral e "Continue lendo".
+// no src/main.ts antigo, agora no HTML, mais os blocos editoriais do front
+// matter (fonte original, tipo de estudo, revisão técnica, como citar,
+// erratas, licença). Blocos opcionais só aparecem se o campo estiver
+// preenchido. Ainda faltam (próximas fases): compartilhar, card do autor,
+// barra lateral e "Continue lendo".
 import Base from "../layouts/Base.astro";
-import { t, type Lang } from "../lib/i18n";
+import { t, caminhoNoIdioma, type Lang } from "../lib/i18n";
 import { corpoHtml, formatarData, resumo, type Noticia } from "../lib/noticias";
+import { citacaoAbnt, doiNormalizado, urlLattes, urlOrcid } from "../lib/citacao";
 
 interface Props {
   noticia: Noticia;
@@ -15,6 +19,22 @@ const { noticia, temOutroIdioma } = Astro.props;
 const n = noticia.data;
 const lang = n.lang as Lang;
 const path = `/artigo/${n.id}/`;
+const urlCanonica = new URL(caminhoNoIdioma(path, lang), Astro.site).href;
+
+const orcid = n.orcid ? urlOrcid(n.orcid) : undefined;
+const lattes = n.lattes ? urlLattes(n.lattes) : undefined;
+const temFonte = Boolean(n.fonte.citacao || n.fonte.url || n.fonte.doi);
+const doi = n.fonte.doi ? doiNormalizado(n.fonte.doi) : undefined;
+const erratas = [...n.erratas].sort((a, b) => a.data.localeCompare(b.data));
+
+const citacao = citacaoAbnt(
+  { autor: n.author, titulo: n.title, data: n.date, url: urlCanonica, volume: n.boletim.volume, numero: n.boletim.numero },
+  lang
+);
+
+const [licencaAntes, licencaDepois] = t(lang, "artigo.licenseText").split("{{license}}");
+const licencaUrl =
+  lang === "pt" ? "https://creativecommons.org/licenses/by/4.0/deed.pt-br" : "https://creativecommons.org/licenses/by/4.0/deed.en";
 ---
 
 <Base
@@ -33,14 +53,56 @@ const path = `/artigo/${n.id}/`;
       {t(lang, "artigo.backLink")}
     </a>
     <div id="artigo-content">
-      {n.category && <span class="tag tag-accent">{n.category}</span>}
+      <div class="noticia-tags">
+        {n.category && <span class="tag tag-accent">{n.category}</span>}
+        {n.tipo_estudo && <span class="tag tag-outline noticia-tipo-estudo">{n.tipo_estudo}</span>}
+      </div>
       <h1>{n.title}</h1>
       {n.subtitle && <p class="article-subtitle">{n.subtitle}</p>}
+
+      {
+        n.author && (
+          <p class="noticia-autor">
+            {t(lang, "artigo.byLine", { author: n.author })}
+            {orcid && (
+              <a class="noticia-id-link" href={orcid.url} target="_blank" rel="noopener noreferrer" title={`ORCID ${orcid.id}`}>
+                <span class="noticia-orcid-icone" aria-hidden="true">iD</span>
+                ORCID
+              </a>
+            )}
+            {lattes && (
+              <a class="noticia-id-link" href={lattes} target="_blank" rel="noopener noreferrer">
+                Lattes
+              </a>
+            )}
+          </p>
+        )
+      }
+      {
+        n.revisor_tecnico && (
+          <p class="noticia-revisor">
+            {t(lang, "artigo.reviewedBy")}: {n.revisor_tecnico}
+          </p>
+        )
+      }
+
       <div class="article-meta-row">
         <span class="article-byline-meta">
-          {formatarData(n.date, lang)}{n.time && ` ${t(lang, "artigo.publishedAt", { time: n.time })}`} · {n.readingTime}
+          <time datetime={n.time ? `${n.date}T${n.time}-03:00` : n.date}>
+            {t(lang, "artigo.publishedOn", { date: formatarData(n.date, lang) })}{n.time && ` ${t(lang, "artigo.publishedAt", { time: n.time })}`}
+          </time>
+          {
+            n.updated && (
+              <>
+                {" · "}
+                <time datetime={n.updated}>{t(lang, "artigo.updatedOn", { date: formatarData(n.updated, lang) })}</time>
+              </>
+            )
+          }
+          {n.readingTime && ` · ${n.readingTime}`}
         </span>
       </div>
+
       {
         n.image && (
           <>
@@ -51,9 +113,35 @@ const path = `/artigo/${n.id}/`;
           </>
         )
       }
+
       <div class="article-layout">
         <div class="article-main">
           <div class="article-body" set:html={corpoHtml(noticia)} />
+
+          {
+            temFonte && (
+              <aside class="noticia-caixa noticia-fonte">
+                <h2 class="noticia-caixa-titulo">{t(lang, "artigo.fonteHeading")}</h2>
+                {n.fonte.citacao && <p class="noticia-fonte-citacao">{n.fonte.citacao}</p>}
+                <p class="noticia-fonte-links">
+                  {n.fonte.url && (
+                    <a href={n.fonte.url} target="_blank" rel="noopener noreferrer">
+                      {t(lang, "artigo.fonteLink")} ↗
+                    </a>
+                  )}
+                  {doi && (
+                    <span>
+                      DOI:{" "}
+                      <a href={doi.url} target="_blank" rel="noopener noreferrer">
+                        {doi.doi}
+                      </a>
+                    </span>
+                  )}
+                </p>
+              </aside>
+            )
+          }
+
           {
             n.references && n.references.length > 0 && (
               <div class="article-references">
@@ -74,8 +162,189 @@ const path = `/artigo/${n.id}/`;
               </div>
             )
           }
+
+          {
+            erratas.length > 0 && (
+              <section class="article-references noticia-erratas">
+                <h2 class="article-references-heading">{t(lang, "artigo.erratasHeading")}</h2>
+                <ul class="article-references-list">
+                  {erratas.map((e) => (
+                    <li>
+                      <time datetime={e.data}>{formatarData(e.data, lang)}</time>: {e.texto}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          }
+
+          <section class="noticia-caixa noticia-citar">
+            <div class="noticia-citar-topo">
+              <h2 class="noticia-caixa-titulo">{t(lang, "artigo.citeHeading")}</h2>
+              <button type="button" class="noticia-citar-copiar" data-copiado={t(lang, "artigo.citeCopied")} hidden>
+                {t(lang, "artigo.citeCopy")}
+              </button>
+            </div>
+            <p class="noticia-citar-texto">
+              {citacao.antes}<strong>{citacao.site}</strong>{citacao.depois} {citacao.acessoRotulo}{" "}
+              <span class="noticia-citar-acesso">{t(lang, "artigo.accessedPlaceholder")}</span>.
+            </p>
+          </section>
+
+          <footer class="noticia-licenca">
+            <h2 class="noticia-caixa-titulo">{t(lang, "artigo.licenseHeading")}</h2>
+            <p>
+              {licencaAntes}<a href={licencaUrl} rel="license noopener" target="_blank">{t(lang, "artigo.licenseName")}</a>{licencaDepois}
+            </p>
+          </footer>
         </div>
       </div>
     </div>
   </article>
 </Base>
+
+<script>
+  // "Acesso em": a data do dia em que o leitor está citando, no mesmo
+  // formato ABNT da data de publicação (ex.: "1 nov. 2026").
+  const MESES = {
+    pt: ["jan.", "fev.", "mar.", "abr.", "maio", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."],
+    en: ["Jan.", "Feb.", "Mar.", "Apr.", "May", "June", "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."],
+  };
+  const lang = document.documentElement.lang === "en" ? "en" : "pt";
+  const hoje = new Date();
+  document.querySelectorAll<HTMLElement>(".noticia-citar-acesso").forEach((el) => {
+    el.textContent = `${hoje.getDate()} ${MESES[lang][hoje.getMonth()]} ${hoje.getFullYear()}`;
+  });
+
+  document.querySelectorAll<HTMLButtonElement>(".noticia-citar-copiar").forEach((botao) => {
+    if (!navigator.clipboard) return;
+    botao.hidden = false;
+    const rotulo = botao.textContent;
+    botao.addEventListener("click", async () => {
+      const texto = botao.closest(".noticia-citar")?.querySelector(".noticia-citar-texto")?.textContent;
+      if (!texto) return;
+      await navigator.clipboard.writeText(texto.replace(/\s+/g, " ").trim());
+      botao.textContent = botao.dataset.copiado ?? rotulo;
+      setTimeout(() => (botao.textContent = rotulo), 2000);
+    });
+  });
+</script>
+
+<style>
+  /* Só o que é novo nesta página; o resto vem de css/style.css. */
+  .noticia-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  .noticia-autor,
+  .noticia-revisor {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-dim);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+  }
+  .noticia-autor {
+    margin-top: var(--space-1);
+  }
+  .noticia-revisor {
+    margin-top: 0.25rem;
+    color: var(--ink-faint);
+  }
+  .noticia-id-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--accent-700);
+    text-decoration: none;
+  }
+  .noticia-id-link:hover {
+    text-decoration: underline;
+  }
+  .noticia-orcid-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.05rem;
+    height: 1.05rem;
+    border-radius: 999px;
+    background: #a6ce39; /* verde oficial do ícone ORCID iD */
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 0.55rem;
+    font-weight: 600;
+  }
+  .noticia-caixa {
+    margin-top: var(--space-4);
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+  }
+  .noticia-fonte {
+    border-left: 3px solid var(--accent-700);
+  }
+  .noticia-caixa-titulo {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: var(--space-1);
+  }
+  .noticia-fonte-citacao {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .noticia-fonte-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    margin-top: var(--space-1);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  .noticia-fonte-links a {
+    color: var(--accent-700);
+    word-break: break-all;
+  }
+  .noticia-citar-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+  .noticia-citar-copiar {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--accent-700);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+  }
+  .noticia-citar-copiar:hover {
+    border-color: var(--accent-700);
+  }
+  .noticia-citar-texto {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--ink-dim);
+    overflow-wrap: anywhere;
+  }
+  .noticia-licenca {
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--ink-faint);
+  }
+  .noticia-licenca a {
+    color: var(--accent-700);
+  }
+</style>
