@@ -165,17 +165,20 @@ atrapalhar: um transformador no build que prefixa `/` só no HTML de saída.
 | `/artigo/noticia-N` (sem barra) | igual (o Pages redireciona para a barra) | comportamento nativo |
 | `/artigo/noticia-N/og-image.jpg` | igual | gerado com sharp (1200px, JPEG q82, como hoje) |
 | `/noticia?id=X`, `/noticia.html?id=X` | **redireciona** para `/artigo/X/` | `noticia.html` vira página de redirecionamento (ver abaixo) |
-| `/episodio?id=X`, `/episodio.html?id=X` | **redireciona** para `/podcast/X/` | idem, `episodio.html` |
-| — (novo) | `/podcast/ep-01/`, `/podcast/ep-2/` | páginas estáticas de episódio, com transcrição no HTML |
+| `/episodio?id=X`, `/episodio.html?id=X` | **redireciona** para `/episodios/X/` | idem, `episodio.html` |
+| — (novo) | `/episodios/ep-01/`, `/episodios/ep-2/` | páginas estáticas de episódio, com transcrição no HTML |
 | `/estudo?slug=X`, `/estudo.html?slug=X` | **redireciona** para `/estudos/<cat>/X/` | idem, `estudo.html` |
 | `/rss.xml`, `/podcast.xml`, `/sitemap.xml`, `/robots.txt`, `/CNAME` | igual | endpoints/cópia |
 | `/images/**`, `/audio/**`, `/css/style.css` | igual | cópia |
 | `/admin/` | igual | cópia |
 | — (novo) | `/404.html` | página de erro, que também redireciona padrões antigos que escaparem |
 
-**Por que episódios ganham `/podcast/<id>/`, e não `/episodio/<id>/`:** uma
-pasta `episodio/` ao lado de `episodio.html` é exatamente a colisão que o
-código atual evita com `/artigo/`. O Pages não faz redirecionamento pelo
+**Por que episódios ganham `/episodios/<id>/`, e não `/episodio/<id>/` nem
+`/podcast/<id>/`:** uma pasta `episodio/` ao lado de `episodio.html` (ou
+`podcast/` ao lado de `podcast.html`) é exatamente a colisão que o código
+atual evita com `/artigo/`: o Pages passa a mandar `/podcast` para
+`/podcast/`, onde não há página. (A primeira versão deste plano dizia
+`/podcast/<id>/`; o verificador de URLs pegou a colisão e o plano foi corrigido.) O Pages não faz redirecionamento pelo
 servidor e não enxerga query string, então `?id=` só pode ser tratado no
 cliente.
 
@@ -189,7 +192,7 @@ estudos). Um `<noscript>` mostra um link para a lista (`/noticias`,
 
 **Feeds:** o `guid` de cada item fica **idêntico**. Em `rss.xml` ele já é
 `/artigo/<id>/`. Em `podcast.xml` continua sendo `/episodio?id=<id>` (só o
-`<link>` passa a apontar para `/podcast/<id>/`), para que os apps de podcast
+`<link>` passa a apontar para `/episodios/<id>/`), para que os apps de podcast
 não dupliquem episódios.
 
 ---
@@ -213,7 +216,7 @@ chaves que hoje só existem em PT (`social.*`, `socialLinks`,
 | Categoria de estudo | **novos** `nomeEn`, `descricaoEn` | 0 de 4 |
 | Integrante | `descriptionEn` (já existe) | já preenchido |
 
-- Item traduzido: ganha página EN (`/en/artigo/<id>/`, `/en/podcast/<id>/`,
+- Item traduzido: ganha página EN (`/en/artigo/<id>/`, `/en/episodios/<id>/`,
   `/en/estudos/<cat>/<slug>/`), com hreflang.
 - Item ainda sem tradução: **não** ganha página EN com texto em português.
   Nas listas EN (Home, Notícias, Podcast, Estudos) ele aparece com o título
@@ -342,14 +345,14 @@ nomes próprios listados na seção 4.
 
 **5.2** Páginas EN de item (notícia, episódio, verbete) geradas só para
 itens traduzidos; selo "Portuguese only" nas listas EN para os demais.
-✔ Hoje: exatamente 9 páginas em `/en/artigo/`, 0 em `/en/podcast/<id>/`.
+✔ Hoje: exatamente 9 páginas em `/en/artigo/`, 0 em `/en/episodios/<id>/`.
 Nenhuma página de item EN contém corpo em português.
 
 **5.3** Schema: campos EN opcionais em `episodes.json`, `estudos.json` e
 `categorias_estudo.json`. Os campos ficam ausentes até alguém traduzir, e
 nenhum texto existente é alterado.
 ✔ Build passa com os campos ausentes. Um teste temporário com `titleEn` num
-episódio (desfeito depois) gera `/en/podcast/<id>/` e o hreflang do par.
+episódio (desfeito depois) gera `/en/episodios/<id>/` e o hreflang do par.
 
 **5.4** `/en/rss.xml`, hreflang e seletor de idioma por link.
 ✔ Os hreflang de cada par apontam um para o outro (script verifica
