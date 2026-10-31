@@ -2,7 +2,7 @@
   {
     "id": "noticia-14",
     "category": "Agricultura Espacial",
-    "title": "",
+    "title": "A Alquimia do Regolito: Revisão das Metodologias e Desafios da Agricultura Espacial",
     "date": "2026-10-31",
     "time": "21:29",
     "readingTime": "13 min",
@@ -26,7 +26,9 @@
       }
     ],
     "image": "images/noticias/noticia-14-imagem-principal.jpg",
-    "imageCaption": "vemos alface romana vermelha crescendo dentro do Habitat Avançado para Plantas do módulo de laboratório Kibo. Fonte: NASA (2024)"
+    "imageCaption": "vemos alface romana vermelha crescendo dentro do Habitat Avançado para Plantas do módulo de laboratório Kibo. Fonte: NASA (2024)",
+    "author": "Pedro Henrique Tenorio Alvarenga",
+    "authorAvatar": "images/integrantes/integrante-pedro.jpeg"
   },
   {
     "id": "noticia-13",
