@@ -1,0 +1,47 @@
+---
+// Página provisória: usa o layout definitivo com o título/introdução da
+// seção (de data/site.json quando a chave existe) e um aviso. Cada página
+// real substitui esta nas próximas fases do PLANO-MIGRACAO.md.
+import Base from "../layouts/Base.astro";
+import { t, type Lang } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+  path: string;
+}
+
+// Seções que já têm textos em data/site.json (prefixo da chave) e páginas
+// novas do rodapé (chave do título em footer.*).
+const PAGINAS: Record<string, { secao?: string; tituloChave?: string }> = {
+  "/": { secao: "home" },
+  "/noticias": { secao: "artigos" },
+  "/estudos": { secao: "estudos" },
+  "/podcast": { secao: "podcast" },
+  "/sobre": { secao: "sobre" },
+  "/contato": { secao: "contato" },
+  "/expediente": { tituloChave: "footer.expediente" },
+  "/politica-editorial": { tituloChave: "footer.editorialPolicy" },
+  "/normas-para-colaboradores": { tituloChave: "footer.contributorGuidelines" },
+  "/privacidade": { tituloChave: "footer.privacy" },
+};
+
+const { lang, path } = Astro.props;
+const pagina = PAGINAS[path] ?? {};
+const marca = "Astrobotânica";
+const titulo = pagina.secao
+  ? t(lang, `${pagina.secao}.title`) || t(lang, `${pagina.secao}.panelKicker`) || marca
+  : t(lang, pagina.tituloChave ?? "");
+const metaTitulo = (pagina.secao && t(lang, `${pagina.secao}.metaTitle`)) || `${titulo} — ${marca}`;
+const descricao = pagina.secao ? t(lang, `${pagina.secao}.metaDescription`) : undefined;
+const intro = pagina.secao ? t(lang, `${pagina.secao}.intro`) : "";
+---
+
+<Base lang={lang} title={metaTitulo} description={descricao || undefined} path={path}>
+  <section class="page-header wrap">
+    <h1>{titulo}</h1>
+    {intro && <p>{intro}</p>}
+  </section>
+  <section class="section wrap">
+    <p class="empty-state">{t(lang, "provisorio.aviso")}</p>
+  </section>
+</Base>

@@ -1,0 +1,176 @@
+---
+// Layout comum a todas as páginas: <head>, cabeçalho, menu (desktop e
+// overlay do celular) e rodapé — mesma marcação e classes do HTML antigo,
+// para o css/style.css funcionar sem alteração, mas com os textos já
+// preenchidos no build (visíveis sem JavaScript).
+import { t, valor, caminhoNoIdioma, type Lang } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+  title: string;
+  description?: string;
+  /** Caminho da página sem o prefixo /en (ex.: "/sobre"). */
+  path: string;
+  /** false quando a página não tem versão no outro idioma. */
+  temOutroIdioma?: boolean;
+  /** Para onde o seletor de idioma leva quando temOutroIdioma é false. */
+  destinoSemTraducao?: string;
+}
+
+const { lang, title, description, path, temOutroIdioma = true, destinoSemTraducao } = Astro.props;
+const outro: Lang = lang === "pt" ? "en" : "pt";
+const site = Astro.site!;
+const urlAqui = new URL(caminhoNoIdioma(path, lang), site).href;
+const urlPt = new URL(caminhoNoIdioma(path, "pt"), site).href;
+const urlEn = new URL(caminhoNoIdioma(path, "en"), site).href;
+const hrefOutro = temOutroIdioma ? caminhoNoIdioma(path, outro) : caminhoNoIdioma(destinoSemTraducao ?? "/", outro);
+
+const link = (p: string) => caminhoNoIdioma(p, lang);
+const secaoAtual = "/" + (path.split("/")[1] ?? "");
+
+const navItens = [
+  { href: "/noticias", texto: t(lang, "nav.articles") },
+  { href: "/estudos", texto: t(lang, "nav.estudos") },
+  { href: "/podcast", texto: t(lang, "nav.podcast") },
+  { href: "/sobre", texto: t(lang, "nav.about") },
+  { href: "/contato", texto: t(lang, "nav.contact") },
+];
+
+const institucionais = [
+  { href: "/sobre", texto: t(lang, "nav.about") },
+  { href: "/expediente", texto: t(lang, "footer.expediente") },
+  { href: "/politica-editorial", texto: t(lang, "footer.editorialPolicy") },
+  { href: "/normas-para-colaboradores", texto: t(lang, "footer.contributorGuidelines") },
+  { href: "/privacidade", texto: t(lang, "footer.privacy") },
+];
+
+// Links cadastrados no painel às vezes vêm sem protocolo ("www.youtube.com"),
+// o que viraria um link relativo quebrado.
+const comProtocolo = (url: string) => (/^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`);
+const redes = (valor<{ label: string; url: string }[]>(lang, "socialLinks") ?? []).filter((r) => r.label && r.url);
+
+const licencaUrl =
+  lang === "pt" ? "https://creativecommons.org/licenses/by/4.0/deed.pt-br" : "https://creativecommons.org/licenses/by/4.0/deed.en";
+---
+
+<!doctype html>
+<html lang={lang === "en" ? "en" : "pt-BR"}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <link rel="canonical" href={urlAqui} />
+    {
+      temOutroIdioma && (
+        <>
+          <link rel="alternate" hreflang="pt-BR" href={urlPt} />
+          <link rel="alternate" hreflang="en" href={urlEn} />
+          <link rel="alternate" hreflang="x-default" href={urlPt} />
+        </>
+      )
+    }
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="/css/style.css" />
+    <slot name="head" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap header-top">
+        <a href={link("/")} class="brand-mark">{t(lang, "brand.name")}</a>
+        <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="nav-overlay">
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+          <span class="nav-toggle-bar"></span>
+          <span class="visually-hidden">{t(lang, "common.openMenu")}</span>
+        </button>
+      </div>
+      <hr class="header-divider" />
+      <nav class="wrap header-nav">
+        {
+          navItens.map((item) => (
+            <a href={link(item.href)} aria-current={item.href === secaoAtual ? "page" : undefined}>
+              {item.texto}
+            </a>
+          ))
+        }
+        <div class="header-nav-right">
+          <div class="lang-switch" role="group" aria-label={t(lang, "common.language")}>
+            <a class="lang-btn" href={lang === "pt" ? caminhoNoIdioma(path, "pt") : hrefOutro} hreflang="pt-BR" lang="pt-BR" aria-label="Português" aria-current={lang === "pt" ? "true" : undefined}>🇧🇷</a>
+            <a class="lang-btn" href={lang === "en" ? caminhoNoIdioma(path, "en") : hrefOutro} hreflang="en" lang="en" aria-label="English" aria-current={lang === "en" ? "true" : undefined}>🇺🇸</a>
+          </div>
+        </div>
+      </nav>
+    </header>
+
+    <div class="nav-overlay" id="nav-overlay">
+      <nav class="nav-overlay-panel">
+        <button type="button" class="nav-overlay-close" aria-label={t(lang, "common.closeMenu")}>✕</button>
+        {navItens.map((item) => <a href={link(item.href)}>{item.texto}</a>)}
+        <div class="lang-switch" role="group" aria-label={t(lang, "common.language")}>
+          <a class="lang-btn" href={lang === "pt" ? caminhoNoIdioma(path, "pt") : hrefOutro} hreflang="pt-BR" lang="pt-BR" aria-label="Português" aria-current={lang === "pt" ? "true" : undefined}>🇧🇷</a>
+          <a class="lang-btn" href={lang === "en" ? caminhoNoIdioma(path, "en") : hrefOutro} hreflang="en" lang="en" aria-label="English" aria-current={lang === "en" ? "true" : undefined}>🇺🇸</a>
+        </div>
+      </nav>
+    </div>
+
+    <main>
+      <slot />
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap footer-inner">
+        <div class="footer-brand">
+          <span class="footer-word">{t(lang, "brand.name")}</span>
+          <p class="footer-tagline">{t(lang, "brand.footerTagline")}</p>
+        </div>
+        <div class="footer-cols">
+          <div class="footer-col">
+            <span class="footer-heading">{t(lang, "footer.navHeading")}</span>
+            {navItens.map((item) => <a href={link(item.href)}>{item.texto}</a>)}
+          </div>
+          <div class="footer-col">
+            <span class="footer-heading">{t(lang, "footer.institutionalHeading")}</span>
+            {institucionais.map((item) => <a href={link(item.href)}>{item.texto}</a>)}
+          </div>
+          {
+            redes.length > 0 && (
+              <div class="footer-col">
+                <span class="footer-heading">{t(lang, "footer.socialHeading")}</span>
+                {redes.map((r) => (
+                  <a href={comProtocolo(r.url)} target="_blank" rel="noopener noreferrer">
+                    {r.label}
+                  </a>
+                ))}
+              </div>
+            )
+          }
+        </div>
+      </div>
+      <div class="wrap footer-copy">
+        {t(lang, "brand.copyright")}
+        <span class="footer-license">
+          {t(lang, "footer.licensePrefix")} <a href={licencaUrl} rel="license noopener" target="_blank">CC BY 4.0</a>.
+        </span>
+      </div>
+    </footer>
+
+    <script src="../scripts/cliente.ts"></script>
+  </body>
+</html>
+
+<style is:global>
+  /* O seletor de idioma agora é feito de links (antes, <button>): tira o
+     sublinhado e mantém a mesma caixa dos botões de css/style.css. */
+  .lang-btn {
+    display: inline-block;
+    text-decoration: none;
+  }
+  .footer-license {
+    margin-left: 0.5em;
+  }
+  .footer-license a {
+    color: inherit;
+  }
+</style>
