@@ -3,6 +3,7 @@
 // <xhtml:link> de alternância entre os pares PT/EN.
 import { noticiasDoIdioma } from "../lib/noticias";
 import { paginaInstitucional } from "../lib/paginas";
+import { urlVerbete, verbetesPublicados } from "../lib/estudos";
 import { episodios, urlEpisodio } from "../lib/episodios";
 import { caminhoNoIdioma } from "../lib/i18n";
 import { BASE_URL, respostaXml, xmlEscape } from "../lib/feeds";
@@ -95,7 +96,10 @@ export async function GET() {
     entradas.push({ caminho: caminhoNoIdioma(caminho, "en"), lastmod: n.data.updated || n.data.date, changefreq: "monthly", par: caminho });
   }
 
-  // Verbetes de estudo entram aqui quando as páginas /estudos/<cat>/<slug>/ existirem (hoje não há nenhum publicado).
+  // Verbetes publicados (só PT por enquanto), como generate_sitemap.py.
+  for (const v of verbetesPublicados) {
+    entradas.push({ caminho: urlVerbete(v), lastmod: v.dataAtualizacao || undefined, changefreq: "monthly" });
+  }
 
   const xml =
     '<?xml version="1.0" encoding="UTF-8"?>\n' +

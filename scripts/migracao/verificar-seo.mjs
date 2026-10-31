@@ -36,6 +36,7 @@ const PROPRIEDADES = {
   PropertyValue: ["@type", "propertyID", "value"],
   CreativeWork: [...COMUNS, "author", "datePublished"],
   ScholarlyArticle: [...COMUNS, "author", "datePublished"],
+  DefinedTerm: [...COMUNS, "inDefinedTermSet"],
   NewsArticle: [
     ...COMUNS,
     "headline",

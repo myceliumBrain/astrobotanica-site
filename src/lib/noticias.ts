@@ -24,7 +24,7 @@ export function corpoHtml(n: Noticia): string {
 // subtítulo ou início do corpo sem tags, cortado em 220 caracteres.
 const RESUMO_MAX = 220;
 
-function semHtml(html: string): string {
+export function semHtml(html: string): string {
   return html
     .replace(/<(style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
     .replace(/<[^>]+>/g, " ")

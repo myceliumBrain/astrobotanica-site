@@ -4,25 +4,15 @@
 // filtra no navegador; sem JS, a lista completa já está no HTML.
 import Base from "../../layouts/Base.astro";
 import { t, type Lang } from "../../lib/i18n";
-import estudos from "../../../data/estudos.json";
-import categorias from "../../../data/categorias_estudo.json";
-
-interface Verbete {
-  slug: string;
-  titulo: string;
-  categoriaId: string;
-  definicaoCurta?: string;
-  imagemCapa?: string;
-  publicado?: boolean;
-}
+import { categoriasEstudo, urlVerbete, verbetesPublicados } from "../../lib/estudos";
 
 interface Props {
   lang: Lang;
 }
 
 const { lang } = Astro.props;
-const publicados = (estudos as Verbete[]).filter((v) => v.publicado);
-const grupos = categorias
+const publicados = verbetesPublicados;
+const grupos = categoriasEstudo
   .map((categoria) => ({ categoria, itens: publicados.filter((v) => v.categoriaId === categoria.id) }))
   .filter((g) => g.itens.length > 0);
 ---
@@ -54,7 +44,7 @@ const grupos = categorias
                 <h2 class="estudos-category-heading">{categoria.nome}</h2>
                 <div class="article-grid">
                   {itens.map((v) => (
-                    <a class="article-card" href={`/estudos/${categoria.slug}/${v.slug}/`} data-titulo={v.titulo.toLowerCase()}>
+                    <a class="article-card" href={urlVerbete(v)} data-titulo={v.titulo.toLowerCase()}>
                       <div class="article-card-image">{v.imagemCapa && <img src={`/${v.imagemCapa}`} alt="" loading="lazy" />}</div>
                       <div class="article-card-kicker">{categoria.nome}</div>
                       <div class="article-card-title">{v.titulo}</div>
