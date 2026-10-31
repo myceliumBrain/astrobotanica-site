@@ -56,6 +56,9 @@ function arquivosDaRaiz() {
 
 export default defineConfig({
   site: "https://astrobotanica.com.br",
+  // Sem troca automática de aspas, travessões e reticências: o texto das
+  // páginas sai exatamente como foi escrito no Markdown.
+  markdown: { smartypants: false },
   // "preserve": sobre.astro → sobre.html, artigo/[id]/index.astro →
   // artigo/<id>/index.html — mesma disposição do site atual, então o Pages
   // responde /sobre e /sobre.html como hoje.
