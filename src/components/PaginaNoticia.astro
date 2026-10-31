@@ -3,14 +3,18 @@
 // no src/main.ts antigo, agora no HTML, mais os blocos editoriais do front
 // matter (fonte original, tipo de estudo, revisão técnica, como citar,
 // erratas, licença). Blocos opcionais só aparecem se o campo estiver
-// preenchido. Ainda faltam (próximas fases): compartilhar, card do autor,
-// barra lateral e "Continue lendo".
+// preenchido.
 import Base from "../layouts/Base.astro";
 import { t, caminhoNoIdioma, type Lang } from "../lib/i18n";
 import { corpoHtml, formatarData, resumo, type Noticia } from "../lib/noticias";
 import { citacaoAbnt, doiNormalizado, urlLattes, urlOrcid } from "../lib/citacao";
 import { dataIso, noticiaJsonLd } from "../lib/seo";
 import { srcsetCapa as srcsetDaCapa } from "../lib/capa";
+import { noticiasDaLista } from "../lib/listas";
+import { redesDeCompartilhamento } from "../lib/compartilhar";
+import CartaoNoticia from "./CartaoNoticia.astro";
+import membros from "../../data/members.json";
+import maisAcessadas from "../../data/pageviews.json";
 
 interface Props {
   noticia: Noticia;
@@ -51,6 +55,24 @@ const jsonLd = noticiaJsonLd(noticia, {
   urlOriginal: lang === "en" ? new URL(path, Astro.site).href : undefined,
 });
 const publicadoIso = dataIso(n.date, n.time);
+
+const redes = redesDeCompartilhamento(urlCanonica, n.title);
+
+// Cartão do autor: integrante com o mesmo nome em data/members.json.
+const membro = n.author ? membros.find((m) => m.name === n.author) : undefined;
+const avatar = n.authorAvatar || membro?.image;
+const bio = membro ? (lang === "en" && membro.descriptionEn) || membro.description : "";
+const primeiroLink = membro?.links?.[0];
+
+// Barra lateral (3 mais recentes, 3 mais acessadas segundo
+// data/pageviews.json) e "Continue lendo" (todas as outras).
+const SIDEBAR_MAX = 3;
+const outras = (await noticiasDaLista(lang)).filter((i) => i.noticia.data.id !== n.id);
+const acessadas = maisAcessadas.map((id) => outras.find((i) => i.noticia.data.id === id)).filter((i) => i !== undefined);
+const listasLaterais = [
+  { titulo: t(lang, "artigo.latestHeading"), itens: outras.slice(0, SIDEBAR_MAX) },
+  { titulo: t(lang, "artigo.mostViewedHeading"), itens: acessadas.slice(0, SIDEBAR_MAX) },
+].filter((l) => l.itens.length > 0);
 ---
 
 <Base
@@ -126,6 +148,18 @@ const publicadoIso = dataIso(n.date, n.time);
           }
           {n.readingTime && ` · ${n.readingTime}`}
         </span>
+        <div class="article-share">
+          <span class="article-share-label">{t(lang, "artigo.shareLabel")}</span>
+          {
+            redes.map((r) =>
+              r.url ? (
+                <a class="article-share-link" href={r.url} target={r.url.startsWith("mailto:") ? undefined : "_blank"} rel="noopener noreferrer" aria-label={t(lang, "artigo.shareOn", { network: r.nome })} title={r.nome} set:html={r.icone} />
+              ) : (
+                <a class="article-share-link noticia-share-copiar" href="#" hidden data-copiado={t(lang, "artigo.linkCopied")} aria-label={t(lang, "artigo.shareOn", { network: r.nome })} title={r.nome} set:html={r.icone} />
+              )
+            )
+          }
+        </div>
       </div>
 
       {
@@ -230,13 +264,96 @@ const publicadoIso = dataIso(n.date, n.time);
               {licencaAntes}<a href={licencaUrl} rel="license noopener" target="_blank">{t(lang, "artigo.licenseName")}</a>{licencaDepois}
             </p>
           </footer>
+
+          {
+            n.author && (
+              <>
+                <hr class="article-divider" />
+                <div class="article-author-card">
+                  {avatar && (
+                    <a class="article-author-photo" href={lang === "en" ? "/en/sobre" : "/sobre"}>
+                      <img src={`/${avatar}`} alt="" />
+                    </a>
+                  )}
+                  <div class="article-author-info">
+                    <div class="article-author-name">{n.author}</div>
+                    {bio && <p class="article-author-bio">{bio}</p>}
+                    <div class="article-author-actions">
+                      <a class="btn btn-primary" href={lang === "en" ? "/en/sobre" : "/sobre"}>
+                        {t(lang, "artigo.authorCta")}
+                      </a>
+                      {primeiroLink && (
+                        <a class="btn btn-secondary" href={primeiroLink.url} target="_blank" rel="noopener noreferrer">
+                          {primeiroLink.label}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )
+          }
         </div>
+
+        {
+          listasLaterais.length > 0 && (
+            <aside class="article-sidebar">
+              {listasLaterais.map((lista) => (
+                <div class="article-sidebar-section">
+                  <span class="article-sidebar-heading">{lista.titulo}</span>
+                  <div class="article-sidebar-list">
+                    {lista.itens.map((i) => (
+                      <a class="article-sidebar-item" href={i.href}>
+                        {i.noticia.data.image && <img class="article-sidebar-thumb" src={`/${i.noticia.data.image}`} alt="" loading="lazy" />}
+                        <span class="article-sidebar-title" lang={i.soPortugues ? "pt" : undefined}>
+                          {i.noticia.data.title}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </aside>
+          )
+        }
       </div>
     </div>
   </article>
+
+  <section class="section wrap">
+    <h2 style="font-size:1.4rem;margin-bottom:1.5rem">{t(lang, "artigo.relatedHeading")}</h2>
+    {
+      outras.length === 0 ? (
+        <p class="empty-state">{t(lang, "artigo.noOthers")}</p>
+      ) : (
+        <div id="artigo-related" class="article-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));gap:1.5rem">
+          {outras.map((item) => (
+            <CartaoNoticia item={item} lang={lang} />
+          ))}
+        </div>
+      )
+    }
+  </section>
 </Base>
 
 <script>
+  // Instagram não tem link de compartilhamento: o botão copia o endereço da
+  // notícia e mostra um aviso curto (como handleInstagramShareClick).
+  document.querySelectorAll<HTMLAnchorElement>(".noticia-share-copiar").forEach((botao) => {
+    if (!navigator.clipboard) return;
+    botao.hidden = false;
+    botao.addEventListener("click", (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(location.href).catch(() => {});
+      const aviso = document.createElement("span");
+      aviso.className = "article-share-copied";
+      aviso.textContent = botao.dataset.copiado ?? "";
+      botao.parentElement!.appendChild(aviso);
+      requestAnimationFrame(() => aviso.classList.add("visible"));
+      setTimeout(() => aviso.remove(), 2600);
+    });
+  });
+
   // "Acesso em": a data do dia em que o leitor está citando, no mesmo
   // formato ABNT da data de publicação (ex.: "1 nov. 2026").
   const MESES = {
@@ -265,6 +382,10 @@ const publicadoIso = dataIso(n.date, n.time);
 
 <style>
   /* Só o que é novo nesta página; o resto vem de css/style.css. */
+  /* Botão do Instagram: só com JS (copia o link); o display do CSS antigo anularia o hidden. */
+  .noticia-share-copiar[hidden] {
+    display: none;
+  }
   .noticia-tags {
     display: flex;
     flex-wrap: wrap;
