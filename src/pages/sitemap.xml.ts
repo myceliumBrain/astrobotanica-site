@@ -1,23 +1,29 @@
 // /sitemap.xml — as URLs do sitemap antigo (scripts/generate_sitemap.py),
 // mais as páginas institucionais, os episódios e as versões em inglês, com
 // <xhtml:link> de alternância entre os pares PT/EN.
+import { getEntry } from "astro:content";
 import { noticiasDoIdioma } from "../lib/noticias";
 import { episodios, urlEpisodio } from "../lib/episodios";
 import { caminhoNoIdioma } from "../lib/i18n";
 import { BASE_URL, respostaXml, xmlEscape } from "../lib/feeds";
 
 // Páginas sem data própria: lastmod = dia do build, como antes.
-const PAGINAS: [string, string][] = [
+// Seções: textos de data/site.json e site.en.json, existem nos dois idiomas.
+const SECOES: [string, string][] = [
   ["/", "weekly"],
   ["/noticias", "daily"],
-  ["/estudos", "weekly"],
+  ["/estudos/", "weekly"], // pasta: /estudos redireciona para /estudos/
   ["/podcast", "weekly"],
-  ["/sobre", "monthly"],
   ["/contato", "yearly"],
-  ["/expediente", "monthly"],
-  ["/politica-editorial", "yearly"],
-  ["/normas-para-colaboradores", "yearly"],
-  ["/privacidade", "yearly"],
+];
+// Institucionais: src/content/paginas/<lang>/<slug>.md. A versão sem
+// Markdown é provisória (noindex) e fica fora do sitemap.
+const INSTITUCIONAIS: [string, string][] = [
+  ["sobre", "monthly"],
+  ["expediente", "monthly"],
+  ["politica-editorial", "yearly"],
+  ["normas-para-colaboradores", "yearly"],
+  ["privacidade", "yearly"],
 ];
 
 interface Entrada {
@@ -44,8 +50,22 @@ export async function GET() {
   const hoje = new Date().toISOString().slice(0, 10);
   const entradas: Entrada[] = [];
 
-  for (const [caminho, changefreq] of PAGINAS) {
+  const institucionais = await Promise.all(
+    INSTITUCIONAIS.map(async ([slug, changefreq]) => {
+      const pt = await getEntry("paginas", `pt/${slug}`);
+      const en = await getEntry("paginas", `en/${slug}`);
+      return { caminho: `/${slug}`, changefreq, pt, en };
+    })
+  );
+  const lastmodPagina = (p: { data: { updated: string } } | undefined) => p?.data.updated || hoje;
+
+  for (const [caminho, changefreq] of SECOES) {
     entradas.push({ caminho, lastmod: hoje, changefreq, par: caminho });
+  }
+  for (const p of institucionais) {
+    if (p.pt) {
+      entradas.push({ caminho: p.caminho, lastmod: lastmodPagina(p.pt), changefreq: p.changefreq, par: p.pt && p.en ? p.caminho : undefined });
+    }
   }
 
   const traduzidas = new Set((await noticiasDoIdioma("en")).map((n) => n.data.id));
@@ -60,8 +80,13 @@ export async function GET() {
   }
 
   // Versões em inglês, depois das em português.
-  for (const [caminho, changefreq] of PAGINAS) {
+  for (const [caminho, changefreq] of SECOES) {
     entradas.push({ caminho: caminhoNoIdioma(caminho, "en"), lastmod: hoje, changefreq, par: caminho });
+  }
+  for (const p of institucionais) {
+    if (p.en) {
+      entradas.push({ caminho: caminhoNoIdioma(p.caminho, "en"), lastmod: lastmodPagina(p.en), changefreq: p.changefreq, par: p.pt ? p.caminho : undefined });
+    }
   }
   for (const n of await noticiasDoIdioma("en")) {
     const caminho = `/artigo/${n.data.id}/`;
