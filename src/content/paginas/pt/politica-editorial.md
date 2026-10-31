@@ -55,6 +55,6 @@ O conteúdo original é publicado sob licença CC BY 4.0: pode ser reproduzido e
 
 ## 9. Privacidade
 
-[Resumo de como o site trata dados de visitantes e assinantes, com link para a política de privacidade completa, em conformidade com a LGPD.]
+O site não usa cookies de rastreamento e não exige cadastro para ler, ouvir ou compartilhar o conteúdo. Coletamos apenas estatísticas agregadas de acesso, sem cookies, para saber quais textos são mais lidos. Os detalhes, incluindo os direitos garantidos pela LGPD, estão na [Política de Privacidade](/privacidade).
 
 Última atualização desta política: [data].
