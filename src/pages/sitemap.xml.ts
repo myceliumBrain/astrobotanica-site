@@ -1,8 +1,8 @@
 // /sitemap.xml — as URLs do sitemap antigo (scripts/generate_sitemap.py),
 // mais as páginas institucionais, os episódios e as versões em inglês, com
 // <xhtml:link> de alternância entre os pares PT/EN.
-import { getEntry } from "astro:content";
 import { noticiasDoIdioma } from "../lib/noticias";
+import { paginaInstitucional } from "../lib/paginas";
 import { episodios, urlEpisodio } from "../lib/episodios";
 import { caminhoNoIdioma } from "../lib/i18n";
 import { BASE_URL, respostaXml, xmlEscape } from "../lib/feeds";
@@ -54,8 +54,8 @@ export async function GET() {
 
   const institucionais = await Promise.all(
     INSTITUCIONAIS.map(async ([slug, changefreq]) => {
-      const pt = await getEntry("paginas", `pt/${slug}`);
-      const en = await getEntry("paginas", `en/${slug}`);
+      const pt = await paginaInstitucional("pt", slug);
+      const en = await paginaInstitucional("en", slug);
       return { caminho: `/${slug}`, changefreq, pt, en };
     })
   );

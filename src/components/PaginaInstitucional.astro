@@ -5,7 +5,8 @@
 // as duas têm texto de verdade.
 // Conteúdo extra passado como filho (ex.: integrantes em Sobre) vem depois
 // do texto.
-import { getEntry, render } from "astro:content";
+import { render } from "astro:content";
+import { paginaInstitucional } from "../lib/paginas";
 import Base from "../layouts/Base.astro";
 import PaginaProvisoria from "./PaginaProvisoria.astro";
 import { t, type Lang } from "../lib/i18n";
@@ -18,8 +19,8 @@ interface Props {
 
 const { lang, slug } = Astro.props;
 const path = `/${slug}`;
-const pagina = await getEntry("paginas", `${lang}/${slug}`);
-const traducao = await getEntry("paginas", `${lang === "pt" ? "en" : "pt"}/${slug}`);
+const pagina = await paginaInstitucional(lang, slug);
+const traducao = await paginaInstitucional(lang === "pt" ? "en" : "pt", slug);
 const { Content } = pagina ? await render(pagina) : { Content: null };
 ---
 
