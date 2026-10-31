@@ -16,7 +16,11 @@ for (const n of await noticiasDoIdioma("pt")) {
 for (const e of episodios) semTraducao[`/en/episodios/${e.id}`] = urlEpisodio(e.id);
 ---
 
-<Base lang="pt" title="Página não encontrada — Astrobotânica" path="/" temOutroIdioma={false} destinoSemTraducao="/" indexavel={false}>
+<Base
+  lang="pt"
+  title="Página não encontrada — Astrobotânica"
+  description="O endereço que você abriu não existe ou mudou de lugar."
+  path="/" temOutroIdioma={false} destinoSemTraducao="/" indexavel={false}>
   <section class="page-header wrap">
     <h1>Página não encontrada</h1>
     <p>O endereço que você abriu não existe ou mudou de lugar.</p>

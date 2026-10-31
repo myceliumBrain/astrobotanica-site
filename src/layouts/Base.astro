@@ -4,14 +4,17 @@
 // para o css/style.css funcionar sem alteração, mas com os textos já
 // preenchidos no build (visíveis sem JavaScript).
 import { t, valor, caminhoNoIdioma, type Lang } from "../lib/i18n";
+import { NOME_SITE, OG_IMAGEM_PADRAO, jsonLdSeguro, organizacao } from "../lib/seo";
 
 interface Props {
   lang: Lang;
+  /** Único por página (scripts/migracao/verificar-seo.mjs confere). */
   title: string;
-  description?: string;
+  /** Única por página. */
+  description: string;
   /** Caminho da página sem o prefixo /en (ex.: "/sobre"). */
   path: string;
-  /** false quando a página não tem versão no outro idioma. */
+  /** false quando a página não tem tradução real no outro idioma: sem hreflang. */
   temOutroIdioma?: boolean;
   /** Para onde o seletor de idioma leva quando temOutroIdioma é false. */
   destinoSemTraducao?: string;
@@ -19,9 +22,27 @@ interface Props {
   indexavel?: boolean;
   /** Item do menu marcado como atual, quando não é o 1º segmento do caminho (ex.: episódios → "/podcast"). */
   secao?: string;
+  /** Imagem do Open Graph (URL absoluta); sem ela, a imagem padrão do site. */
+  imagem?: string;
+  /** og:type: "website" ou "article". */
+  ogTipo?: string;
+  /** Nós JSON-LD da página, além da Organization (que vai em todas). */
+  jsonLd?: Record<string, unknown>[];
 }
 
-const { lang, title, description, path, temOutroIdioma = true, destinoSemTraducao, indexavel = true, secao } = Astro.props;
+const {
+  lang,
+  title,
+  description,
+  path,
+  temOutroIdioma = true,
+  destinoSemTraducao,
+  indexavel = true,
+  secao,
+  imagem = OG_IMAGEM_PADRAO,
+  ogTipo = "website",
+  jsonLd = [],
+} = Astro.props;
 const outro: Lang = lang === "pt" ? "en" : "pt";
 const site = Astro.site!;
 const urlAqui = new URL(caminhoNoIdioma(path, lang), site).href;
@@ -63,7 +84,7 @@ const licencaUrl =
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
-    {description && <meta name="description" content={description} />}
+    <meta name="description" content={description} />
     {indexavel ? <link rel="canonical" href={urlAqui} /> : <meta name="robots" content="noindex" />}
     {
       indexavel && temOutroIdioma && (
@@ -78,6 +99,19 @@ const licencaUrl =
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="/css/style.css" />
     <link rel="alternate" type="application/rss+xml" title="Astrobotânica — Notícias" href="/rss.xml" />
+    <meta property="og:type" content={ogTipo} />
+    <meta property="og:site_name" content={NOME_SITE} />
+    <meta property="og:locale" content={lang === "en" ? "en_US" : "pt_BR"} />
+    {indexavel && temOutroIdioma && <meta property="og:locale:alternate" content={lang === "en" ? "pt_BR" : "en_US"} />}
+    {indexavel && <meta property="og:url" content={urlAqui} />}
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={imagem} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imagem} />
+    <script type="application/ld+json" set:html={jsonLdSeguro([organizacao(), ...jsonLd])} />
     <slot name="head" />
   </head>
   <body>

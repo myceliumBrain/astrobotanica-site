@@ -1,6 +1,8 @@
 ---
 // Página institucional a partir de src/content/paginas/<lang>/<slug>.md.
-// Enquanto o Markdown de uma página não existir, mostra a página provisória.
+// Enquanto o Markdown de uma página não existir, mostra a página provisória
+// (fora do índice dos buscadores). O hreflang só liga as duas versões quando
+// as duas têm texto de verdade.
 // Conteúdo extra passado como filho (ex.: integrantes em Sobre) vem depois
 // do texto.
 import { getEntry, render } from "astro:content";
@@ -17,12 +19,20 @@ interface Props {
 const { lang, slug } = Astro.props;
 const path = `/${slug}`;
 const pagina = await getEntry("paginas", `${lang}/${slug}`);
+const traducao = await getEntry("paginas", `${lang === "pt" ? "en" : "pt"}/${slug}`);
 const { Content } = pagina ? await render(pagina) : { Content: null };
 ---
 
 {
   pagina && Content ? (
-    <Base lang={lang} title={`${pagina.data.title} — Astrobotânica`} description={pagina.data.description || undefined} path={path}>
+    <Base
+      lang={lang}
+      title={`${pagina.data.title} — Astrobotânica`}
+      description={pagina.data.description || `${pagina.data.title} — Astrobotânica`}
+      path={path}
+      temOutroIdioma={Boolean(traducao)}
+      destinoSemTraducao={path}
+    >
       <section class="page-header wrap">
         <h1>{pagina.data.title}</h1>
         {pagina.data.updated && (
@@ -39,7 +49,7 @@ const { Content } = pagina ? await render(pagina) : { Content: null };
       <slot />
     </Base>
   ) : (
-    <PaginaProvisoria lang={lang} path={path} />
+    <PaginaProvisoria lang={lang} path={path} indexavel={false} temOutroIdioma={false} />
   )
 }
 

@@ -22,7 +22,8 @@ const transcricao = episodio.transcript ?? [];
 <Base
   lang={lang}
   title={`${episodio.title} — Astrobotânica`}
-  description={episodio.description || undefined}
+  description={episodio.description || `${t(lang, "episodio.tag", { number: episodio.number })}: ${episodio.title}`}
+  imagem={episodio.image ? new URL(`/${episodio.image}`, Astro.site).href : undefined}
   path={urlEpisodio(episodio.id)}
   temOutroIdioma={false}
   destinoSemTraducao="/podcast"
