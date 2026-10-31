@@ -1,0 +1,97 @@
+---
+// /estudos/: verbetes publicados agrupados por categoria, na ordem de
+// data/categorias_estudo.json (renderEstudosIndex). A busca por título
+// filtra no navegador; sem JS, a lista completa já está no HTML.
+import Base from "../../layouts/Base.astro";
+import { t, type Lang } from "../../lib/i18n";
+import estudos from "../../../data/estudos.json";
+import categorias from "../../../data/categorias_estudo.json";
+
+interface Verbete {
+  slug: string;
+  titulo: string;
+  categoriaId: string;
+  definicaoCurta?: string;
+  imagemCapa?: string;
+  publicado?: boolean;
+}
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const publicados = (estudos as Verbete[]).filter((v) => v.publicado);
+const grupos = categorias
+  .map((categoria) => ({ categoria, itens: publicados.filter((v) => v.categoriaId === categoria.id) }))
+  .filter((g) => g.itens.length > 0);
+---
+
+<Base lang={lang} title={t(lang, "estudos.metaTitle")} description={t(lang, "estudos.metaDescription")} path="/estudos/">
+  <section class="page-header wrap">
+    <h1>{t(lang, "estudos.title")}</h1>
+    <p>{t(lang, "estudos.intro")}</p>
+  </section>
+
+  <section class="section wrap">
+    {
+      publicados.length === 0 ? (
+        <p class="empty-state">{t(lang, "estudos.emptyList")}</p>
+      ) : (
+        <>
+          <div class="estudos-search-row" hidden>
+            <input
+              type="search"
+              id="estudos-search"
+              class="estudos-search-input"
+              placeholder={t(lang, "estudos.searchPlaceholder")}
+              aria-label={t(lang, "estudos.searchPlaceholder")}
+            />
+          </div>
+          <div id="estudos-list">
+            {grupos.map(({ categoria, itens }) => (
+              <section class="estudos-category">
+                <h2 class="estudos-category-heading">{categoria.nome}</h2>
+                <div class="article-grid">
+                  {itens.map((v) => (
+                    <a class="article-card" href={`/estudos/${categoria.slug}/${v.slug}/`} data-titulo={v.titulo.toLowerCase()}>
+                      <div class="article-card-image">{v.imagemCapa && <img src={`/${v.imagemCapa}`} alt="" loading="lazy" />}</div>
+                      <div class="article-card-kicker">{categoria.nome}</div>
+                      <div class="article-card-title">{v.titulo}</div>
+                      <div class="article-card-meta">{v.definicaoCurta}</div>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            ))}
+            <p class="empty-state" id="estudos-sem-resultado" hidden>
+              {t(lang, "estudos.emptySearch")}
+            </p>
+          </div>
+        </>
+      )
+    }
+  </section>
+</Base>
+
+<script>
+  const busca = document.querySelector<HTMLInputElement>("#estudos-search");
+  if (busca) {
+    busca.closest<HTMLElement>(".estudos-search-row")!.hidden = false;
+    busca.addEventListener("input", () => {
+      const q = busca.value.trim().toLowerCase();
+      let algum = false;
+      document.querySelectorAll<HTMLElement>(".estudos-category").forEach((secao) => {
+        let visiveis = 0;
+        secao.querySelectorAll<HTMLElement>("[data-titulo]").forEach((card) => {
+          const mostra = !q || card.dataset.titulo!.includes(q);
+          card.hidden = !mostra;
+          if (mostra) visiveis++;
+        });
+        secao.hidden = visiveis === 0;
+        if (visiveis) algum = true;
+      });
+      document.querySelector<HTMLElement>("#estudos-sem-resultado")!.hidden = algum;
+    });
+  }
+</script>
