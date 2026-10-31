@@ -9,7 +9,7 @@ import { t, caminhoNoIdioma, type Lang } from "../lib/i18n";
 import { corpoHtml, formatarData, resumo, type Noticia } from "../lib/noticias";
 import { citacaoAbnt, doiNormalizado, urlLattes, urlOrcid } from "../lib/citacao";
 import { dataIso, noticiaJsonLd } from "../lib/seo";
-import { srcsetCapa as srcsetDaCapa } from "../lib/capa";
+import { srcsetImagem } from "../lib/capa";
 import { noticiasDaLista } from "../lib/listas";
 import { redesDeCompartilhamento } from "../lib/compartilhar";
 import CartaoNoticia from "./CartaoNoticia.astro";
@@ -46,7 +46,7 @@ const licencaUrl =
 // só por notícia (em PT); sem capa, vale a imagem padrão do site.
 const tituloPagina = `${n.title} — Astrobotânica`;
 const descricao = resumo(noticia);
-const srcsetCapa = n.image ? await srcsetDaCapa(n.id, n.image) : undefined;
+const srcsetCapa = await srcsetImagem(n.id, n.image, "capa");
 const ogImagem = n.image ? new URL(`/artigo/${n.id}/og-image.jpg`, Astro.site).href : undefined;
 const jsonLd = noticiaJsonLd(noticia, {
   url: urlCanonica,
@@ -69,6 +69,9 @@ const primeiroLink = membro?.links?.[0];
 const SIDEBAR_MAX = 3;
 const outras = (await noticiasDaLista(lang)).filter((i) => i.noticia.data.id !== n.id);
 const acessadas = maisAcessadas.map((id) => outras.find((i) => i.noticia.data.id === id)).filter((i) => i !== undefined);
+const srcsetMiniatura = Object.fromEntries(
+  await Promise.all(outras.map(async (i) => [i.noticia.data.id, await srcsetImagem(i.noticia.data.id, i.noticia.data.image, "capa")]))
+);
 const listasLaterais = [
   { titulo: t(lang, "artigo.latestHeading"), itens: outras.slice(0, SIDEBAR_MAX) },
   { titulo: t(lang, "artigo.mostViewedHeading"), itens: acessadas.slice(0, SIDEBAR_MAX) },
@@ -304,7 +307,9 @@ const listasLaterais = [
                   <div class="article-sidebar-list">
                     {lista.itens.map((i) => (
                       <a class="article-sidebar-item" href={i.href}>
-                        {i.noticia.data.image && <img class="article-sidebar-thumb" src={`/${i.noticia.data.image}`} alt="" loading="lazy" />}
+                        {i.noticia.data.image && (
+                          <img class="article-sidebar-thumb" src={`/${i.noticia.data.image}`} srcset={srcsetMiniatura[i.noticia.data.id]} sizes="5rem" alt="" loading="lazy" />
+                        )}
                         <span class="article-sidebar-title" lang={i.soPortugues ? "pt" : undefined}>
                           {i.noticia.data.title}
                         </span>
