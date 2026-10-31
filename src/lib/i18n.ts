@@ -24,6 +24,9 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
     provisorio: {
       aviso: "Página provisória — conteúdo em preparação.",
     },
+    paginas: {
+      updatedOn: "Última atualização: {{date}}",
+    },
     artigo: {
       publishedOn: "Publicado em {{date}}",
       updatedOn: "Atualizado em {{date}}",
@@ -52,6 +55,9 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
     },
     provisorio: {
       aviso: "Provisional page — content in preparation.",
+    },
+    paginas: {
+      updatedOn: "Last updated: {{date}}",
     },
     artigo: {
       publishedOn: "Published on {{date}}",

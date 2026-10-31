@@ -1,0 +1,69 @@
+---
+// Página institucional a partir de src/content/paginas/<lang>/<slug>.md.
+// Enquanto o Markdown de uma página não existir, mostra a página provisória.
+import { getEntry, render } from "astro:content";
+import Base from "../layouts/Base.astro";
+import PaginaProvisoria from "./PaginaProvisoria.astro";
+import { t, type Lang } from "../lib/i18n";
+import { formatarData } from "../lib/noticias";
+
+interface Props {
+  lang: Lang;
+  slug: string;
+}
+
+const { lang, slug } = Astro.props;
+const path = `/${slug}`;
+const pagina = await getEntry("paginas", `${lang}/${slug}`);
+const { Content } = pagina ? await render(pagina) : { Content: null };
+---
+
+{
+  pagina && Content ? (
+    <Base lang={lang} title={`${pagina.data.title} — Astrobotânica`} description={pagina.data.description || undefined} path={path}>
+      <section class="page-header wrap">
+        <h1>{pagina.data.title}</h1>
+        {pagina.data.updated && (
+          <p class="article-byline-meta">
+            {t(lang, "paginas.updatedOn", { date: formatarData(pagina.data.updated, lang) })}
+          </p>
+        )}
+      </section>
+      <section class="section wrap">
+        <div class="article-body pagina-texto">
+          <Content />
+        </div>
+      </section>
+    </Base>
+  ) : (
+    <PaginaProvisoria lang={lang} path={path} />
+  )
+}
+
+<style>
+  .pagina-texto {
+    max-width: var(--content-width);
+  }
+  .pagina-texto :global(ul),
+  .pagina-texto :global(ol) {
+    padding-left: 1.4rem;
+    margin-top: var(--space-2);
+  }
+  /* o reset de css/style.css tira os marcadores das listas */
+  .pagina-texto :global(ul) {
+    list-style: disc;
+  }
+  .pagina-texto :global(ol) {
+    list-style: decimal;
+  }
+  .pagina-texto :global(li + li) {
+    margin-top: var(--space-1);
+  }
+  .pagina-texto :global(p + ul),
+  .pagina-texto :global(ul + p) {
+    margin-top: var(--space-3);
+  }
+  .pagina-texto :global(a) {
+    color: var(--accent-700);
+  }
+</style>

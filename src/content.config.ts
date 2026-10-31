@@ -44,4 +44,18 @@ const noticias = defineCollection({
   }),
 });
 
-export const collections = { noticias };
+// Páginas institucionais (Sobre, Expediente, Política Editorial, Normas
+// para Colaboradores, Privacidade): um Markdown por página e idioma
+// (src/content/paginas/{pt,en}/<slug>.md). Texto em Markdown comum.
+const paginas = defineCollection({
+  loader: glob({ pattern: "{pt,en}/*.md", base: "./src/content/paginas" }),
+  schema: z.object({
+    title: z.string().min(1),
+    description: z.string(),
+    lang: z.enum(["pt", "en"]),
+    // Data da última revisão do texto, mostrada no topo quando preenchida.
+    updated: dataOpcional,
+  }),
+});
+
+export const collections = { noticias, paginas };
