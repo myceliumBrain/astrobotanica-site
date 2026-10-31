@@ -35,12 +35,32 @@ const citacao = citacaoAbnt(
 const [licencaAntes, licencaDepois] = t(lang, "artigo.licenseText").split("{{license}}");
 const licencaUrl =
   lang === "pt" ? "https://creativecommons.org/licenses/by/4.0/deed.pt-br" : "https://creativecommons.org/licenses/by/4.0/deed.en";
+
+// Metadados para previews em redes sociais e buscadores, como os que
+// scripts/generate_seo.py gerava. A og-image é uma só por notícia (em PT).
+const tituloPagina = `${n.title} — Astrobotânica`;
+const descricao = resumo(noticia);
+const ogImagem = n.image ? new URL(`/artigo/${n.id}/og-image.jpg`, Astro.site).href : undefined;
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "NewsArticle",
+  headline: n.title,
+  description: descricao,
+  datePublished: n.date,
+  ...(n.updated ? { dateModified: n.updated } : {}),
+  author: { "@type": "Person", name: n.author || "Astrobotânica" },
+  publisher: { "@type": "Organization", name: "Astrobotânica" },
+  mainEntityOfPage: { "@type": "WebPage", "@id": urlCanonica },
+  ...(ogImagem ? { image: [ogImagem] } : {}),
+  inLanguage: lang === "en" ? "en" : "pt-BR",
+  license: "https://creativecommons.org/licenses/by/4.0/",
+};
 ---
 
 <Base
   lang={lang}
-  title={`${n.title} — Astrobotânica`}
-  description={resumo(noticia)}
+  title={tituloPagina}
+  description={descricao}
   path={path}
   temOutroIdioma={temOutroIdioma}
   destinoSemTraducao="/noticias"
@@ -48,6 +68,22 @@ const licencaUrl =
   {/* O corpo das notícias usa caminhos relativos (src="images/..."), como no
       site antigo — que também usava <base href="/"> em /artigo/<id>/. */}
   <base slot="head" href="/" />
+  <Fragment slot="head">
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="Astrobotânica" />
+    <meta property="og:locale" content={lang === "en" ? "en_US" : "pt_BR"} />
+    <meta property="og:url" content={urlCanonica} />
+    <meta property="og:title" content={tituloPagina} />
+    <meta property="og:description" content={descricao} />
+    {ogImagem && <meta property="og:image" content={ogImagem} />}
+    {ogImagem && <meta name="twitter:image" content={ogImagem} />}
+    <meta name="twitter:card" content={ogImagem ? "summary_large_image" : "summary"} />
+    <meta name="twitter:title" content={tituloPagina} />
+    <meta name="twitter:description" content={descricao} />
+    <meta property="article:published_time" content={n.date} />
+    {n.updated && <meta property="article:modified_time" content={n.updated} />}
+    <script type="application/ld+json" set:html={JSON.stringify(jsonLd).replace(/</g, "\\u003c")} />
+  </Fragment>
   <article class="wrap" style="padding-top:2.5rem;padding-bottom:1.5rem">
     <a href={lang === "en" ? "/en/noticias" : "/noticias"} class="btn btn-ghost" style="margin-bottom:1rem;display:inline-block">
       {t(lang, "artigo.backLink")}
