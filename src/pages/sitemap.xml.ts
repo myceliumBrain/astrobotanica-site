@@ -36,13 +36,15 @@ interface Entrada {
 
 function url(e: Entrada): string {
   const linhas = [`    <loc>${xmlEscape(BASE_URL + e.caminho)}</loc>`];
+  if (e.lastmod) linhas.push(`    <lastmod>${e.lastmod}</lastmod>`);
+  linhas.push(`    <changefreq>${e.changefreq}</changefreq>`);
+  // O schema do sitemap exige elementos de outro namespace depois de
+  // loc/lastmod/changefreq/priority.
   if (e.par) {
     for (const [hreflang, lang] of [["pt-BR", "pt"], ["en", "en"], ["x-default", "pt"]] as const) {
       linhas.push(`    <xhtml:link rel="alternate" hreflang="${hreflang}" href="${xmlEscape(BASE_URL + caminhoNoIdioma(e.par, lang))}" />`);
     }
   }
-  if (e.lastmod) linhas.push(`    <lastmod>${e.lastmod}</lastmod>`);
-  linhas.push(`    <changefreq>${e.changefreq}</changefreq>`);
   return `  <url>\n${linhas.join("\n")}\n  </url>`;
 }
 
