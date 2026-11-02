@@ -27,7 +27,7 @@ readingTime: "4 min"
 image: "images/noticias/noticia-4-imagem-principal.png"
 imageCaption: "Montagem experimental para o Ensaio A na seção sudoeste da casa de vegetação do laboratório FLIES. As plantas de ervilha foram dispostas aleatoriamente em oito arranjos de 2 × 3 sobre uma bancada móvel. Cada vaso foi colocado sobre um prato de papel para evitar o escoamento de água, e uma tela de sombreamento de 40% foi suspensa a 0,76 m acima da bancada para atenuar a exposição excessiva à radiação solar."
 imageVertical: "images/noticias/noticia-4-imagem-vertical.jpg"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "J. Emmanuel Mendoza, N. B. Lemke, J. K. Tomberlin bioRxiv 2025.11.14.688485; doi: https://doi.org/10.1101/2025.11.14.688485"
     url: "https://www.biorxiv.org/content/10.1101/2025.11.14.688485v1"

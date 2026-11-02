@@ -26,7 +26,7 @@ category: "Agricultura Espacial"
 readingTime: "3 min"
 image: "images/noticias/noticia-11-imagem-principal.jpg"
 imageVertical: "images/noticias/noticia-11-imagem-vertical.jpg"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Caporale AG, Paradiso R, Arouna N, Amitrano C, Tagliamonte S, Chiacchio MF, Vitaglione P, De Pascale S and Adamo P (2025) Fava bean plant performance and fertility dynamics in Mars regolith simulant-based substrates for space farming. Front. Plant Sci. 16:1676285. doi: 10.3389/fpls.2025.1676285"
     url: "https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2025.1676285/full#cite"

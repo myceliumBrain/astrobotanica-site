@@ -27,7 +27,7 @@ readingTime: "9 min"
 image: "images/noticias/noticia-8-imagem-principal.jpg"
 imageCaption: "Amostra de regolito marciano, observada pela CacheCam do robô perseverance. Fonte: NASA (2022)"
 imageVertical: "images/noticias/noticia-8-imagem-vertical.png"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Fackrell, L. E.;, Palmer, A. G., Loureiro, R., Schroeder, P. A., Simpson, A. C., Cheek, D., Taylor, M., Murphy, H., Long-Fox, J. M., Singh, N. K., Venkateswaran, K. J., Mills, H. J., Holzhaus, O. G., & Lynch, K. (2026). What lives in regolith simulants and why it matters for biological in-situ resource utilization research. Soil Science Society of America Journal, 90, e70299. https://doi.org/10.1002/saj2.70299"
     url: "https://acsess.onlinelibrary.wiley.com/doi/10.1002/saj2.70299?utm_medium=article&utm_source=researchgate.net"

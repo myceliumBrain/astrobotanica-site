@@ -26,7 +26,7 @@ category: "Micologia"
 readingTime: "6 min"
 image: "images/noticias/noticia-10-imagem-principal.jpg"
 imageVertical: "images/noticias/noticia-10-imagem-vertical.jpg"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Braunmiller, H.M., Bitterlich, M., Koebernick, N., Jacob, E., Heck, A.S., Schnepf, A., Pausch, J., Suuronen, J.-P., Hesse, B., Delzon, S., Perrin, J., King, A., Jansa, J. and Ahmed, M.A. (2026), Opening the black box: in situ imaging of arbuscular mycorrhizal fungal structures in soil using synchrotron-based micro-CT. New Phytol. https://doi.org/10.1111/nph.71379"
     url: "https://nph.onlinelibrary.wiley.com/doi/10.1111/nph.71379"

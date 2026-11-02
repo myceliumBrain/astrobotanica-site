@@ -28,7 +28,7 @@ readingTime: "7 min"
 image: "images/noticias/noticia-5-imagem-principal.png"
 imageCaption: "Audiência pública na Comissão de Ciência, Tecnologia e Inovação da Câmara dos Deputados, cujo tema foi: Agricultura espacial como eixo estratégico da economia do espaço. Local: Anexo II, Plenário 13. Início: 17/06/2026 às 09:13"
 imageVertical: "images/noticias/noticia-5-imagem-vertical.png"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Audiência Pública na Comissão de Ciência, Tecnologia e Inovação da Câmara dos Deputados - Tema: Agricultura espacial como eixo estratégico da economia do espaço"
     url: "https://www.youtube.com/live/y0khQXjhAIc"

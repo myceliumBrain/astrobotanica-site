@@ -196,6 +196,11 @@
           de um colaborador continua podendo alterar qualquer arquivo do
           repositório direto pelo GitHub.
         </p>
+        <p class="admin-hint">
+          Cada acesso fica ligado a um <strong>integrante</strong> (a pessoa
+          em "Integrantes"). É assim que o painel sabe quem é o autor dos
+          textos de cada acesso.
+        </p>
         <div id="access-list" class="admin-item-list"></div>
 
         <div class="admin-subform">
@@ -220,6 +225,11 @@
                 <option value="admin">Admin (painel inteiro)</option>
               </select>
             </div>
+            <div class="field">
+              <label for="access-integrante">Integrante</label>
+              <select class="input" id="access-integrante"></select>
+              <span class="field-hint">Quem é essa pessoa em "Integrantes" — define a autoria dos textos dela. Cadastre o integrante antes, se ainda não existir.</span>
+            </div>
           </div>
           <div class="card-actions" style="justify-content:flex-start">
             <button type="button" id="access-submit" class="btn btn-primary btn-small">+ adicionar acesso</button>
@@ -241,6 +251,10 @@
               <input class="input" id="account-label" type="text" disabled />
               <button type="button" id="account-edit-label" class="btn btn-secondary btn-small">Modificar nome</button>
             </div>
+          </div>
+          <div class="field">
+            <label for="account-integrante">Integrante</label>
+            <input class="input" id="account-integrante" type="text" disabled />
           </div>
           <div class="card-actions" style="justify-content:flex-start">
             <button type="button" id="account-edit-password" class="btn btn-secondary btn-small">Modificar senha</button>

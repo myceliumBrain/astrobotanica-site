@@ -75,7 +75,7 @@ Toda tela de edição segue o mesmo padrão:
   cartões de notícia, episódio e verbete elas entram na P5, junto com a
   reforma desses cartões.
 
-### P2 — Integrantes com identificador pelo nome
+### P2 — Integrantes com identificador pelo nome ✔ (2026-11-02)
 - O identificador passa a ser o nome completo sem acentos, por exemplo
   `eduardo-dreyer-simoes-saraiva`. É gerado do nome ao criar o integrante, e o
   admin pode ajustá-lo.
@@ -89,6 +89,17 @@ Toda tela de edição segue o mesmo padrão:
   quebrar quem tenha o link delas.
 - Cada acesso do painel fica ligado a um integrante (`integrante` no
   `auth.json`). É isso que define a autoria na P7.
+- Feito:
+  - integrante novo: o id acompanha o nome completo enquanto ele é digitado
+    (nome repetido ganha `-2`); só o admin ajusta à mão; trava depois de
+    salvo;
+  - a foto escolhida antes de o nome estar completo é renomeada para o id
+    final antes do envio;
+  - em "Acessos", cada acesso tem o seletor de integrante (também no
+    formulário de novo acesso); um integrante só pode estar ligado a um
+    acesso; "Minha conta" mostra o integrante de quem entrou.
+  - Fotos antigas que ficam até a Fase 13: `images/integrantes/integrante-pedro.jpeg`
+    e `images/integrantes/novo-integrante.jpg` (e as miniaturas delas).
 
 ### P3 — Páginas editáveis
 - Sobre, Expediente, Política Editorial, Normas e Privacidade editáveis no
