@@ -4,6 +4,10 @@
 // - Open Graph (og:title, og:description, og:image, que precisa existir);
 // - hreflang recíproco, só entre páginas indexáveis e sem misturar página
 //   provisória com página de texto (tradução real);
+// - seletor de idioma: links comuns (<a href>) para páginas que existem; com
+//   hreflang, o link do outro idioma é o próprio par;
+// - sitemap.xml: os pares <xhtml:link> de cada URL são os mesmos do hreflang
+//   da página;
 // - JSON-LD: JSON válido, @context schema.org, Organization em toda página,
 //   NewsArticle nas notícias com os campos que o Google pede (headline,
 //   image, datePublished, dateModified, author, publisher) e a fonte citada;
@@ -133,6 +137,9 @@ for (const rel of fs.readdirSync(pasta, { recursive: true })) {
     description: decodificar(meta(html, "name", "description") ?? ""),
     canonical: html.match(/<link rel="canonical" href="([^"]+)"/)?.[1],
     hreflang: Object.fromEntries([...html.matchAll(/<link rel="alternate" hreflang="([^"]+)" href="([^"]+)"/g)].map((m) => [m[1], m[2]])),
+    seletor: [...html.matchAll(/<div class="lang-switch"[^>]*>([\s\S]*?)<\/div>/g)].flatMap((m) =>
+      [...m[1].matchAll(/<a class="lang-btn" href="([^"]+)" hreflang="([^"]+)"/g)].map((a) => ({ href: a[1], lang: a[2] }))
+    ),
     og: {
       title: meta(html, "property", "og:title"),
       description: meta(html, "property", "og:description"),
@@ -172,6 +179,15 @@ for (const p of paginas) {
     if (!volta.includes(BASE_URL + p.url)) falha(p.url, `hreflang ${lang} sem retorno em ${alvo}`);
   }
 
+  // Seletor de idioma: dois links (cabeçalho e menu móvel) por idioma, para
+  // páginas que existem; com hreflang, o do outro idioma é o próprio par.
+  if (p.seletor.length !== 4) falha(p.url, `seletor de idioma com ${p.seletor.length} links (esperado 4: PT e EN no cabeçalho e no menu)`);
+  for (const { href, lang } of p.seletor) {
+    if (!href.startsWith("/") || !existeNaPasta(BASE_URL + href)) falha(p.url, `seletor de idioma ${lang} aponta para página inexistente (${href})`);
+    const par = p.hreflang[lang];
+    if (par && BASE_URL + href !== par) falha(p.url, `seletor de idioma ${lang} (${href}) diferente do hreflang (${par})`);
+  }
+
   // JSON-LD
   if (p.jsonLd.length !== 1) falha(p.url, `${p.jsonLd.length} blocos JSON-LD (esperado 1)`);
   for (const bloco of p.jsonLd) {
@@ -196,6 +212,18 @@ for (const p of paginas) {
         if (noticia.publisher?.["@id"] && !ids.has(noticia.publisher["@id"])) falha(p.url, "NewsArticle: publisher aponta para @id que não está no @graph");
       }
     }
+  }
+}
+
+// sitemap.xml: os pares de cada URL são os do hreflang da página
+const sitemap = fs.readFileSync(path.join(pasta, "sitemap.xml"), "utf8");
+for (const [, bloco] of sitemap.matchAll(/<url>([\s\S]*?)<\/url>/g)) {
+  const loc = bloco.match(/<loc>([^<]+)<\/loc>/)?.[1];
+  const p = porUrl.get(loc);
+  if (!p) continue; // não é página HTML (verificar-urls confere se existe)
+  const pares = Object.fromEntries([...bloco.matchAll(/<xhtml:link [^>]*hreflang="([^"]+)" href="([^"]+)"/g)].map((m) => [m[1], m[2]]));
+  if (JSON.stringify(Object.entries(pares).sort()) !== JSON.stringify(Object.entries(p.hreflang).sort())) {
+    falha(p.url, `sitemap.xml: pares ${JSON.stringify(pares)} diferentes do hreflang da página ${JSON.stringify(p.hreflang)}`);
   }
 }
 

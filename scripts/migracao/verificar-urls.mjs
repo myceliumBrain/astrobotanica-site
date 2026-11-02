@@ -9,7 +9,7 @@
 // mesmo jeito que o script da página faz no navegador.
 //
 // Além das URLs, confere: colisões x.html × pasta x/, sitemap.xml (todas as <loc> existem), robots.txt
-// apontando para o sitemap, 404.html, CNAME, rss.xml/podcast.xml (mesmos
+// apontando para o sitemap, 404.html, CNAME, rss.xml, en/rss.xml e podcast.xml (mesmos
 // guid do feed atual, texto completo no rss) e a cópia de images/ e audio/.
 //
 // Uso:
@@ -183,6 +183,15 @@ if (!soUrls) {
   const imgsCorpo = itens.flatMap((i) => [...i.matchAll(/src="(https:\/\/astrobotanica\.com\.br\/[^"]+)"/g)].map((m) => m[1]));
   const imgsCorpoQuebradas = imgsCorpo.filter((u) => abrir(caminhoDe(u)).status !== 200);
   checar("rss.xml: toda imagem do texto completo existe", imgsCorpoQuebradas.length === 0, `${imgsCorpo.length} imagens${imgsCorpoQuebradas.length ? `; quebradas: ${imgsCorpoQuebradas.join(", ")}` : ""}`);
+
+  // en/rss.xml: só as notícias traduzidas, com as páginas /en/artigo/<id>/
+  const rssEn = ler("en/rss.xml");
+  const itensEn = tags(rssEn, "item");
+  const traduzidas = fs.readdirSync(path.join(RAIZ, "src/content/noticias/en")).filter((f) => f.endsWith(".md")).length;
+  checar("en/rss.xml: um item por notícia traduzida", itensEn.length === Math.min(traduzidas, 30), `${itensEn.length} itens (${traduzidas} traduzidas)`);
+  const linksRssEn = itensEn.map((i) => tags(i, "link")[0]).filter((u) => !/^https:\/\/astrobotanica\.com\.br\/en\/artigo\//.test(u) || abrir(caminhoDe(u)).status !== 200);
+  checar("en/rss.xml: todo <link> é uma /en/artigo/ que existe", linksRssEn.length === 0, linksRssEn.join(", "));
+  checar("en/rss.xml: todo item traz o texto completo", itensEn.every((i) => /<content:encoded><!\[CDATA\[[\s\S]{200,}/.test(i)));
 
   // podcast.xml
   const podcast = ler("podcast.xml");
