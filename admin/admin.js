@@ -1150,11 +1150,11 @@ function applyEpisodeField(input) {
   }
   if (input.dataset.multiline === "paragraphs") {
     const paragraphs = linesToParagraphs(input.value);
-    if (paragraphs.length === 0) delete record.transcript;
-    else record.transcript = paragraphs;
+    if (paragraphs.length === 0) delete record[key];
+    else record[key] = paragraphs;
     return;
   }
-  if ((key === "image" || key === "time") && !input.value) { delete record[key]; return; }
+  if (["image", "time", "titleEn", "descriptionEn"].includes(key) && !input.value.trim()) { delete record[key]; return; }
   record[key] = input.value;
 }
 
@@ -1172,7 +1172,7 @@ function applyCategoriaEstudoField(input) {
   const key = input.dataset.key;
   const record = contentData.categoriasEstudo[i];
   if (!record) return;
-  if (key === "descricao" && !input.value) { delete record[key]; return; }
+  if (["descricao", "nomeEn", "descricaoEn"].includes(key) && !input.value.trim()) { delete record[key]; return; }
   record[key] = input.value;
 }
 
@@ -1191,16 +1191,27 @@ function applyEstudoField(input) {
   }
   if (input.dataset.richtext === "html") {
     const newHtml = finalizeRichTextHtml(input);
+    // Como nas notícias: só remove a imagem se nenhum outro conteúdo (a
+    // outra língua deste verbete ou outro verbete) ainda usar o arquivo.
     const oldPaths = extractImagePaths(record[key]);
     const newPaths = extractImagePaths(newHtml);
+    const usedElsewhere = new Set();
+    contentData.estudos.forEach((verbete) => {
+      ["conteudo", "conteudoEn"].forEach((k) => {
+        if (verbete === record && k === key) return;
+        extractImagePaths(verbete[k]).forEach((path) => usedElsewhere.add(path));
+      });
+    });
     oldPaths.forEach((path) => {
-      if (!newPaths.has(path)) {
+      if (!newPaths.has(path) && !usedElsewhere.has(path)) {
         pendingDeletions.push({ path, message: `admin: remove imagem não usada mais no conteúdo (${path})` });
       }
     });
-    record[key] = newHtml;
+    if (key === "conteudoEn" && !newHtml) delete record.conteudoEn;
+    else record[key] = newHtml;
     return;
   }
+  if (["tituloEn", "definicaoCurtaEn"].includes(key) && !input.value.trim()) { delete record[key]; return; }
   record[key] = input.value;
 }
 
@@ -1269,6 +1280,11 @@ async function saveAll() {
     const memberIds = contentData.members?.map((m) => m.id) || [];
     const duplicate = memberIds.find((id, i) => memberIds.indexOf(id) !== i);
     if (duplicate) throw new Error(`dois integrantes com o mesmo identificador ("${duplicate}")`);
+    // Episódios: data inválida faria o build do site falhar.
+    if (dirty.has("episodes")) {
+      const semData = contentData.episodes.filter((e) => !/^\d{4}-\d{2}-\d{2}$/.test(e.date || ""));
+      if (semData.length) throw new Error(`corrija antes de salvar: data inválida no episódio ${semData.map((e) => e.title || e.id).join(", ")}`);
+    }
     // Notícias: valida e calcula os arquivos antes de qualquer envio — um
     // título vazio ou uma data inválida faria o build do site falhar.
     let noticias = null;
@@ -2430,6 +2446,29 @@ function buildArticlePortugueseSection(article, i) {
 // isso, caindo pro campo em português quando algum não foi preenchido).
 // Fecha por padrão (mutuamente exclusiva com "Versão em português" — ver
 // buildArticleCard, que decide o estado inicial das duas).
+// Seção recolhível "Versão em inglês (opcional)" de episódio, verbete e
+// categoria — mesmo visual da notícia (buildArticleEnglishSection). Começa
+// fechada. Campos em branco = o item fica só em português no site.
+function buildEnglishSection(hint, fields) {
+  const wrap = el("div", "field full article-en-section");
+  const summary = el("button", "article-lang-summary");
+  summary.type = "button";
+  summary.appendChild(el("span", "article-lang-chevron", "▸"));
+  summary.appendChild(el("span", "", "Versão em inglês (opcional)"));
+  wrap.appendChild(summary);
+  const panel = el("div", "article-lang-panel fields-grid");
+  panel.appendChild(el("p", "field-hint full", hint));
+  fields.forEach((field) => panel.appendChild(field));
+  panel.hidden = true;
+  summary.addEventListener("click", () => {
+    const opening = panel.hidden;
+    panel.hidden = !opening;
+    summary.classList.toggle("open", opening);
+  });
+  wrap.appendChild(panel);
+  return wrap;
+}
+
 function buildArticleEnglishSection(article, i) {
   const wrap = el("div", "field full article-en-section");
 
@@ -2790,6 +2829,25 @@ function buildEpisodeCard(episode, i, total, container) {
   transcript.classList.add("full");
   transcript.querySelector("textarea").rows = 8;
   grid.appendChild(transcript);
+
+  const titleEn = buildInput("Título (EN)", "text", episode.titleEn, { episode: i, key: "titleEn" });
+  titleEn.classList.add("full");
+  const descriptionEn = buildTextarea("Descrição curta (EN)", episode.descriptionEn, { episode: i, key: "descriptionEn" });
+  descriptionEn.classList.add("full");
+  const transcriptEn = buildTextarea(
+    "Transcrição (EN, opcional) — um parágrafo por linha",
+    (episode.transcriptEn || []).join("\n"),
+    { episode: i, key: "transcriptEn" },
+    true
+  );
+  transcriptEn.classList.add("full");
+  transcriptEn.querySelector("textarea").rows = 8;
+  grid.appendChild(
+    buildEnglishSection(
+      "O episódio ganha página em inglês (/en/episodios/…) quando o título (EN) estiver preenchido. O áudio é o mesmo, em português.",
+      [titleEn, descriptionEn, transcriptEn]
+    )
+  );
 
   body.appendChild(grid);
 
@@ -3247,6 +3305,15 @@ function buildCategoriaEstudoCard(categoria, i, total) {
   descricao.classList.add("full");
   grid.appendChild(descricao);
 
+  const descricaoEn = buildTextarea("Descrição (EN)", categoria.descricaoEn, { categoriaEstudo: i, key: "descricaoEn" }, false, 2);
+  descricaoEn.classList.add("full");
+  grid.appendChild(
+    buildEnglishSection("Sem o nome (EN), o site em inglês mostra o nome em português. O slug da URL é o mesmo nos dois idiomas.", [
+      buildInput("Nome (EN)", "text", categoria.nomeEn, { categoriaEstudo: i, key: "nomeEn" }),
+      descricaoEn,
+    ])
+  );
+
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
@@ -3407,6 +3474,40 @@ function buildEstudoCard(verbete, i, total, container) {
   fontesField.appendChild(addFonteBtn);
   grid.appendChild(fontesField);
 
+  const tituloEn = buildInput("Título (EN)", "text", verbete.tituloEn, { verbete: i, key: "tituloEn" });
+  tituloEn.classList.add("full");
+  const definicaoCurtaEn = buildTextarea("Definição curta (EN)", verbete.definicaoCurtaEn, { verbete: i, key: "definicaoCurtaEn" }, false, 2);
+  definicaoCurtaEn.classList.add("full");
+  // id com "-en": prefixo de arquivo próprio para as imagens deste editor,
+  // como no corpo em inglês da notícia.
+  const conteudoEnField = buildRichTextField(
+    "Conteúdo (EN)",
+    verbete.conteudoEn,
+    { verbete: i, key: "conteudoEn" },
+    {
+      folder: "images/estudos",
+      id: `${verbete.id}-en`,
+      buildImageMessage: (path) => `admin: envia imagem do conteúdo em inglês do verbete "${verbete.titulo || verbete.id}" (${path})`,
+    }
+  );
+  conteudoEnField.classList.add("full");
+  // Como na notícia: copia o HTML do português (mesmas imagens, sem novo
+  // envio) para só traduzir o texto por cima.
+  const copyConteudoBtn = el("button", "btn btn-secondary btn-small full", "Copiar conteúdo do português");
+  copyConteudoBtn.type = "button";
+  copyConteudoBtn.addEventListener("click", () => {
+    collectAll();
+    const currentEn = finalizeRichTextHtml(conteudoEnField.querySelector(".rich-text-editor"));
+    if (currentEn && !confirm("Isso substitui o conteúdo em inglês atual pelo conteúdo em português (mesmas imagens). Continuar?")) return;
+    conteudoEnField.setValue(contentData.estudos[i].conteudo || "");
+  });
+  grid.appendChild(
+    buildEnglishSection(
+      "O verbete publicado ganha página em inglês (/en/estudos/…) quando o título (EN) estiver preenchido.",
+      [tituloEn, definicaoCurtaEn, copyConteudoBtn, conteudoEnField]
+    )
+  );
+
   grid.appendChild(buildCheckboxField("Publicado", verbete.publicado, { verbete: i, key: "publicado" }));
 
   body.appendChild(grid);
@@ -3415,6 +3516,7 @@ function buildEstudoCard(verbete, i, total, container) {
   const saveBtn = buildSaveCardButton(() => {
     imagemCapaField.confirmFileUpload();
     conteudoField.confirmBodyImages();
+    conteudoEnField.confirmBodyImages();
     collectEstudoCardFields(i);
     // dataAtualizacao não tem campo próprio no formulário — é sempre a data
     // deste "Salvar alterações", igual a como readingTime é recalculado a
