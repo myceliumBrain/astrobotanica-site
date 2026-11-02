@@ -77,21 +77,22 @@
       <button type="button" class="sidebar-section" data-group="conteudo" aria-expanded="true">Conteúdo</button>
       <div class="sidebar-group">
         <button type="button" class="nav-btn active" data-panel="articles">Notícias <span class="nav-count" id="nav-count-articles"></span></button>
-        <button type="button" class="nav-btn" data-panel="episodes">Episódios <span class="nav-count" id="nav-count-episodes"></span></button>
+        <button type="button" class="nav-btn" data-panel="episodes">Podcast <span class="nav-count" id="nav-count-episodes"></span></button>
         <button type="button" class="nav-btn" data-panel="estudos">Estudos <span class="nav-count" id="nav-count-estudos"></span></button>
+        <button type="button" class="nav-btn" data-panel="members">Integrantes <span class="nav-count" id="nav-count-members"></span></button>
       </div>
       <button type="button" class="sidebar-section admin-only" data-group="paginas" aria-expanded="false">Páginas</button>
       <div class="sidebar-group admin-only" id="sidebar-pages"></div>
-      <hr class="sidebar-divider admin-only" />
-      <button type="button" class="sidebar-section" data-group="sistema" aria-expanded="false">Sistema</button>
-      <div class="sidebar-group">
-        <button type="button" class="nav-btn admin-only" data-panel="general">Marca &amp; navegação</button>
-        <button type="button" class="nav-btn" data-panel="members">Integrantes <span class="nav-count" id="nav-count-members"></span></button>
-        <button type="button" class="nav-btn admin-only" data-panel="access">Acessos</button>
+      <button type="button" class="sidebar-section admin-only" data-group="site" aria-expanded="false">Site</button>
+      <div class="sidebar-group admin-only">
+        <button type="button" class="nav-btn" data-panel="menu">Menu</button>
+        <button type="button" class="nav-btn" data-panel="general">Rodapé e marca</button>
       </div>
-      <button type="button" class="sidebar-section" data-group="conta" aria-expanded="false">Conta</button>
+      <hr class="sidebar-divider" />
+      <button type="button" class="sidebar-section" data-group="configuracoes" aria-expanded="false">Configurações</button>
       <div class="sidebar-group">
-        <button type="button" class="nav-btn" data-panel="account">Dados de acesso</button>
+        <button type="button" class="nav-btn admin-only" data-panel="access">Acessos</button>
+        <button type="button" class="nav-btn" data-panel="account">Minha conta</button>
       </div>
     </aside>
 
@@ -110,7 +111,7 @@
 
       <div class="section-panel" id="panel-episodes">
         <div class="panel-header">
-          <span class="panel-title">Episódios</span>
+          <span class="panel-title">Podcast — episódios</span>
           <div class="panel-header-counts">
             <span class="panel-count" id="count-episodes"></span>
             <span class="panel-count" id="featured-count-episodes"></span>
@@ -150,23 +151,26 @@
         <button type="button" class="add-btn" id="add-categoria-estudo-btn">+ adicionar categoria</button>
       </div>
 
-      <div class="section-panel admin-only" id="panel-general">
-        <div class="panel-header"><span class="panel-title">Marca &amp; navegação</span></div>
-        <div id="general-form"></div>
-
-        <h3 class="section-heading">Menu de navegação (cabeçalho e coluna "Navegação" do rodapé)</h3>
+      <div class="section-panel admin-only" id="panel-menu">
+        <div class="panel-header"><span class="panel-title">Menu</span></div>
         <p class="admin-hint">
-          Na ordem em que aparecem. "Mostrar" desmarcado tira o item do menu,
-          mas a página continua no ar. Link: o caminho de uma página do site
-          (ex.: <code>/podcast</code>; nas páginas em inglês vira
-          <code>/en/podcast</code>) ou um endereço completo
-          (<code>https://...</code>). Sem nome em inglês, o menu em inglês usa
-          o nome em português.
+          Itens do menu do site (cabeçalho, menu do celular e coluna
+          "Navegação" do rodapé), na ordem em que aparecem. "Mostrar"
+          desmarcado tira o item do menu, mas a página continua no ar. Link: o
+          caminho de uma página do site (ex.: <code>/podcast</code>; nas páginas
+          em inglês vira <code>/en/podcast</code>) ou um endereço completo
+          (<code>https://...</code>). Sem nome em inglês, o menu em inglês usa o
+          nome em português.
         </p>
         <div class="field full">
           <div id="site-menu-list"></div>
           <button type="button" class="btn btn-secondary btn-small" id="add-menu-item-btn">+ adicionar item ao menu</button>
         </div>
+      </div>
+
+      <div class="section-panel admin-only" id="panel-general">
+        <div class="panel-header"><span class="panel-title">Rodapé e marca</span></div>
+        <div id="general-form"></div>
 
         <h3 class="section-heading">Redes sociais (coluna ao lado de "Navegação" no rodapé)</h3>
         <div class="field full">

@@ -87,7 +87,7 @@ let CURRENT_LABEL = "";
 let CURRENT_UID = null;
 
 // Textos do site: cada campo é uma chave "a.b.c" dentro de data/site.json.
-// GENERAL_SCHEMA vira o painel "Marca & navegação"; cada item de
+// GENERAL_SCHEMA vira a tela "Site → Rodapé e marca"; cada item de
 // PAGE_SCHEMA vira seu próprio item de menu + painel em "Páginas".
 const GENERAL_SCHEMA = [
   {
@@ -107,18 +107,14 @@ const GENERAL_SCHEMA = [
   },
 ];
 
-// Ordem = prioridade de uso: páginas cujo conteúdo textual muda com mais
-// frequência (Home e as telas de notícias, que acompanham o ritmo de
-// publicação) vêm primeiro; Podcast/Episódio em seguida (conteúdo publicado
-// com menos frequência que notícias); Sobre/Contato por último dentro deste
-// grupo, por serem páginas institucionais que praticamente não mudam depois
-// de configuradas uma vez (ver divisor grosso na barra lateral, em
-// admin/index.html, que separa este grupo do GENERAL_SCHEMA — este sim quase
-// nunca editado).
+// Telas de "Páginas" na barra lateral, na ordem do menu do site: as
+// páginas institucionais primeiro, depois cada seção com a sua lista e a sua
+// página de item. Os campos são textos fixos do site (data/site.json e
+// data/site.en.json) usados nessas páginas.
 const PAGE_SCHEMA = [
   {
     key: "home",
-    label: "Home",
+    label: "Início",
     fields: [
       { key: "home.metaTitle", label: "Título da aba do navegador", type: "text" },
       { key: "home.metaDescription", label: "Descrição (SEO)", type: "textarea" },
@@ -126,72 +122,9 @@ const PAGE_SCHEMA = [
     ],
   },
   {
-    key: "artigos",
-    label: "Notícias",
-    fields: [
-      { key: "artigos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "artigos.tag", label: "Selo", type: "text" },
-      { key: "artigos.title", label: "Título", type: "text" },
-      { key: "artigos.intro", label: "Texto de introdução", type: "textarea" },
-    ],
-  },
-  {
-    key: "artigo",
-    label: "Notícia",
-    fields: [
-      { key: "artigo.backLink", label: "Link \"voltar\"", type: "text" },
-      { key: "artigo.byLine", label: "Texto do autor (use {{author}})", type: "text" },
-      { key: "artigo.latestHeading", label: "Título da barra lateral \"mais recentes\"", type: "text" },
-      { key: "artigo.relatedHeading", label: "Título \"continue lendo\"", type: "text" },
-    ],
-  },
-  {
-    key: "estudos",
-    label: "Estudos",
-    fields: [
-      { key: "estudos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "estudos.tag", label: "Selo", type: "text" },
-      { key: "estudos.title", label: "Título", type: "text" },
-      { key: "estudos.intro", label: "Texto de introdução", type: "textarea" },
-      { key: "estudos.searchPlaceholder", label: "Placeholder do campo de busca", type: "text" },
-    ],
-  },
-  {
-    key: "estudo",
-    label: "Verbete de estudo",
-    fields: [
-      { key: "estudo.backLink", label: "Link \"voltar\"", type: "text" },
-      { key: "estudo.updatedAt", label: "Texto \"atualizado em\" (use {{date}})", type: "text" },
-      { key: "estudo.relatedHeading", label: "Título \"termos relacionados\"", type: "text" },
-      { key: "estudo.sourcesHeading", label: "Título \"fontes\"", type: "text" },
-    ],
-  },
-  {
-    key: "podcast",
-    label: "Podcast",
-    fields: [
-      { key: "podcast.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "podcast.tag", label: "Selo", type: "text" },
-      { key: "podcast.title", label: "Título", type: "text" },
-      { key: "podcast.intro", label: "Texto de introdução", type: "textarea" },
-    ],
-  },
-  {
-    key: "episodio",
-    label: "Episódio",
-    fields: [
-      { key: "episodio.backLink", label: "Link \"voltar\"", type: "text" },
-      { key: "episodio.relatedHeading", label: "Título \"outros episódios\"", type: "text" },
-    ],
-  },
-  {
     key: "sobre",
     label: "Sobre",
     fields: [
-      { key: "sobre.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "sobre.tag", label: "Selo", type: "text" },
-      { key: "sobre.title", label: "Título", type: "text" },
-      { key: "sobre.intro", label: "Texto de introdução", type: "textarea" },
       { key: "sobre.membersHeading", label: "Título da seção \"Integrantes\"", type: "text" },
     ],
   },
@@ -200,12 +133,67 @@ const PAGE_SCHEMA = [
     label: "Contato",
     fields: [
       { key: "contato.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "contato.tag", label: "Selo", type: "text" },
       { key: "contato.title", label: "Título", type: "text" },
       { key: "contato.intro", label: "Texto de introdução", type: "textarea" },
       { key: "contato.emailKicker", label: "Selo do cartão de email", type: "text" },
       { key: "contato.email", label: "Email de contato", type: "text" },
       { key: "contato.emailNote", label: "Nota abaixo do email", type: "text" },
+    ],
+  },
+  {
+    key: "artigos",
+    label: "Notícias — lista",
+    fields: [
+      { key: "artigos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "artigos.title", label: "Título", type: "text" },
+      { key: "artigos.intro", label: "Texto de introdução", type: "textarea" },
+    ],
+  },
+  {
+    key: "artigo",
+    label: "Notícias — página da notícia",
+    fields: [
+      { key: "artigo.backLink", label: "Link \"voltar\"", type: "text" },
+      { key: "artigo.byLine", label: "Texto do autor (use {{author}})", type: "text" },
+      { key: "artigo.latestHeading", label: "Título da barra lateral \"mais recentes\"", type: "text" },
+      { key: "artigo.relatedHeading", label: "Título \"continue lendo\"", type: "text" },
+    ],
+  },
+  {
+    key: "podcast",
+    label: "Podcast — lista",
+    fields: [
+      { key: "podcast.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "podcast.title", label: "Título", type: "text" },
+      { key: "podcast.intro", label: "Texto de introdução", type: "textarea" },
+    ],
+  },
+  {
+    key: "episodio",
+    label: "Podcast — página do episódio",
+    fields: [
+      { key: "episodio.backLink", label: "Link \"voltar\"", type: "text" },
+      { key: "episodio.relatedHeading", label: "Título \"outros episódios\"", type: "text" },
+    ],
+  },
+  {
+    key: "estudos",
+    label: "Estudos — lista",
+    fields: [
+      { key: "estudos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
+      { key: "estudos.title", label: "Título", type: "text" },
+      { key: "estudos.intro", label: "Texto de introdução", type: "textarea" },
+      { key: "estudos.searchPlaceholder", label: "Placeholder do campo de busca", type: "text" },
+    ],
+  },
+  {
+    key: "estudo",
+    label: "Estudos — página do verbete",
+    fields: [
+      { key: "estudo.backLink", label: "Link \"voltar\"", type: "text" },
+      { key: "estudo.updatedAt", label: "Texto \"atualizado em\" (use {{date}})", type: "text" },
+      { key: "estudo.relatedHeading", label: "Título \"termos relacionados\"", type: "text" },
+      { key: "estudo.sourcesHeading", label: "Título \"fontes\"", type: "text" },
     ],
   },
 ];
@@ -733,7 +721,7 @@ function setupLoginScreen() {
 // App: navegação por abas laterais
 // ----------------------------------------------------------------------------
 
-// Grupos da barra lateral (Conteúdo, Páginas, Sistema) podem ser
+// Grupos da barra lateral (Conteúdo, Páginas, Site, Configurações) podem ser
 // retraídos; o estado de cada um fica salvo no localStorage deste navegador.
 const SIDEBAR_GROUPS_KEY = "adm-sidebar-groups";
 
@@ -822,6 +810,7 @@ async function enterApp() {
     location.reload();
   });
   document.getElementById("save-btn").addEventListener("click", saveAll);
+  vigiarVersaoDoPainel();
   document.getElementById("add-article-btn").addEventListener("click", addArticle);
   document.getElementById("add-episode-btn").addEventListener("click", addEpisode);
   document.getElementById("add-member-btn").addEventListener("click", addMember);
@@ -1254,9 +1243,57 @@ function collectEstudoCardFields(i) {
   collectVerbeteTermosRelacionados();
 }
 
+// Versão do painel (ver versionarPainel em astro.config.mjs): se o painel
+// publicado mudou desde que esta página abriu, salvar daqui poderia gravar
+// num formato que o site não lê mais. Uma faixa avisa assim que a mudança é
+// percebida (a cada 5 minutos e ao voltar para a aba), e saveAll se recusa a
+// enviar. Sem a meta (astro dev), não há conferência.
+const VERSAO_PAINEL = document.querySelector('meta[name="versao-painel"]')?.content;
+
+async function painelDesatualizado() {
+  if (!VERSAO_PAINEL) return false;
+  try {
+    const r = await fetch(`versao.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) return false;
+    const { versao } = await r.json();
+    return Boolean(versao) && versao !== VERSAO_PAINEL;
+  } catch {
+    return false; // sem rede: a conferência não bloqueia
+  }
+}
+
+async function avisarSePainelDesatualizado() {
+  if (document.getElementById("aviso-versao") || !(await painelDesatualizado())) return;
+  const aviso = el("div", "aviso-versao");
+  aviso.id = "aviso-versao";
+  aviso.setAttribute("role", "alert");
+  aviso.appendChild(
+    el("span", "", "Há uma versão nova do painel. Copie o que ainda não salvou e recarregue a página (Ctrl+Shift+R) antes de salvar.")
+  );
+  const recarregar = el("button", "btn btn-primary btn-small", "Recarregar agora");
+  recarregar.type = "button";
+  recarregar.addEventListener("click", () => location.reload());
+  aviso.appendChild(recarregar);
+  document.getElementById("app-screen").prepend(aviso);
+}
+
+function vigiarVersaoDoPainel() {
+  if (!VERSAO_PAINEL) return;
+  setInterval(avisarSePainelDesatualizado, 5 * 60 * 1000);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") avisarSePainelDesatualizado();
+  });
+}
+
 async function saveAll() {
   if (dirty.size === 0 && pendingUploads.length === 0 && pendingDeletions.length === 0) return;
-  // Sem isso, campos de "Marca & navegação"/"Páginas" (data-site/data-site-en)
+  if (await painelDesatualizado()) {
+    await avisarSePainelDesatualizado();
+    setSaveStatus("erro: painel desatualizado — recarregue a página", "err");
+    toast("Nada foi enviado: o painel foi atualizado desde que esta página abriu. Recarregue (Ctrl+Shift+R) e refaça a alteração.", "error");
+    return;
+  }
+  // Sem isso, campos de "Rodapé e marca"/"Páginas" (data-site/data-site-en)
   // e as listas de tamanho livre (links de integrante, redes sociais do
   // rodapé) só entravam em contentData quando alguém reordenava/adicionava/
   // removia um item em outra seção (o que já chama collectAll) — clicar
@@ -3574,14 +3611,14 @@ function addEstudo() {
 }
 
 // ----------------------------------------------------------------------------
-// Textos do site: Marca & navegação + Páginas
+// Textos do site: Rodapé e marca + Páginas
 // ----------------------------------------------------------------------------
 
 // Cada campo de texto do site vem em par: a versão em português (editada
-// direto em contentData.site, como sempre) e, logo abaixo, a versão em
-// inglês (contentData.siteEn) — mantida manualmente por quem edita o
-// painel. Textos novos não traduzem sozinhos: é preciso preencher o campo
-// "(EN)" à mão sempre que criar/mudar um campo em português.
+// direto em contentData.site) e a versão em inglês (contentData.siteEn),
+// mantida à mão — não há tradução automática. As duas ficam em abas
+// "Português | English" no topo da tela (ver abasDeIdioma); a aba English
+// mostra quantos campos ainda faltam traduzir.
 function buildSiteField(fieldDef) {
   const wrap = el("div", "field-group");
   if (fieldDef.type === "textarea") wrap.classList.add("full");
@@ -3591,17 +3628,58 @@ function buildSiteField(fieldDef) {
     fieldDef.type === "textarea"
       ? buildTextarea(fieldDef.label, value, { site: fieldDef.key })
       : buildInput(fieldDef.label, "text", value, { site: fieldDef.key });
+  ptField.classList.add("campo-pt");
   wrap.appendChild(ptField);
 
   const valueEn = getByPath(contentData.siteEn, fieldDef.key) ?? "";
   const enField =
     fieldDef.type === "textarea"
-      ? buildTextarea(`${fieldDef.label} (EN)`, valueEn, { siteEn: fieldDef.key })
-      : buildInput(`${fieldDef.label} (EN)`, "text", valueEn, { siteEn: fieldDef.key });
-  enField.classList.add("field--en");
+      ? buildTextarea(fieldDef.label, valueEn, { siteEn: fieldDef.key })
+      : buildInput(fieldDef.label, "text", valueEn, { siteEn: fieldDef.key });
+  enField.classList.add("campo-en");
+  // Na aba English, o texto em português aparece como referência.
+  if (value) enField.appendChild(el("span", "field-hint campo-referencia", `Português: ${value}`));
   wrap.appendChild(enField);
 
   return wrap;
+}
+
+// Abas "Português | English" de uma tela de textos do site. A tela inteira
+// troca de idioma (data-idioma no container; o CSS esconde .campo-pt ou
+// .campo-en). Campos sem idioma (ex.: banner da Home) aparecem nas duas.
+function abasDeIdioma(container) {
+  container.dataset.idioma = "pt";
+  const abas = el("div", "abas-idioma");
+  abas.setAttribute("role", "tablist");
+  const aba = (idioma, texto) => {
+    const b = el("button", "aba-idioma", texto);
+    b.type = "button";
+    b.setAttribute("role", "tab");
+    b.dataset.idioma = idioma;
+    b.addEventListener("click", () => {
+      container.dataset.idioma = idioma;
+      abas.querySelectorAll(".aba-idioma").forEach((x) => x.setAttribute("aria-selected", String(x === b)));
+    });
+    abas.appendChild(b);
+    return b;
+  };
+  aba("pt", "Português").setAttribute("aria-selected", "true");
+  const abaEn = aba("en", "English");
+  abaEn.setAttribute("aria-selected", "false");
+  const falta = el("span", "aba-falta");
+  abaEn.appendChild(falta);
+  // Faltando = campo com texto em português e vazio em inglês.
+  const contar = () => {
+    let n = 0;
+    container.querySelectorAll("[data-site-en]").forEach((en) => {
+      const pt = container.querySelector(`[data-site="${en.dataset.siteEn}"]`);
+      if (pt?.value.trim() && !en.value.trim()) n++;
+    });
+    falta.textContent = n ? ` · falta traduzir ${n}` : "";
+  };
+  contar();
+  container.addEventListener("input", contar);
+  container.prepend(abas);
 }
 
 // Delegação: distingue se o campo que mudou é a versão pt (data-site) ou en
@@ -3622,6 +3700,7 @@ function renderGeneralForm() {
     }
     container.appendChild(grid);
   }
+  abasDeIdioma(container);
   container.addEventListener("input", handleSiteFieldChange);
   container.addEventListener("change", handleSiteFieldChange);
 }
@@ -3815,6 +3894,7 @@ function renderPageForms() {
       grid.appendChild(buildSiteField(fieldDef));
     }
     container.appendChild(grid);
+    abasDeIdioma(container);
     container.addEventListener("input", handleSiteFieldChange);
     container.addEventListener("change", handleSiteFieldChange);
   }

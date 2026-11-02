@@ -669,3 +669,35 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
   .adm-topbar { padding: 0 1rem; }
   .adm-save-status { display: none; }
 }
+
+/* Abas "Português | English" das telas de textos do site (abasDeIdioma). */
+.abas-idioma { display: flex; gap: 0.25rem; margin-bottom: 1.25rem; border-bottom: 1px solid var(--adm-border); }
+.aba-idioma {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--adm-muted);
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.55rem 0.9rem;
+  margin-bottom: -1px;
+  cursor: pointer;
+}
+.aba-idioma:hover { color: var(--adm-off-white); }
+.aba-idioma[aria-selected="true"] { color: var(--adm-off-white); border-bottom-color: var(--adm-accent); }
+.aba-falta { color: var(--adm-accent); font-size: 0.78rem; }
+[data-idioma="pt"] .campo-en,
+[data-idioma="en"] .campo-pt { display: none; }
+.campo-referencia { display: block; margin-top: 0.35rem; white-space: pre-wrap; }
+
+/* Faixa de "versão nova do painel" (avisarSePainelDesatualizado). */
+.aviso-versao {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1.25rem;
+  background: #3a2f12;
+  color: #ffe2a3;
+  font-size: 0.88rem;
+}

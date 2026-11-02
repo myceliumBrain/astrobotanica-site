@@ -65,12 +65,15 @@ Toda tela de edição segue o mesmo padrão:
 
 ## Partes (um PR cada, nesta ordem)
 
-### P1 — Estrutura e limpeza
+### P1 — Estrutura e limpeza ✔ (2026-11-02)
 - Nova navegação lateral (acima) e o padrão de tela com abas PT | EN.
 - Remove os 8 campos sem efeito.
 - Menu do site com uma tela própria em "Site → Menu".
 - **Aviso de versão**: o painel confere se há uma versão mais nova publicada
   e pede para recarregar antes de salvar. Isso resolve o problema do cache.
+- Feito: as abas PT | EN valem nas telas de Páginas e de Rodapé e marca. Nos
+  cartões de notícia, episódio e verbete elas entram na P5, junto com a
+  reforma desses cartões.
 
 ### P2 — Integrantes com identificador pelo nome
 - O identificador passa a ser o nome completo sem acentos, por exemplo

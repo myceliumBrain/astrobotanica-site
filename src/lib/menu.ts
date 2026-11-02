@@ -1,5 +1,5 @@
 // Menu de navegação (cabeçalho, menu do celular e coluna "Navegação" do
-// rodapé), editado no painel /admin em "Marca & navegação" e guardado em
+// rodapé), editado no painel /admin em "Site → Menu" e guardado em
 // data/site.json → menu: [{ rotulo, rotuloEn, link, visivel }], na ordem em
 // que aparece. Esconder um item só o tira do menu: a página continua no ar.
 //
