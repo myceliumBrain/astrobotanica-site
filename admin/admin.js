@@ -1,8 +1,9 @@
 // ============================================================================
 // admin.js — painel de administração de conteúdo.
 //
-// Modelo: ao entrar, episodes.json/articles.json/site.json são carregados
-// uma vez para a memória (contentData). Reordenar, adicionar, remover e
+// Modelo: ao entrar, as notícias (src/content/noticias/{pt,en}/*.md, ver
+// noticias-md.js) e episodes.json/site.json etc. são carregados uma vez para
+// a memória (contentData). Reordenar, adicionar, remover e
 // editar campos só mudam essa cópia em memória e marcam a seção como suja
 // (dirty) — nada é gravado no GitHub até clicar em "Salvar no GitHub", que
 // faz o commit de cada arquivo sujo de uma vez. Os acessos (data/auth.json)
@@ -14,13 +15,20 @@
 // na memória da aba durante a sessão.
 // ============================================================================
 
+import {
+  PASTA_NOTICIAS,
+  arquivosParaNoticias,
+  mudancasDeArquivos,
+  noticiasParaArquivos,
+  problemasDasNoticias,
+} from "./noticias-md.js";
+
 const CONFIG = {
   owner: "myceliumBrain",
   repo: "astrobotanica-site",
   branch: "main",
   authPath: "data/auth.json",
   episodesPath: "data/episodes.json",
-  articlesPath: "data/articles.json",
   membersPath: "data/members.json",
   sitePath: "data/site.json",
   siteEnPath: "data/site.en.json",
@@ -28,8 +36,9 @@ const CONFIG = {
   categoriasEstudoPath: "data/categorias_estudo.json",
 };
 
+// Seções gravadas como um arquivo JSON cada. As notícias (seção "articles")
+// são gravadas à parte, um .md por notícia e idioma (ver salvarNoticias).
 const PATHS = {
-  articles: CONFIG.articlesPath,
   episodes: CONFIG.episodesPath,
   members: CONFIG.membersPath,
   site: CONFIG.sitePath,
@@ -459,6 +468,31 @@ async function getFile(path) {
   return { content: safeJsonParse(base64ToUtf8(data.content)), sha: data.sha };
 }
 
+// Texto de todos os .md de notícias (pt/ e en/), como { caminho: texto }.
+// Uma pasta que ainda não existe (ex: en/ sem nenhuma tradução) conta como
+// vazia.
+async function getNoticiasMarkdown() {
+  const repoBase = `/repos/${CONFIG.owner}/${CONFIG.repo}/contents`;
+  const arquivos = {};
+  for (const lang of ["pt", "en"]) {
+    let lista;
+    try {
+      lista = await ghRequest(`${repoBase}/${PASTA_NOTICIAS}/${lang}?ref=${CONFIG.branch}&_=${Date.now()}`);
+    } catch (err) {
+      if (err.status === 404) continue;
+      throw err;
+    }
+    const mds = lista.filter((item) => item.type === "file" && item.name.endsWith(".md"));
+    const textos = await Promise.all(
+      mds.map((item) =>
+        ghRequest(`${repoBase}/${item.path}?ref=${CONFIG.branch}&_=${Date.now()}`).then((d) => base64ToUtf8(d.content))
+      )
+    );
+    mds.forEach((item, i) => (arquivos[item.path] = textos[i]));
+  }
+  return arquivos;
+}
+
 // O GitHub responde 404 (ou 403) a uma escrita quando o token não tem
 // permissão de escrita no repositório — "Not Found" sozinho não ajuda ninguém.
 function explainWriteError(err) {
@@ -834,6 +868,9 @@ async function enterApp() {
 
 let contentData = { articles: null, episodes: null, members: null, site: null, siteEn: null, estudos: null, categoriasEstudo: null };
 const dirty = new Set();
+// Os .md de notícias como estavam no GitHub no último carregamento ou
+// salvamento — base para gravar só o que mudou (ver salvarNoticias).
+let noticiasMarkdownOriginais = {};
 
 // Campo de upload do banner de evento da Home (ver renderHomeEventBanner) —
 // guardado à parte porque, ao contrário dos campos de artigo/episódio/
@@ -930,7 +967,7 @@ async function loadContent() {
   setSaveStatus("carregando…");
   try {
     const [articles, episodes, members, site, siteEn, estudos, categoriasEstudo] = await Promise.all([
-      getFile(CONFIG.articlesPath),
+      getNoticiasMarkdown(),
       getFile(CONFIG.episodesPath),
       getFileOrEmpty(CONFIG.membersPath, []),
       getFile(CONFIG.sitePath),
@@ -938,7 +975,8 @@ async function loadContent() {
       getFileOrEmpty(CONFIG.estudosPath, []),
       getFileOrEmpty(CONFIG.categoriasEstudoPath, []),
     ]);
-    contentData.articles = articles.content;
+    noticiasMarkdownOriginais = articles;
+    contentData.articles = arquivosParaNoticias(articles);
     contentData.episodes = episodes.content;
     contentData.members = members.content || [];
     contentData.site = site.content;
@@ -1231,6 +1269,20 @@ async function saveAll() {
     const memberIds = contentData.members?.map((m) => m.id) || [];
     const duplicate = memberIds.find((id, i) => memberIds.indexOf(id) !== i);
     if (duplicate) throw new Error(`dois integrantes com o mesmo identificador ("${duplicate}")`);
+    // Notícias: valida e calcula os arquivos antes de qualquer envio — um
+    // título vazio ou uma data inválida faria o build do site falhar.
+    let noticias = null;
+    if (dirty.has("articles")) {
+      const problemas = problemasDasNoticias(contentData.articles);
+      if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
+      const arquivos = noticiasParaArquivos(contentData.articles);
+      noticias = { arquivos, mudancas: mudancasDeArquivos(noticiasMarkdownOriginais, arquivos) };
+      if (!confirmarApagarTraducoes(noticias.mudancas.apagar, arquivos)) {
+        setSaveStatus("alterações pendentes", "pending");
+        saveBtn.disabled = false;
+        return;
+      }
+    }
     for (const upload of pendingUploads) {
       await uploadBinaryFile(upload.path, upload.file, upload.message);
     }
@@ -1252,6 +1304,10 @@ async function saveAll() {
       });
     }
     for (const section of dirty) {
+      if (section === "articles") {
+        await salvarNoticias(noticias);
+        continue;
+      }
       // sha undefined (arquivo ainda não existe no repositório, ex: primeiro
       // salvamento de data/members.json) faz o PUT criar o arquivo em vez de
       // atualizar um existente — ver getFileOrEmpty.
@@ -1273,6 +1329,36 @@ async function saveAll() {
     toast(`Erro: ${err.message}`, "error");
     saveBtn.disabled = false;
   }
+}
+
+// Versão em inglês esvaziada (título e corpo EN em branco) apaga o .md EN da
+// notícia — pede confirmação antes, já que o texto traduzido some do site.
+// Os .md de notícias removidas inteiras já foram confirmados em removeArticle.
+function confirmarApagarTraducoes(apagar, arquivos) {
+  const traducoes = apagar.filter((caminho) => {
+    const m = new RegExp(`^${PASTA_NOTICIAS}/en/(.+)\\.md$`).exec(caminho);
+    return m && `${PASTA_NOTICIAS}/pt/${m[1]}.md` in arquivos;
+  });
+  if (traducoes.length === 0) return true;
+  const ids = traducoes.map((caminho) => caminho.split("/").pop().replace(/\.md$/, "")).join(", ");
+  return confirm(`A versão em inglês destas notícias está vazia e será apagada do site: ${ids}. Continuar?`);
+}
+
+// Grava as notícias num único commit, só com os .md que mudaram; apaga o .md
+// de uma notícia removida e o EN de uma tradução esvaziada.
+async function salvarNoticias({ arquivos, mudancas }) {
+  const entries = [
+    ...Object.entries(mudancas.gravar).map(([path, content]) => ({ path, mode: "100644", type: "blob", content })),
+    ...mudancas.apagar.map((path) => ({ path, mode: "100644", type: "blob", sha: null })),
+  ];
+  if (entries.length) {
+    try {
+      await commitTreeChange(entries, "admin: atualiza notícias");
+    } catch (err) {
+      throw explainWriteError(err);
+    }
+  }
+  noticiasMarkdownOriginais = arquivos;
 }
 
 // ----------------------------------------------------------------------------
