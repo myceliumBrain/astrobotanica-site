@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Favicon provisório: broto verde sobre fundo claro, nas cores do site. -->
+  <rect width="64" height="64" rx="12" fill="#e6f1e9"/>
+  <path d="M32 54V30" stroke="#395a43" stroke-width="5" stroke-linecap="round" fill="none"/>
+  <path d="M32 34C32 22 24 14 12 14c0 12 8 20 20 20Z" fill="#4f7a5c"/>
+  <path d="M32 30c0-10 7-17 20-17 0 10-7 17-20 17Z" fill="#7fad8b"/>
+</svg>
