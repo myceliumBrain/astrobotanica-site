@@ -1,0 +1,16 @@
+---
+// Página criada pelo painel a partir de um item do menu (ver
+// slugsDePaginasNovas em src/lib/paginas.ts).
+import PaginaInstitucional from "../components/PaginaInstitucional.astro";
+import { paginaInstitucional, slugsDePaginasNovas } from "../lib/paginas";
+
+export async function getStaticPaths() {
+  const slugs = [];
+  for (const slug of await slugsDePaginasNovas()) if (await paginaInstitucional("pt", slug)) slugs.push(slug);
+  return slugs.map((pagina) => ({ params: { pagina } }));
+}
+
+const { pagina } = Astro.params;
+---
+
+<PaginaInstitucional lang="pt" slug={pagina} />

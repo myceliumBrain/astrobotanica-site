@@ -22,6 +22,15 @@ import {
   noticiasParaArquivos,
   problemasDasNoticias,
 } from "./noticias-md.js";
+import {
+  PASTA_PAGINAS,
+  caminhoPagina,
+  htmlParaMarkdown,
+  lerPagina,
+  markdownParaHtml,
+  montarPagina,
+  slugDoCaminho,
+} from "./paginas-md.js";
 
 const CONFIG = {
   owner: "myceliumBrain",
@@ -462,12 +471,17 @@ async function getFile(path) {
 // Uma pasta que ainda não existe (ex: en/ sem nenhuma tradução) conta como
 // vazia.
 async function getNoticiasMarkdown() {
+  return getMarkdownDaPasta(PASTA_NOTICIAS);
+}
+
+// Todos os .md de <pasta>/pt e <pasta>/en, como { caminho: texto }.
+async function getMarkdownDaPasta(pasta) {
   const repoBase = `/repos/${CONFIG.owner}/${CONFIG.repo}/contents`;
   const arquivos = {};
   for (const lang of ["pt", "en"]) {
     let lista;
     try {
-      lista = await ghRequest(`${repoBase}/${PASTA_NOTICIAS}/${lang}?ref=${CONFIG.branch}&_=${Date.now()}`);
+      lista = await ghRequest(`${repoBase}/${pasta}/${lang}?ref=${CONFIG.branch}&_=${Date.now()}`);
     } catch (err) {
       if (err.status === 404) continue;
       throw err;
@@ -768,14 +782,22 @@ function setupNav() {
       setSidebarGroup(toggle, toggle.getAttribute("aria-expanded") !== "true");
       return;
     }
+    const pai = e.target.closest(".nav-pai");
+    if (pai) {
+      pai.setAttribute("aria-expanded", String(pai.getAttribute("aria-expanded") !== "true"));
+      return;
+    }
     const btn = e.target.closest(".nav-btn");
     if (!btn) return;
     showPanel(btn.dataset.panel);
   });
 }
 
+let painelAtual = null;
+
 function showPanel(name) {
   if (ROLE !== "admin" && document.getElementById("panel-" + name)?.closest(".admin-only")) return;
+  painelAtual = name;
   document.querySelectorAll(".section-panel").forEach((p) => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
   const panel = document.getElementById("panel-" + name);
@@ -786,21 +808,19 @@ function showPanel(name) {
     // Se a aba ativa estiver num grupo retraído, abre o grupo pra ela aparecer.
     const toggle = btn.closest(".sidebar-group")?.previousElementSibling;
     if (toggle?.getAttribute("aria-expanded") === "false") setSidebarGroup(toggle, true);
+    // Idem para um item de "Páginas" com subitens (ver renderSidebarPaginas).
+    const pai = btn.closest(".nav-subgrupo")?.previousElementSibling;
+    if (pai?.classList.contains("nav-pai")) pai.setAttribute("aria-expanded", "true");
   }
 }
 
+// Telas dos textos fixos (PAGE_SCHEMA). Os botões delas na barra lateral são
+// montados a partir do menu do site (ver renderSidebarPaginas).
 function setupPagePanels() {
-  const sidebarContainer = document.getElementById("sidebar-pages");
   const panelsContainer = document.getElementById("page-panels");
-  sidebarContainer.innerHTML = "";
   panelsContainer.innerHTML = "";
 
   for (const page of PAGE_SCHEMA) {
-    const navBtn = el("button", "nav-btn", page.label);
-    navBtn.type = "button";
-    navBtn.dataset.panel = `page-${page.key}`;
-    sidebarContainer.appendChild(navBtn);
-
     const panel = el("div", "section-panel");
     panel.id = `panel-page-${page.key}`;
     const header = el("div", "panel-header");
@@ -959,7 +979,7 @@ function stripLegacyFields(items, keys) {
 async function loadContent() {
   setSaveStatus("carregando…");
   try {
-    const [articles, episodes, members, site, siteEn, estudos, categoriasEstudo] = await Promise.all([
+    const [articles, episodes, members, site, siteEn, estudos, categoriasEstudo, paginas] = await Promise.all([
       getNoticiasMarkdown(),
       getFile(CONFIG.episodesPath),
       getFileOrEmpty(CONFIG.membersPath, []),
@@ -967,8 +987,10 @@ async function loadContent() {
       getFileOrEmpty(CONFIG.siteEnPath, {}),
       getFileOrEmpty(CONFIG.estudosPath, []),
       getFileOrEmpty(CONFIG.categoriasEstudoPath, []),
+      getMarkdownDaPasta(PASTA_PAGINAS),
     ]);
     noticiasMarkdownOriginais = articles;
+    carregarPaginasDeTexto(paginas);
     contentData.articles = arquivosParaNoticias(articles);
     contentData.episodes = episodes.content;
     contentData.members = members.content || [];
@@ -994,6 +1016,7 @@ async function loadContent() {
     renderGeneralForm();
     renderSiteSocialLinks();
     renderSiteMenu();
+    renderSidebarPaginas();
     if (fixedArticles || fixedEpisodes || fixedEstudos || fixedCategoriasEstudo) {
       document.getElementById("save-btn").disabled = false;
       setSaveStatus("alterações pendentes", "pending");
@@ -1359,6 +1382,18 @@ async function saveAll() {
         return;
       }
     }
+    // Páginas de texto: idem, um commit só com os .md que mudaram.
+    let paginas = null;
+    if (dirty.has("paginas")) {
+      const { arquivos, problemas } = paginasParaArquivos();
+      if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
+      paginas = { arquivos, mudancas: mudancasDeArquivos(paginasMarkdownOriginais, arquivos) };
+      if (paginas.mudancas.apagar.length && !confirm(`Apagar a versão em inglês de: ${paginas.mudancas.apagar.map(slugDoCaminho).join(", ")}? (o texto em inglês foi esvaziado)`)) {
+        setSaveStatus("alterações pendentes", "pending");
+        saveBtn.disabled = false;
+        return;
+      }
+    }
     for (const upload of pendingUploads) {
       await uploadBinaryFile(upload.path, upload.file, upload.message);
     }
@@ -1383,6 +1418,10 @@ async function saveAll() {
     for (const section of dirty) {
       if (section === "articles") {
         await salvarNoticias(noticias);
+        continue;
+      }
+      if (section === "paginas") {
+        await salvarPaginas(paginas);
         continue;
       }
       // sha undefined (arquivo ainda não existe no repositório, ex: primeiro
@@ -1895,7 +1934,30 @@ function buildRichTextField(labelText, value, dataset, opts) {
     opt.textContent = label;
     sizeSelect.appendChild(opt);
   });
-  toolbar.appendChild(sizeSelect);
+  if (!opts.simples) toolbar.appendChild(sizeSelect);
+
+  // Modo simples (páginas de texto, salvas em Markdown — ver paginas-md.js):
+  // sem tamanho de fonte nem imagem, com seção (H2), link e listas.
+  if (opts.simples) {
+    const botao = (texto, titulo, acao) => {
+      const b = el("button", "rich-text-btn", texto);
+      b.type = "button";
+      b.title = titulo;
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", acao);
+      toolbar.appendChild(b);
+    };
+    botao("Seção", "Alternar o parágrafo atual para título de seção", () => {
+      const current = document.queryCommandValue("formatBlock");
+      document.execCommand("formatBlock", false, /^h2$/i.test(current) ? "p" : "h2");
+    });
+    botao("Link", "Transformar o texto selecionado em link", () => {
+      const url = prompt("Endereço do link (https://… ou /pagina-do-site):");
+      if (url?.trim()) document.execCommand("createLink", false, url.trim());
+    });
+    botao("Lista", "Lista com marcadores", () => document.execCommand("insertUnorderedList"));
+    botao("Lista numerada", "Lista numerada", () => document.execCommand("insertOrderedList"));
+  }
 
   const imageBtn = el("button", "rich-text-btn", "+ imagem");
   imageBtn.type = "button";
@@ -1905,7 +1967,7 @@ function buildRichTextField(labelText, value, dataset, opts) {
   imageInput.accept = "image/*";
   imageInput.hidden = true;
   imageBtn.appendChild(imageInput);
-  toolbar.appendChild(imageBtn);
+  if (!opts.simples) toolbar.appendChild(imageBtn);
 
   const editor = document.createElement("div");
   editor.className = "input rich-text-editor";
@@ -1952,6 +2014,8 @@ function buildRichTextField(labelText, value, dataset, opts) {
   // (quebra de linha simples dentro do mesmo parágrafo).
   editor.addEventListener("keydown", (e) => {
     if (e.key !== "Enter" || e.shiftKey) return;
+    // Dentro de lista ou tabela, o Enter nativo (novo item, sair da lista).
+    if (opts.simples && window.getSelection()?.anchorNode?.parentElement?.closest("li, td, th")) return;
     e.preventDefault();
     splitEditorParagraphAtCursor(editor);
     saveSelection();
@@ -2047,6 +2111,10 @@ function buildRichTextField(labelText, value, dataset, opts) {
     const fileItem = items && Array.from(items).find((item) => item.kind === "file" && item.type.startsWith("image/"));
     if (fileItem) {
       e.preventDefault();
+      if (opts.simples) {
+        toast("As páginas de texto não aceitam imagens.", "error");
+        return;
+      }
       const file = fileItem.getAsFile();
       if (file) insertPendingImage(file);
       return;
@@ -3713,7 +3781,7 @@ function buildSiteField(fieldDef) {
 // Abas "Português | English" de uma tela de textos do site. A tela inteira
 // troca de idioma (data-idioma no container; o CSS esconde .campo-pt ou
 // .campo-en). Campos sem idioma (ex.: banner da Home) aparecem nas duas.
-function abasDeIdioma(container) {
+function abasDeIdioma(container, faltando) {
   container.dataset.idioma = "pt";
   const abas = el("div", "abas-idioma");
   abas.setAttribute("role", "tablist");
@@ -3737,10 +3805,13 @@ function abasDeIdioma(container) {
   // Faltando = campo com texto em português e vazio em inglês.
   const contar = () => {
     let n = 0;
-    container.querySelectorAll("[data-site-en]").forEach((en) => {
-      const pt = container.querySelector(`[data-site="${en.dataset.siteEn}"]`);
-      if (pt?.value.trim() && !en.value.trim()) n++;
-    });
+    if (faltando) n = faltando();
+    else {
+      container.querySelectorAll("[data-site-en]").forEach((en) => {
+        const pt = container.querySelector(`[data-site="${en.dataset.siteEn}"]`);
+        if (pt?.value.trim() && !en.value.trim()) n++;
+      });
+    }
     falta.textContent = n ? ` · falta traduzir ${n}` : "";
   };
   contar();
@@ -3892,7 +3963,7 @@ function buildSiteMenuRow(item) {
     if (delta < 0) lista.insertBefore(row, irmao);
     else lista.insertBefore(irmao, row);
     atualizarBotoesDoMenu();
-    markDirty("site");
+    menuMudou();
   };
   row.appendChild(buildReorderButtons(0, 1, () => mover(-1), () => mover(1)));
 
@@ -3901,7 +3972,7 @@ function buildSiteMenuRow(item) {
   removeBtn.addEventListener("click", () => {
     row.remove();
     atualizarBotoesDoMenu();
-    markDirty("site");
+    menuMudou();
   });
   row.appendChild(removeBtn);
 
@@ -3942,13 +4013,279 @@ function renderSiteMenu() {
   list.innerHTML = "";
   (contentData.site.menu || menuPadrao()).forEach((item) => list.appendChild(buildSiteMenuRow(item)));
   atualizarBotoesDoMenu();
-  list.addEventListener("input", () => markDirty("site"));
-  list.addEventListener("change", () => markDirty("site"));
+  list.addEventListener("input", menuMudou);
+  list.addEventListener("change", menuMudou);
   addBtn.addEventListener("click", () => {
     list.appendChild(buildSiteMenuRow({ visivel: true }));
     atualizarBotoesDoMenu();
-    markDirty("site");
+    menuMudou();
   });
+}
+
+// Menu editado: "Páginas" na barra lateral acompanha (ver renderSidebarPaginas).
+let menuMudouTimer = null;
+function menuMudou() {
+  markDirty("site");
+  clearTimeout(menuMudouTimer);
+  menuMudouTimer = setTimeout(renderSidebarPaginas, 300);
+}
+
+// Menu como está na tela agora (mesmo ainda não salvo).
+function menuAtual() {
+  const list = document.getElementById("site-menu-list");
+  if (!list || !list.querySelector(".site-menu-row")) return contentData.site.menu || menuPadrao();
+  return Array.from(list.querySelectorAll(".site-menu-row")).map((row) => ({
+    rotulo: row.querySelector(".site-menu-rotulo").value.trim(),
+    link: row.querySelector(".site-menu-link").value.trim(),
+    visivel: row.querySelector(".site-menu-visivel-input").checked,
+  }));
+}
+
+// ----------------------------------------------------------------------------
+// Páginas: barra lateral montada a partir do menu do site
+// ----------------------------------------------------------------------------
+
+// Seções do site com telas próprias (textos fixos de PAGE_SCHEMA e/ou o texto
+// em src/content/paginas). Qualquer outro link "/slug" do menu é uma página
+// de texto (src/content/paginas/<lang>/<slug>.md), criada ao salvar.
+const SECOES_DAS_PAGINAS = {
+  "/": { nome: "Início", telas: [["page-home", "Início"]] },
+  "/noticias": { nome: "Notícias", telas: [["page-artigos", "Lista"], ["page-artigo", "Página da notícia"]] },
+  "/podcast": { nome: "Podcast", telas: [["page-podcast", "Lista"], ["page-episodio", "Página do episódio"]] },
+  "/estudos": { nome: "Estudos", telas: [["page-estudos", "Lista"], ["page-estudo", "Página do verbete"]] },
+  "/contato": { nome: "Contato", telas: [["page-contato", "Contato"]] },
+  "/sobre": { nome: "Sobre", telas: [["pagina-sobre", "Texto da página"], ["page-sobre", "Seção \"Integrantes\""]] },
+};
+const RE_SLUG_PAGINA = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+// "/estudos/" → "/estudos"; null para link externo ou com mais de um nível
+// (ex.: "/artigo/noticia-3/"), que não tem tela própria.
+function chaveDoLink(link) {
+  if (!link?.startsWith("/")) return null;
+  const caminho = link.replace(/[?#].*$/, "").replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+  if (caminho in SECOES_DAS_PAGINAS) return caminho;
+  const slug = caminho.slice(1);
+  return RE_SLUG_PAGINA.test(slug) ? caminho : null;
+}
+
+function telasDaChave(chave) {
+  return SECOES_DAS_PAGINAS[chave]?.telas || [[`pagina-${chave.slice(1)}`, "Texto da página"]];
+}
+
+function botaoDeTela(painel, texto) {
+  const b = el("button", "nav-btn", texto);
+  b.type = "button";
+  b.dataset.panel = painel;
+  return b;
+}
+
+// Um item: botão direto (uma tela) ou pai com seta e subitens (várias).
+function itemDaBarraDePaginas(nome, chave, oculto) {
+  const telas = telasDaChave(chave);
+  for (const [painel] of telas) {
+    if (painel.startsWith("pagina-")) garantirPainelDePagina(painel.slice("pagina-".length), nome);
+  }
+  const marca = () => {
+    const tag = el("span", "nav-tag", "oculto no menu");
+    tag.title = "Desmarcado em Site → Menu: a página continua no ar, só não aparece no menu";
+    return tag;
+  };
+  if (telas.length === 1) {
+    const b = botaoDeTela(telas[0][0], nome);
+    if (oculto) b.appendChild(marca());
+    return [b];
+  }
+  const pai = el("button", "nav-btn nav-pai", nome);
+  pai.type = "button";
+  pai.setAttribute("aria-expanded", "false");
+  if (oculto) pai.appendChild(marca());
+  const grupo = el("div", "nav-subgrupo");
+  for (const [painel, texto] of telas) grupo.appendChild(botaoDeTela(painel, texto));
+  return [pai, grupo];
+}
+
+function renderSidebarPaginas() {
+  const container = document.getElementById("sidebar-pages");
+  if (!container || !contentData.site) return;
+  // Mantém abertos os itens que estavam abertos.
+  const abertos = new Set(
+    Array.from(container.querySelectorAll('.nav-pai[aria-expanded="true"]')).map((b) => b.firstChild.textContent)
+  );
+  container.innerHTML = "";
+  const usadas = new Set();
+  const adicionar = (nome, chave, oculto) => {
+    if (usadas.has(chave)) return;
+    usadas.add(chave);
+    itemDaBarraDePaginas(nome, chave, oculto).forEach((n) => container.appendChild(n));
+  };
+
+  // Início fica sempre no topo, esteja ou não no menu.
+  adicionar("Início", "/", false);
+  for (const item of menuAtual()) {
+    const chave = chaveDoLink(item.link);
+    if (chave) adicionar(item.rotulo || SECOES_DAS_PAGINAS[chave]?.nome || chave, chave, item.visivel === false);
+  }
+  // O que tem tela mas não está no menu (ex.: Expediente, que fica no rodapé).
+  const fora = [
+    ...Object.entries(SECOES_DAS_PAGINAS).map(([chave, s]) => [chave, s.nome]),
+    ...[...paginasDeTexto.keys()].map((slug) => [`/${slug}`, paginasDeTexto.get(slug).pt?.campos.title || slug]),
+  ].filter(([chave]) => !usadas.has(chave));
+  if (fora.length) {
+    const rotulo = el("div", "nav-rotulo", "Fora do menu");
+    container.appendChild(rotulo);
+    fora.sort((a, b) => a[1].localeCompare(b[1], "pt")).forEach(([chave, nome]) => adicionar(nome, chave, false));
+  }
+
+  container.querySelectorAll(".nav-pai").forEach((b) => {
+    if (abertos.has(b.firstChild.textContent)) b.setAttribute("aria-expanded", "true");
+  });
+  if (painelAtual) {
+    const ativo = container.querySelector(`.nav-btn[data-panel="${painelAtual}"]`);
+    if (ativo) showPanel(painelAtual);
+  }
+}
+
+// ----------------------------------------------------------------------------
+// Páginas de texto (src/content/paginas/<lang>/<slug>.md)
+// ----------------------------------------------------------------------------
+
+let paginasMarkdownOriginais = {}; // caminho → texto, como está no GitHub
+// slug → { pt: {campos, corpo} | null, en: … | null, nome }
+const paginasDeTexto = new Map();
+
+function carregarPaginasDeTexto(arquivos) {
+  paginasMarkdownOriginais = arquivos;
+  paginasDeTexto.clear();
+  document.querySelectorAll('[id^="panel-pagina-"]').forEach((p) => p.remove());
+  for (const [caminho, texto] of Object.entries(arquivos)) {
+    const lang = caminho.split("/").slice(-2)[0];
+    const slug = slugDoCaminho(caminho);
+    if (!paginasDeTexto.has(slug)) paginasDeTexto.set(slug, { pt: null, en: null });
+    paginasDeTexto.get(slug)[lang] = lerPagina(texto);
+  }
+}
+
+// Cria (uma vez) a tela de edição de uma página de texto. `nome` é o nome
+// do item no menu, usado só como sugestão de título de uma página nova.
+function garantirPainelDePagina(slug, nome) {
+  if (document.getElementById(`panel-pagina-${slug}`)) return;
+  if (!paginasDeTexto.has(slug)) paginasDeTexto.set(slug, { pt: null, en: null });
+  const pagina = paginasDeTexto.get(slug);
+
+  const panel = el("div", "section-panel");
+  panel.id = `panel-pagina-${slug}`;
+  const header = el("div", "panel-header");
+  header.appendChild(el("span", "panel-title", pagina.pt?.campos.title || nome || slug));
+  panel.appendChild(header);
+
+  const dica = el("p", "admin-hint");
+  if (!pagina.pt) {
+    dica.textContent = `Esta página ainda não existe no site. Escreva o título e o texto e clique em "Salvar no GitHub" para criá-la em /${slug}.`;
+  } else {
+    dica.textContent = `Texto da página /${slug}${slug === "sobre" ? ". A lista de integrantes aparece logo abaixo do texto e é editada em Conteúdo → Integrantes" : ""}.`;
+  }
+  panel.appendChild(dica);
+
+  const form = el("div");
+  form.id = `pagina-form-${slug}`;
+  for (const lang of ["pt", "en"]) {
+    const dados = pagina[lang];
+    const bloco = el("div", `fields-grid campo-${lang}`);
+    const ds = (campo) => ({ pagina: slug, lang, campo });
+    const titulo = buildInput("Título", "text", dados?.campos.title ?? (lang === "pt" ? nome || "" : ""), ds("title"));
+    bloco.appendChild(titulo);
+    const atualizado = buildInput("Atualizado em (opcional, aparece no topo)", "date", dados?.campos.updated || "", ds("updated"));
+    bloco.appendChild(atualizado);
+    const descricao = buildTextarea("Descrição (SEO e compartilhamento)", dados?.campos.description || "", ds("description"));
+    descricao.classList.add("full");
+    bloco.appendChild(descricao);
+    const texto = buildRichTextField("Texto", markdownParaHtml(dados?.corpo || ""), ds("corpo"), { simples: true });
+    texto.classList.add("full");
+    bloco.appendChild(texto);
+    if (lang === "en") {
+      bloco.appendChild(
+        el("p", "admin-hint full", "Sem texto em inglês, /en/" + slug + " mostra a página provisória. Para tirar a versão em inglês, esvazie o título e o texto.")
+      );
+    }
+    form.appendChild(bloco);
+  }
+  // Só o corpo alterado é convertido de volta para Markdown na hora de
+  // salvar; o que não foi tocado é regravado exatamente como estava.
+  form.addEventListener("input", (e) => {
+    if (e.target.closest('[data-campo="corpo"]')) e.target.closest('[data-campo="corpo"]').dataset.alterado = "1";
+    markDirty("paginas");
+  });
+  form.addEventListener("change", () => markDirty("paginas"));
+  panel.appendChild(form);
+  abasDeIdioma(form, () => {
+    const vazio = (lang) => !form.querySelector(`.campo-${lang} [data-campo="corpo"]`).textContent.trim();
+    return !vazio("pt") && vazio("en") ? 1 : 0;
+  });
+  document.getElementById("page-panels").appendChild(panel);
+}
+
+// Arquivos .md de todas as páginas com tela, como { caminho: texto }.
+function paginasParaArquivos() {
+  const arquivos = {};
+  const problemas = [];
+  for (const [slug, pagina] of paginasDeTexto) {
+    const form = document.getElementById(`pagina-form-${slug}`);
+    for (const lang of ["pt", "en"]) {
+      const original = pagina[lang];
+      const caminho = caminhoPagina(lang, slug);
+      if (!form) {
+        if (original) arquivos[caminho] = paginasMarkdownOriginais[caminho];
+        continue;
+      }
+      const campo = (nome) => form.querySelector(`[data-lang="${lang}"][data-campo="${nome}"]`);
+      const editor = campo("corpo");
+      let corpo = original?.corpo ?? "";
+      if (editor.dataset.alterado) {
+        const tpl = document.createElement("template");
+        tpl.innerHTML = finalizeRichTextHtml(editor);
+        corpo = htmlParaMarkdown(tpl.content);
+      }
+      const title = campo("title").value.trim();
+      const nome = `${slug}${lang === "en" ? " (EN)" : ""}`;
+      // Página nova só é criada com texto; a versão em inglês esvaziada
+      // (título e texto) é apagada, com confirmação em saveAll.
+      if (!original && !corpo.trim()) continue;
+      if (original && lang === "en" && !corpo.trim() && !title) continue;
+      if (!title) problemas.push(`página ${nome}: falta o título`);
+      const campos = {
+        ...(original?.campos || {}),
+        title,
+        description: campo("description").value.trim(),
+        lang,
+        updated: campo("updated").value,
+      };
+      // Sem mudança nenhuma: o arquivo fica exatamente como estava.
+      const igual =
+        original &&
+        !editor.dataset.alterado &&
+        ["title", "description", "updated"].every((k) => (original.campos[k] ?? "") === campos[k]);
+      arquivos[caminho] = igual ? paginasMarkdownOriginais[caminho] : montarPagina(campos, corpo);
+    }
+  }
+  return { arquivos, problemas };
+}
+
+async function salvarPaginas({ arquivos, mudancas }) {
+  const entries = [
+    ...Object.entries(mudancas.gravar).map(([path, content]) => ({ path, mode: "100644", type: "blob", content })),
+    ...mudancas.apagar.map((path) => ({ path, mode: "100644", type: "blob", sha: null })),
+  ];
+  if (entries.length) {
+    const nomes = [...new Set([...Object.keys(mudancas.gravar), ...mudancas.apagar].map(slugDoCaminho))].join(", ");
+    try {
+      await commitTreeChange(entries, `admin: atualiza páginas (${nomes})`);
+    } catch (err) {
+      throw explainWriteError(err);
+    }
+  }
+  // A partir daqui o GitHub tem estes arquivos: viram o novo "original".
+  carregarPaginasDeTexto(arquivos);
+  renderSidebarPaginas();
 }
 
 function renderPageForms() {
