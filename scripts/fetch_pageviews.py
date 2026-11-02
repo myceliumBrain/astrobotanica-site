@@ -23,6 +23,7 @@ pipeline não quebra antes de alguém terminar essa configuração manual.
 import json
 import os
 import re
+import time
 import urllib.request
 from urllib.error import HTTPError, URLError
 
@@ -31,6 +32,34 @@ GOATCOUNTER_CODE = os.environ.get("GOATCOUNTER_CODE", "astrobotanica")
 GOATCOUNTER_API_TOKEN = os.environ.get("GOATCOUNTER_API_TOKEN")
 MAX_RESULTS = 10
 ARTICLE_PATH_RE = re.compile(r"^/artigo/([^/]+)/?$")
+# A API do GoatCounter às vezes responde 404 {"error":"not found"} (ou 5xx)
+# a uma chamada válida e acerta na seguinte — o histórico do workflow mostra
+# falhas intermitentes com o mesmo token. Por isso cada chamada é repetida
+# algumas vezes, com espera crescente, antes de desistir.
+TENTATIVAS = 4
+ESPERA_INICIAL = 15  # segundos; dobra a cada nova tentativa
+ERROS_TEMPORARIOS = {404, 429, 500, 502, 503, 504}
+
+
+def get_json(url):
+    headers = {"Authorization": f"Bearer {GOATCOUNTER_API_TOKEN}", "Content-Type": "application/json"}
+    espera = ESPERA_INICIAL
+    for tentativa in range(1, TENTATIVAS + 1):
+        try:
+            req = urllib.request.Request(url, headers=headers)
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                return json.loads(resp.read())
+        except HTTPError as e:
+            if e.code not in ERROS_TEMPORARIOS or tentativa == TENTATIVAS:
+                raise
+            motivo = f"HTTP {e.code}"
+        except URLError as e:
+            if tentativa == TENTATIVAS:
+                raise
+            motivo = str(e.reason)
+        print(f"Tentativa {tentativa}/{TENTATIVAS} falhou ({motivo}); nova tentativa em {espera}s.")
+        time.sleep(espera)
+        espera *= 2
 
 
 def fetch_hits():
@@ -38,16 +67,13 @@ def fetch_hits():
     # chamada, os path_ids já recebidos (ver exclude_paths), conforme
     # https://www.goatcounter.com/help/api.
     base_url = f"https://{GOATCOUNTER_CODE}.goatcounter.com/api/v0/stats/hits"
-    headers = {"Authorization": f"Bearer {GOATCOUNTER_API_TOKEN}", "Content-Type": "application/json"}
     counts = {}
     seen_path_ids = []
     for _ in range(20):  # até 20 páginas (2000 caminhos) é mais que suficiente
         url = f"{base_url}?limit=100"
         for path_id in seen_path_ids:
             url += f"&exclude_paths={path_id}"
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            data = json.loads(resp.read())
+        data = get_json(url)
         for hit in data.get("hits", []):
             match = ARTICLE_PATH_RE.match(hit.get("path", ""))
             if match:
@@ -60,37 +86,16 @@ def fetch_hits():
     return counts
 
 
-def check_token():
-    # Endpoint simples (só confirma token + site) — roda antes de
-    # /stats/hits pra diagnosticar problema de código do site/token sem
-    # misturar com erros da parte de paginação.
-    url = f"https://{GOATCOUNTER_CODE}.goatcounter.com/api/v0/me"
-    headers = {"Authorization": f"Bearer {GOATCOUNTER_API_TOKEN}", "Content-Type": "application/json"}
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        data = json.loads(resp.read())
-    site = data.get("site", {})
-    print(f"Token válido para o site: código={site.get('code')!r}, id={site.get('id')!r}, url={site.get('url')!r}")
-
-
 def main():
     if not GOATCOUNTER_API_TOKEN:
         print("GOATCOUNTER_API_TOKEN não configurado — pulando (ver instruções no topo deste arquivo).")
         return
 
     try:
-        check_token()
-    except HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"Token/código do site inválido (GOATCOUNTER_CODE={GOATCOUNTER_CODE!r}): HTTP {e.code} {e.reason} — {body}")
-    except URLError as e:
-        raise SystemExit(f"Falha ao consultar a API do GoatCounter: {e}")
-
-    try:
         counts = fetch_hits()
     except HTTPError as e:
         body = e.read().decode("utf-8", errors="replace")
-        raise SystemExit(f"Falha ao consultar a API do GoatCounter: HTTP {e.code} {e.reason} — {body}")
+        raise SystemExit(f"Falha ao consultar a API do GoatCounter (GOATCOUNTER_CODE={GOATCOUNTER_CODE!r}): HTTP {e.code} {e.reason} — {body}")
     except URLError as e:
         raise SystemExit(f"Falha ao consultar a API do GoatCounter: {e}")
 
