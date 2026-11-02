@@ -1,0 +1,16 @@
+---
+// Versão em inglês de uma página criada pelo painel (ver src/pages/[pagina].astro).
+// Sem o .md em inglês, mostra a página provisória, como as outras.
+import PaginaInstitucional from "../../components/PaginaInstitucional.astro";
+import { paginaInstitucional, slugsDePaginasNovas } from "../../lib/paginas";
+
+export async function getStaticPaths() {
+  const slugs = [];
+  for (const slug of await slugsDePaginasNovas()) if (await paginaInstitucional("pt", slug)) slugs.push(slug);
+  return slugs.map((pagina) => ({ params: { pagina } }));
+}
+
+const { pagina } = Astro.params;
+---
+
+<PaginaInstitucional lang="en" slug={pagina} />

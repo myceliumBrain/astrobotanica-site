@@ -2,7 +2,7 @@
 // mais as páginas institucionais, os episódios e as versões em inglês, com
 // <xhtml:link> de alternância entre os pares PT/EN.
 import { noticiasDoIdioma } from "../lib/noticias";
-import { paginaInstitucional } from "../lib/paginas";
+import { paginaInstitucional, slugsDePaginasNovas } from "../lib/paginas";
 import { temTraducao as verbeteTraduzido, urlVerbete, verbetesPublicados } from "../lib/estudos";
 import { episodios, temTraducao as episodioTraduzido, urlEpisodio } from "../lib/episodios";
 import { caminhoNoIdioma } from "../lib/i18n";
@@ -53,8 +53,10 @@ export async function GET() {
   const hoje = new Date().toISOString().slice(0, 10);
   const entradas: Entrada[] = [];
 
+  // Mais as páginas criadas pelo painel a partir do menu.
+  const novas: [string, string][] = (await slugsDePaginasNovas()).map((slug) => [slug, "monthly"]);
   const institucionais = await Promise.all(
-    INSTITUCIONAIS.map(async ([slug, changefreq]) => {
+    [...INSTITUCIONAIS, ...novas].map(async ([slug, changefreq]) => {
       const pt = await paginaInstitucional("pt", slug);
       const en = await paginaInstitucional("en", slug);
       return { caminho: `/${slug}`, changefreq, pt, en };
