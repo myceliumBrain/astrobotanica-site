@@ -4,6 +4,7 @@
 // para o css/style.css funcionar sem alteração, mas com os textos já
 // preenchidos no build (visíveis sem JavaScript).
 import { t, valor, caminhoNoIdioma, type Lang } from "../lib/i18n";
+import { itensDoMenu } from "../lib/menu";
 import { NOME_SITE, OG_IMAGEM_PADRAO, jsonLdSeguro, organizacao } from "../lib/seo";
 
 interface Props {
@@ -53,13 +54,8 @@ const hrefOutro = temOutroIdioma ? caminhoNoIdioma(path, outro) : caminhoNoIdiom
 const link = (p: string) => caminhoNoIdioma(p, lang);
 const secaoAtual = secao ?? "/" + (path.split("/")[1] ?? "");
 
-const navItens = [
-  { href: "/noticias", texto: t(lang, "nav.articles") },
-  { href: "/estudos", texto: t(lang, "nav.estudos") },
-  { href: "/podcast", texto: t(lang, "nav.podcast") },
-  { href: "/sobre", texto: t(lang, "nav.about") },
-  { href: "/contato", texto: t(lang, "nav.contact") },
-];
+// Itens e ordem vêm do painel (data/site.json → menu, ver src/lib/menu.ts).
+const navItens = itensDoMenu(lang);
 
 const institucionais = [
   { href: "/sobre", texto: t(lang, "nav.about") },
@@ -132,7 +128,7 @@ const licencaUrl =
       <nav class="wrap header-nav">
         {
           navItens.map((item) => (
-            <a href={link(item.href)} aria-current={item.href === secaoAtual ? "page" : undefined}>
+            <a href={item.href} aria-current={item.secao === secaoAtual ? "page" : undefined}>
               {item.texto}
             </a>
           ))
@@ -150,7 +146,7 @@ const licencaUrl =
     <div class="nav-overlay" id="nav-overlay">
       <nav class="nav-overlay-panel">
         <button type="button" class="nav-overlay-close" aria-label={t(lang, "common.closeMenu")}>✕</button>
-        {navItens.map((item) => <a href={link(item.href)}>{item.texto}</a>)}
+        {navItens.map((item) => <a href={item.href}>{item.texto}</a>)}
         <div class="lang-switch" role="group" aria-label={t(lang, "common.language")}>
           <a class="lang-btn" href={lang === "pt" ? caminhoNoIdioma(path, "pt") : hrefOutro} hreflang="pt-BR" lang="pt-BR" aria-label="Português" aria-current={lang === "pt" ? "true" : undefined}>🇧🇷</a>
           <a class="lang-btn" href={lang === "en" ? caminhoNoIdioma(path, "en") : hrefOutro} hreflang="en" lang="en" aria-label="English" aria-current={lang === "en" ? "true" : undefined}>🇺🇸</a>
@@ -171,7 +167,7 @@ const licencaUrl =
         <div class="footer-cols">
           <div class="footer-col">
             <span class="footer-heading">{t(lang, "footer.navHeading")}</span>
-            {navItens.map((item) => <a href={link(item.href)}>{item.texto}</a>)}
+            {navItens.map((item) => <a href={item.href}>{item.texto}</a>)}
           </div>
           <div class="footer-col">
             <span class="footer-heading">{t(lang, "footer.institutionalHeading")}</span>
