@@ -4,6 +4,7 @@
 // de atualização. <head> como o de scripts/generate_estudos_seo.py (título,
 // resumo de 220 caracteres, DefinedTerm). Em PT para todos os publicados; em
 // EN só para o verbete com tituloEn, com hreflang entre os dois.
+import ContadorAcessos from "./ContadorAcessos.astro";
 import Base from "../layouts/Base.astro";
 import { caminhoNoIdioma, t, type Lang } from "../lib/i18n";
 import { formatarData } from "../lib/noticias";
@@ -112,4 +113,5 @@ const estudos = caminhoNoIdioma("/estudos/", lang);
       {v.dataAtualizacao && <p class="article-byline-meta">{t(lang, "estudo.updatedAt", { date: formatarData(v.dataAtualizacao, lang) })}</p>}
     </div>
   </article>
+  <ContadorAcessos />
 </Base>
