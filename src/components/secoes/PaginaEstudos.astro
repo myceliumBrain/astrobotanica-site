@@ -4,7 +4,7 @@
 // filtra no navegador; sem JS, a lista completa já está no HTML. Em EN, o
 // verbete sem tradução aparece em português, com selo e link para a página PT.
 import Base from "../../layouts/Base.astro";
-import { t, type Lang } from "../../lib/i18n";
+import { caminhoNoIdioma, t, type Lang } from "../../lib/i18n";
 import { categoriasEstudo, nomeCategoria, verbeteNoIdioma, verbetesPublicados } from "../../lib/estudos";
 
 interface Props {
@@ -22,6 +22,7 @@ const grupos = categoriasEstudo
 ---
 
 <Base lang={lang} title={t(lang, "estudos.metaTitle")} description={t(lang, "estudos.metaDescription")} path="/estudos/">
+  <a slot="nav-direita" href={caminhoNoIdioma("/rss.xml", lang)} class="rss-link">{t(lang, "common.rssFeed")}</a>
   <section class="page-header wrap">
     <h1>{t(lang, "estudos.title")}</h1>
     <p>{t(lang, "estudos.intro")}</p>
