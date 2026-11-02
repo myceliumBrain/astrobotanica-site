@@ -145,6 +145,17 @@ Toda tela de edição segue o mesmo padrão:
 
   Eu preparo o passo a passo; a configuração é sua.
 
+> ⚠️ **IMPORTANTE — LEMBRAR (decisão de 2026-11-02).** Por enquanto a
+> restrição dos colaboradores é **só de organização**: o painel esconde os
+> botões e as telas, mas **não impede** a publicação. O token do Eduardo é da
+> conta dele no GitHub e tem permissão de escrita, então, fora do painel (pela
+> API ou pelo site do GitHub), ele ainda consegue alterar a `main` e
+> publicar. Para a restrição valer de verdade, falta **criar a regra na
+> `main`** (Settings → Rules → Rulesets → New branch ruleset: alvo `main`,
+> "Require a pull request before merging", com o papel *Admin* em "Bypass
+> list"). Como os tokens dos colaboradores já são das contas deles, nada mais
+> precisa mudar no painel quando a regra for criada.
+
 ### P8 — Histórico e desfazer
 - Cada item (notícia, episódio, página…) tem "Histórico": as últimas
   alterações (quem, quando, o que mudou), lidas dos commits do arquivo.
@@ -164,6 +175,7 @@ Toda tela de edição segue o mesmo padrão:
 
 ## O que depende de você
 - Revisar e fazer o merge de cada PR.
-- Para a P7: decidir como os colaboradores entram (ver acima) e criar a regra
-  na `main`.
+- Para a P7: criar a regra na `main` quando quiser que a restrição dos
+  colaboradores valha de verdade (ver o aviso na P7). Os colaboradores já
+  entram com tokens das próprias contas.
 - Conteúdo: o preenchimento dos textos continua para o fim, como combinado.
