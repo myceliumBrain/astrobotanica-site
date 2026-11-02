@@ -1,5 +1,6 @@
 // @ts-check
 import { defineConfig } from "astro/config";
+import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,9 +50,47 @@ function arquivosDaRaiz() {
         for (const item of ARQUIVOS_DA_RAIZ) {
           fs.cpSync(path.join(RAIZ, item), path.join(saida, item), { recursive: true });
         }
+        versionarPainel(path.join(saida, "admin"));
       },
     },
   };
+}
+
+// O Pages guarda os arquivos em cache por 10 minutos: logo depois de uma
+// publicação, o navegador ainda pode abrir o painel antigo, que salva no
+// formato antigo sem avisar. Na saída do build, o painel ganha uma versão
+// (hash do conteúdo de admin/, que só muda quando o próprio painel muda):
+// - admin/versao.json e <meta name="versao-painel"> com a versão;
+// - admin.css, admin.js e os import "./..." com ?v=<versão>, para um painel
+//   novo nunca misturar arquivos antigos do cache.
+// Antes de salvar, o painel compara a sua versão com a de versao.json.
+function versionarPainel(pasta) {
+  const arquivos = fs
+    .readdirSync(pasta, { recursive: true })
+    .map(String)
+    .filter((rel) => fs.statSync(path.join(pasta, rel)).isFile())
+    .sort();
+  const hash = crypto.createHash("sha256");
+  for (const rel of arquivos) hash.update(rel).update(fs.readFileSync(path.join(pasta, rel)));
+  const versao = hash.digest("hex").slice(0, 12);
+
+  const comVersao = (url) => `${url}?v=${versao}`;
+  for (const rel of arquivos.filter((r) => /\.(m?js)$/.test(r))) {
+    const arquivo = path.join(pasta, rel);
+    const js = fs.readFileSync(arquivo, "utf8");
+    fs.writeFileSync(arquivo, js.replace(/(from\s+["'])(\.{1,2}\/[^"'?]+)(["'])/g, (_, a, url, b) => a + comVersao(url) + b));
+  }
+  const indice = path.join(pasta, "index.html");
+  const html = fs
+    .readFileSync(indice, "utf8")
+    .replace('href="admin.css"', `href="${comVersao("admin.css")}"`)
+    .replace('src="admin.js"', `src="${comVersao("admin.js")}"`)
+    .replace("</title>", `</title>\n<meta name="versao-painel" content="${versao}" />`);
+  if (!html.includes(comVersao("admin.js")) || !html.includes(comVersao("admin.css"))) {
+    throw new Error("admin/index.html: não encontrei admin.css/admin.js para versionar");
+  }
+  fs.writeFileSync(indice, html);
+  fs.writeFileSync(path.join(pasta, "versao.json"), JSON.stringify({ versao }) + "\n");
 }
 
 export default defineConfig({
