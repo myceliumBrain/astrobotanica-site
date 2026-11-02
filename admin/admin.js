@@ -1050,12 +1050,20 @@ function applyArticleField(input) {
   if (input.dataset.richtext === "html") {
     const newHtml = finalizeRichTextHtml(input);
     // Imagem que estava no HTML salvo antes e não está mais no novo —
-    // saiu do texto (apagada no editor), então o arquivo fica sem uso;
-    // agenda a remoção junto do resto das alterações pendentes.
+    // saiu do texto (apagada no editor); se nenhum outro corpo (a outra
+    // língua desta notícia ou outra notícia) usar o mesmo arquivo, ele fica
+    // sem uso e a remoção é agendada junto do resto das alterações pendentes.
     const oldPaths = extractImagePaths(record[key]);
     const newPaths = extractImagePaths(newHtml);
+    const usedElsewhere = new Set();
+    contentData.articles.forEach((article) => {
+      ["body", "bodyEn"].forEach((k) => {
+        if (article === record && k === key) return;
+        extractImagePaths(article[k]).forEach((path) => usedElsewhere.add(path));
+      });
+    });
     oldPaths.forEach((path) => {
-      if (!newPaths.has(path)) {
+      if (!newPaths.has(path) && !usedElsewhere.has(path)) {
         pendingDeletions.push({ path, message: `admin: remove imagem não usada mais no corpo (${path})` });
       }
     });
