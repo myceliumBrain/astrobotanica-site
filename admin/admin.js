@@ -85,6 +85,10 @@ let CURRENT_LABEL = "";
 // senha). Gravado como ownerUid em cada integrante criado, pra que um
 // colaborador só edite os integrantes que ele mesmo adicionou.
 let CURRENT_UID = null;
+// Integrante (id em data/members.json) ligado a esse acesso — "integrante" no
+// auth.json, escolhido pelo admin em "Acessos". Diz quem é o autor dos
+// textos de quem entrou (ver PLANO-PAINEL.md, P2 e P7).
+let CURRENT_INTEGRANTE = null;
 
 // Textos do site: cada campo é uma chave "a.b.c" dentro de data/site.json.
 // GENERAL_SCHEMA vira a tela "Site → Rodapé e marca"; cada item de
@@ -260,6 +264,14 @@ function uniqueSlug(existingIds, base) {
   }
   return candidate;
 }
+
+// Identificador de integrante: o nome completo sem acentos, em minúsculas e
+// com hífens ("Eduardo Dreyer Simões Saraiva" → "eduardo-dreyer-simoes-saraiva").
+// É também o nome do arquivo da foto (images/integrantes/<id>.<ext>).
+function memberIdFromName(name, otherIds) {
+  return slugify(name || "") ? uniqueSlug(otherIds, name) : "";
+}
+const MEMBER_ID_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 function getByPath(obj, path) {
   return path.split(".").reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
@@ -689,6 +701,7 @@ function setupLoginScreen() {
           CURRENT_SALT = entry.salt;
           CURRENT_LABEL = entry.label || "";
           CURRENT_UID = uidOf(entry);
+          CURRENT_INTEGRANTE = entry.integrante || null;
           break;
         }
       }
@@ -836,6 +849,7 @@ async function enterApp() {
   renderCurrentUser();
 
   await loadContent();
+  renderCurrentUser(); // agora com contentData.members, para o nome do integrante
   renderPageForms();
   renderHomeEventBanner();
   if (ROLE === "admin") await loadAccess();
@@ -1306,9 +1320,20 @@ async function saveAll() {
   try {
     // Antes dos envios: um id de integrante repetido faria a foto de um
     // sobrescrever a do outro (o caminho da foto vem do id).
+    if (dirty.has("members")) {
+      const problemas = contentData.members
+        .filter((m) => m._isNew)
+        .flatMap((m) => {
+          if (!m.name?.trim()) return ["integrante novo sem nome completo"];
+          if (!MEMBER_ID_RE.test(m.id || "")) return [`identificador inválido em "${m.name}" (só letras minúsculas sem acento, números e hífens)`];
+          return [];
+        });
+      if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
+    }
     const memberIds = contentData.members?.map((m) => m.id) || [];
     const duplicate = memberIds.find((id, i) => memberIds.indexOf(id) !== i);
     if (duplicate) throw new Error(`dois integrantes com o mesmo identificador ("${duplicate}")`);
+    if (dirty.has("members")) alinharFotosDeIntegrantesNovos();
     // Menu: item sem nome ou com link fora do formato faria o build falhar
     // (ver src/lib/menu.ts).
     if (dirty.has("site")) {
@@ -1352,6 +1377,7 @@ async function saveAll() {
       contentData.members.forEach((m) => {
         if (m._isNew) savedNewMembers = true;
         delete m._isNew;
+        delete m._idManual;
       });
     }
     for (const section of dirty) {
@@ -1369,6 +1395,8 @@ async function saveAll() {
       }
       await putFile(PATHS[section], contentData[section], fresh.sha, `admin: atualiza ${section}`);
     }
+    // A lista de integrantes de "Acessos" passa a ter os recém-salvos.
+    if (dirty.has("members") && accessCache) renderAccessList();
     dirty.clear();
     // Redesenha os cards de integrante pra travar o id dos que acabaram de
     // ser salvos pela primeira vez (some o campo editável, aparece o travado).
@@ -3171,12 +3199,29 @@ function buildMemberCard(member, i, total) {
   // de artigo/episódio (buildReadOnlyField), pelo mesmo motivo: renomear um id
   // já em uso desalinha o caminho da foto e qualquer notícia que já tenha
   // selecionado esse integrante como autor.
-  grid.appendChild(
-    member._isNew
-      ? buildInput("Identificador (id)", "text", member.id, { member: i, key: "id" })
-      : buildReadOnlyField("Identificador (id)", member.id)
-  );
-  grid.appendChild(buildInput("Nome", "text", member.name, { member: i, key: "name" }));
+  const nameField = buildInput("Nome completo", "text", member.name, { member: i, key: "name" });
+  if (member._isNew) {
+    // Integrante novo: o id é gerado do nome completo enquanto ele é
+    // digitado. Só o admin pode ajustá-lo à mão; a partir daí o nome não
+    // mexe mais nele (_idManual, só em memória, como _isNew).
+    const idField = buildInput("Identificador (id)", "text", member.id, { member: i, key: "id" }, "gerado do nome completo");
+    const idInput = idField.querySelector("input");
+    idInput.disabled = ROLE !== "admin";
+    idField.appendChild(
+      el("span", "field-hint", "Nome completo sem acentos, ex.: eduardo-dreyer-simoes-saraiva. Também é o nome do arquivo da foto. Não muda depois de salvo.")
+    );
+    const otherIds = () => contentData.members.filter((m) => m !== member).map((m) => m.id);
+    nameField.querySelector("input").addEventListener("input", (e) => {
+      if (!member._idManual) idInput.value = memberIdFromName(e.target.value, otherIds());
+    });
+    idInput.addEventListener("input", () => {
+      member._idManual = true;
+    });
+    grid.appendChild(idField);
+  } else {
+    grid.appendChild(buildReadOnlyField("Identificador (id)", member.id));
+  }
+  grid.appendChild(nameField);
 
   const descriptionGroup = el("div", "field-group full");
   const description = buildTextarea("Descrição", member.description, { member: i, key: "description" });
@@ -3248,7 +3293,9 @@ function moveMember(from, to) {
 function removeMember(i) {
   const member = contentData.members[i];
   if (!canEditMember(member)) return;
-  if (!confirm(`Remover o integrante "${member.name || "(sem nome)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  const linked = (accessCache?.content?.tokens || []).filter((t) => member.id && t.integrante === member.id);
+  const aviso = linked.length ? ` O acesso "${linked.map((t) => t.label).join('", "')}" vai ficar sem integrante (dá para ligar outro em "Acessos").` : "";
+  if (!confirm(`Remover o integrante "${member.name || "(sem nome)"}"? Só é definitivo ao clicar em "Salvar no GitHub".${aviso}`)) return;
   collectAll();
   contentData.members.splice(i, 1);
   renderMembersList();
@@ -3258,7 +3305,8 @@ function removeMember(i) {
 
 function addMember() {
   collectAll();
-  const id = uniqueSlug(contentData.members.map((m) => m.id), "novo-integrante");
+  // O id nasce vazio e acompanha o nome digitado (ver buildMemberCard).
+  const id = "";
   // _isNew é só uma marca em memória (nunca vai pro JSON, ver saveAll): libera
   // o id pra edição enquanto o integrante ainda não foi salvo de verdade no
   // GitHub. Depois do primeiro "Salvar no GitHub" bem-sucedido, a marca some e
@@ -3270,6 +3318,24 @@ function addMember() {
   markDirty("members");
   const card = document.getElementById("member-card-0");
   if (card) card.classList.add("open");
+}
+
+// A foto de um integrante novo pode ter sido escolhida antes de o nome estar
+// completo (o caminho vem do id do momento, ver memberSlug). Antes de
+// enviar, renomeia o arquivo na fila para images/integrantes/<id final>.<ext>.
+function alinharFotosDeIntegrantesNovos() {
+  contentData.members.forEach((m, i) => {
+    if (!m._isNew || !m.image?.startsWith("images/integrantes/")) return;
+    const esperado = `images/integrantes/${m.id}.${fileExtension(m.image, "jpg")}`;
+    if (m.image === esperado) return;
+    const upload = pendingUploads.find((u) => u.path === m.image);
+    if (!upload) return;
+    upload.path = esperado;
+    upload.message = `admin: envia foto do integrante "${m.name}" (${esperado})`;
+    m.image = esperado;
+    const input = document.querySelector(`[data-member="${i}"][data-key="image"]`);
+    if (input) input.value = esperado;
+  });
 }
 
 // Salvamento de um colaborador: parte da versão do GitHub e troca só os
@@ -3981,6 +4047,10 @@ function renderAccessList() {
     row.appendChild(main);
 
     const actions = el("div", "admin-item-actions");
+    const memberSelect = buildAccessMemberSelect(entry.integrante);
+    memberSelect.setAttribute("aria-label", `Integrante de ${entry.label || "sem nome"}`);
+    memberSelect.addEventListener("change", () => changeAccessMember(index, entry.label, memberSelect));
+    actions.appendChild(memberSelect);
     const roleSelect = el("select", "input role-select");
     roleSelect.setAttribute("aria-label", `Categoria de ${entry.label || "sem nome"}`);
     for (const [value, text] of Object.entries(ROLES)) {
@@ -4000,6 +4070,75 @@ function renderAccessList() {
 
     list.appendChild(row);
   });
+
+  // Formulário "Adicionar novo acesso": mesma lista, mantendo a escolha.
+  const formSelect = document.getElementById("access-integrante");
+  const chosen = formSelect.value;
+  formSelect.replaceChildren(...buildAccessMemberSelect(chosen).children);
+  formSelect.value = chosen;
+}
+
+// Integrantes já salvos (os novos ainda não têm id definitivo) + "nenhum".
+// Um id que não existe mais em members.json aparece como "removido", pra não
+// sumir calado da tela.
+function buildAccessMemberSelect(current) {
+  const select = el("select", "input member-select");
+  const none = el("option", null, "— sem integrante —");
+  none.value = "";
+  select.appendChild(none);
+  for (const member of contentData.members || []) {
+    if (member._isNew) continue;
+    const option = el("option", null, member.name || member.id);
+    option.value = member.id;
+    select.appendChild(option);
+  }
+  if (current && !(contentData.members || []).some((m) => m.id === current && !m._isNew)) {
+    const option = el("option", null, `${current} (integrante removido)`);
+    option.value = current;
+    select.appendChild(option);
+  }
+  select.value = current || "";
+  return select;
+}
+
+// Um integrante só pode estar ligado a um acesso.
+function checkMemberFree(tokens, integrante, exceptIndex) {
+  if (!integrante) return;
+  const other = tokens.find((t, i) => i !== exceptIndex && t.integrante === integrante);
+  if (other) throw new Error(`esse integrante já está ligado ao acesso "${other.label}"`);
+}
+
+async function changeAccessMember(index, label, select) {
+  const integrante = select.value;
+  select.disabled = true;
+  try {
+    const fresh = await getFile(CONFIG.authPath);
+    const tokens = [...(fresh.content?.tokens || [])];
+    if (!tokens[index] || tokens[index].label !== label) {
+      throw new Error("a lista de acessos mudou — recarregue a página");
+    }
+    checkMemberFree(tokens, integrante, index);
+    const entry = { ...tokens[index] };
+    if (integrante) entry.integrante = integrante;
+    else delete entry.integrante;
+    tokens[index] = entry;
+    const nome = contentData.members.find((m) => m.id === integrante)?.name;
+    await putFile(
+      CONFIG.authPath,
+      { tokens },
+      fresh.sha,
+      integrante ? `admin: liga o acesso "${label}" ao integrante ${integrante}` : `admin: desliga o acesso "${label}" do integrante`
+    );
+    if (entry.salt === CURRENT_SALT) {
+      CURRENT_INTEGRANTE = integrante || null;
+      renderCurrentUser();
+    }
+    toast(integrante ? `"${label}" agora é ${nome || integrante}.` : `"${label}" ficou sem integrante.`, "ok");
+    await loadAccess();
+  } catch (err) {
+    toast(`Erro ao ligar integrante: ${err.message}`, "error");
+    await loadAccess();
+  }
 }
 
 async function addAccess() {
@@ -4007,10 +4146,12 @@ async function addAccess() {
   const tokenInput = document.getElementById("access-token");
   const passwordInput = document.getElementById("access-password");
   const roleInput = document.getElementById("access-role");
+  const memberInput = document.getElementById("access-integrante");
   const submit = document.getElementById("access-submit");
 
   const label = labelInput.value.trim();
   const role = roleInput.value;
+  const integrante = memberInput.value;
   const token = tokenInput.value.trim();
   const password = passwordInput.value;
 
@@ -4022,14 +4163,17 @@ async function addAccess() {
   submit.disabled = true;
   try {
     const fresh = await getFile(CONFIG.authPath);
+    checkMemberFree(fresh.content?.tokens || [], integrante, -1);
     const encrypted = await encryptToken(token, password);
-    const updated = { tokens: [...(fresh.content?.tokens || []), { uid: crypto.randomUUID(), label, role, ...encrypted }] };
+    const entry = { uid: crypto.randomUUID(), label, role, ...(integrante ? { integrante } : {}), ...encrypted };
+    const updated = { tokens: [...(fresh.content?.tokens || []), entry] };
     await putFile(CONFIG.authPath, updated, fresh.sha, `admin: adiciona acesso "${label}" (${role})`);
     toast(`Acesso de "${label}" adicionado.`, "ok");
     labelInput.value = "";
     tokenInput.value = "";
     passwordInput.value = "";
     roleInput.value = "colaborador";
+    memberInput.value = "";
     await loadAccess();
   } catch (err) {
     toast(`Erro ao adicionar acesso: ${err.message}`, "error");
@@ -4088,6 +4232,10 @@ async function changeAccessRole(index, label, select) {
 
 function renderCurrentUser() {
   document.getElementById("user-btn").textContent = CURRENT_LABEL || "sem nome";
+  const member = CURRENT_INTEGRANTE && contentData.members?.find((m) => m.id === CURRENT_INTEGRANTE);
+  document.getElementById("account-integrante").value = member
+    ? `${member.name} (${member.id})`
+    : CURRENT_INTEGRANTE || "nenhum — peça ao admin para ligar seu acesso a um integrante";
   resetAccountForm();
 }
 

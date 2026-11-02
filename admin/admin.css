@@ -612,7 +612,9 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 .admin-item-main { flex: 1; min-width: 0; }
 .admin-item-title { font-family: var(--adm-mono); font-size: 0.86rem; }
 .admin-item-actions { display: flex; gap: 6px; flex: none; }
-.admin-item-actions .role-select { width: auto; padding-top: 0.3rem; padding-bottom: 0.3rem; font-size: 0.75rem; }
+.admin-item-actions .role-select,
+.admin-item-actions .member-select { width: auto; padding-top: 0.3rem; padding-bottom: 0.3rem; font-size: 0.75rem; }
+.admin-item-actions .member-select { max-width: 14rem; }
 
 .admin-subform {
   background: var(--adm-surface);
@@ -668,6 +670,8 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
   .rich-text-toolbar { flex-direction: row; flex-wrap: wrap; width: 100%; top: 0; }
   .adm-topbar { padding: 0 1rem; }
   .adm-save-status { display: none; }
+  .admin-item-row { flex-wrap: wrap; }
+  .admin-item-actions { flex-wrap: wrap; }
 }
 
 /* Abas "Português | English" das telas de textos do site (abasDeIdioma). */
