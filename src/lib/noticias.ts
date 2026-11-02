@@ -20,6 +20,13 @@ export function corpoHtml(n: Noticia): string {
   return (n.body ?? "").replace(/\n$/, "");
 }
 
+/** Corpo para a página da notícia: o mesmo HTML, com as imagens carregadas só
+ * quando chegam perto da tela (o texto e os arquivos não mudam; o RSS usa
+ * corpoHtml sem esse ajuste). */
+export function corpoHtmlDaPagina(n: Noticia): string {
+  return corpoHtml(n).replace(/<img\b(?![^>]*\bloading=)/gi, '<img loading="lazy" decoding="async"');
+}
+
 // Mesmo resumo usado por scripts/generate_seo.py (meta description, RSS):
 // subtítulo ou início do corpo sem tags, cortado em 220 caracteres.
 const RESUMO_MAX = 220;

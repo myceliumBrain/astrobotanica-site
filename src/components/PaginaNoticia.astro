@@ -6,7 +6,7 @@
 // preenchido.
 import Base from "../layouts/Base.astro";
 import { t, caminhoNoIdioma, type Lang } from "../lib/i18n";
-import { corpoHtml, formatarData, resumo, type Noticia } from "../lib/noticias";
+import { corpoHtmlDaPagina, formatarData, resumo, type Noticia } from "../lib/noticias";
 import { citacaoAbnt, doiNormalizado, urlLattes, urlOrcid } from "../lib/citacao";
 import { dataIso, noticiaJsonLd } from "../lib/seo";
 import { srcsetImagem } from "../lib/capa";
@@ -187,7 +187,7 @@ const listasLaterais = [
 
       <div class="article-layout">
         <div class="article-main">
-          <div class="article-body" set:html={corpoHtml(noticia)} />
+          <div class="article-body" set:html={corpoHtmlDaPagina(noticia)} />
 
           {
             temFonte && (
