@@ -2,18 +2,25 @@
 // 404.html — o GitHub Pages serve este arquivo para qualquer caminho que não
 // existe. Uma página só para os dois idiomas (o Pages não escolhe 404 por
 // pasta). O script cobre o único padrão previsível de endereço quebrado:
-// /en/artigo/<id>/ ou /en/episodios/<id>/ de um item sem tradução, que vai
+// /en/artigo/<id>/, /en/episodios/<id>/ ou /en/estudos/<cat>/<verbete>/ de
+// um item sem tradução (ou cuja tradução foi apagada no painel), que vai
 // para a versão em português.
 import Base from "../layouts/Base.astro";
 import { noticiasDoIdioma } from "../lib/noticias";
-import { episodios, urlEpisodio } from "../lib/episodios";
+import { episodios, temTraducao as episodioTraduzido, urlEpisodio } from "../lib/episodios";
+import { temTraducao as verbeteTraduzido, urlVerbete, verbetesPublicados } from "../lib/estudos";
 
 const semTraducao: Record<string, string> = {};
 const traduzidas = new Set((await noticiasDoIdioma("en")).map((n) => n.data.id));
 for (const n of await noticiasDoIdioma("pt")) {
   if (!traduzidas.has(n.data.id)) semTraducao[`/en/artigo/${n.data.id}`] = `/artigo/${n.data.id}/`;
 }
-for (const e of episodios) semTraducao[`/en/episodios/${e.id}`] = urlEpisodio(e.id);
+for (const e of episodios.filter((e) => !episodioTraduzido(e))) {
+  semTraducao[urlEpisodio(e.id, "en").replace(/\/$/, "")] = urlEpisodio(e.id);
+}
+for (const v of verbetesPublicados.filter((v) => !verbeteTraduzido(v))) {
+  semTraducao[urlVerbete(v, "en").replace(/\/$/, "")] = urlVerbete(v);
+}
 ---
 
 <Base

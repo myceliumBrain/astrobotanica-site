@@ -1,0 +1,115 @@
+---
+// Página de um verbete publicado, como renderVerbeteDetail: categoria,
+// título, definição curta, capa, corpo, termos relacionados, fontes e data
+// de atualização. <head> como o de scripts/generate_estudos_seo.py (título,
+// resumo de 220 caracteres, DefinedTerm). Em PT para todos os publicados; em
+// EN só para o verbete com tituloEn, com hreflang entre os dois.
+import Base from "../layouts/Base.astro";
+import { caminhoNoIdioma, t, type Lang } from "../lib/i18n";
+import { formatarData } from "../lib/noticias";
+import { NOME_SITE } from "../lib/seo";
+import {
+  categoriaDe,
+  nomeCategoria,
+  resumoVerbete,
+  temTraducao,
+  urlVerbete,
+  verbeteNoIdioma,
+  verbetesPublicados,
+  type Verbete,
+} from "../lib/estudos";
+
+interface Props {
+  verbete: Verbete;
+  lang: Lang;
+}
+
+const { verbete: v, lang } = Astro.props;
+const textos = verbeteNoIdioma(v, lang);
+const categoria = nomeCategoria(categoriaDe(v), lang);
+const path = urlVerbete(v);
+const url = new URL(caminhoNoIdioma(path, lang), Astro.site).href;
+const descricao = resumoVerbete(v, lang);
+const imagem = v.imagemCapa ? new URL(v.imagemCapa, Astro.site).href : undefined;
+const relacionados = (v.termosRelacionadosIds ?? [])
+  .map((id) => verbetesPublicados.find((r) => r.id === id))
+  .filter((r) => r !== undefined)
+  .map((r) => verbeteNoIdioma(r, lang));
+const jsonLd = {
+  "@type": "DefinedTerm",
+  name: textos.titulo,
+  description: descricao,
+  inDefinedTermSet: categoria,
+  url,
+  ...(imagem && { image: [imagem] }),
+};
+const estudos = caminhoNoIdioma("/estudos/", lang);
+---
+
+<Base
+  lang={lang}
+  title={`${textos.titulo} — ${NOME_SITE}`}
+  description={descricao}
+  path={path}
+  temOutroIdioma={temTraducao(v)}
+  destinoSemTraducao="/estudos/"
+  secao="/estudos"
+  imagem={imagem}
+  ogTipo="article"
+  jsonLd={[jsonLd]}
+>
+  <base slot="head" href="/" />
+  <article class="wrap" style="padding-top:2.5rem;padding-bottom:2.5rem">
+    <a href={estudos} class="btn btn-ghost" style="margin-bottom:1rem;display:inline-block">{t(lang, "estudo.backLink")}</a>
+    <div id="verbete-content">
+      <span class="tag tag-accent">{categoria}</span>
+      <h1>{textos.titulo}</h1>
+      {textos.definicaoCurta && <p class="verbete-lede">{textos.definicaoCurta}</p>}
+      {
+        v.imagemCapa && (
+          <div class="article-cover">
+            <img src={`/${v.imagemCapa}`} alt="" />
+          </div>
+        )
+      }
+      <div class="article-body" set:html={textos.conteudo} />
+      {
+        relacionados.length > 0 && (
+          <div class="article-references">
+            <h2 class="article-references-heading">{t(lang, "estudo.relatedHeading")}</h2>
+            <ul class="article-references-list">
+              {relacionados.map((r) => (
+                <li>
+                  <a href={r.href} lang={r.soPortugues ? "pt" : undefined}>
+                    {r.titulo}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
+      }
+      {
+        v.fontes && v.fontes.length > 0 && (
+          <div class="article-references">
+            <h2 class="article-references-heading">{t(lang, "estudo.sourcesHeading")}</h2>
+            <ol class="article-references-list">
+              {v.fontes.map((f) => (
+                <li>
+                  {f.url ? (
+                    <a href={f.url} target="_blank" rel="noopener noreferrer">
+                      {f.text}
+                    </a>
+                  ) : (
+                    f.text
+                  )}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )
+      }
+      {v.dataAtualizacao && <p class="article-byline-meta">{t(lang, "estudo.updatedAt", { date: formatarData(v.dataAtualizacao, lang) })}</p>}
+    </div>
+  </article>
+</Base>

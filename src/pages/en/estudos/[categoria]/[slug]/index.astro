@@ -1,0 +1,16 @@
+---
+// /en/estudos/<categoria>/<verbete>/ — só para verbetes com tituloEn (ver PaginaVerbete).
+import PaginaVerbete from "../../../../../components/PaginaVerbete.astro";
+import { categoriaDe, temTraducao, verbetesPublicados, type Verbete } from "../../../../../lib/estudos";
+
+export function getStaticPaths() {
+  return verbetesPublicados.filter(temTraducao).map((verbete) => ({
+    params: { categoria: categoriaDe(verbete).slug, slug: verbete.slug },
+    props: { verbete },
+  }));
+}
+
+const { verbete } = Astro.props as { verbete: Verbete };
+---
+
+<PaginaVerbete verbete={verbete} lang="en" />

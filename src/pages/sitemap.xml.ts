@@ -3,8 +3,8 @@
 // <xhtml:link> de alternância entre os pares PT/EN.
 import { noticiasDoIdioma } from "../lib/noticias";
 import { paginaInstitucional } from "../lib/paginas";
-import { urlVerbete, verbetesPublicados } from "../lib/estudos";
-import { episodios, urlEpisodio } from "../lib/episodios";
+import { temTraducao as verbeteTraduzido, urlVerbete, verbetesPublicados } from "../lib/estudos";
+import { episodios, temTraducao as episodioTraduzido, urlEpisodio } from "../lib/episodios";
 import { caminhoNoIdioma } from "../lib/i18n";
 import { BASE_URL, respostaXml, xmlEscape } from "../lib/feeds";
 
@@ -79,7 +79,8 @@ export async function GET() {
   }
 
   for (const e of episodios) {
-    entradas.push({ caminho: urlEpisodio(e.id), lastmod: e.date, changefreq: "monthly" });
+    const caminho = urlEpisodio(e.id);
+    entradas.push({ caminho, lastmod: e.date, changefreq: "monthly", par: episodioTraduzido(e) ? caminho : undefined });
   }
 
   // Versões em inglês, depois das em português.
@@ -96,9 +97,17 @@ export async function GET() {
     entradas.push({ caminho: caminhoNoIdioma(caminho, "en"), lastmod: n.data.updated || n.data.date, changefreq: "monthly", par: caminho });
   }
 
-  // Verbetes publicados (só PT por enquanto), como generate_sitemap.py.
+  for (const e of episodios.filter(episodioTraduzido)) {
+    entradas.push({ caminho: urlEpisodio(e.id, "en"), lastmod: e.date, changefreq: "monthly", par: urlEpisodio(e.id) });
+  }
+
+  // Verbetes publicados, como generate_sitemap.py, e os traduzidos em EN.
   for (const v of verbetesPublicados) {
-    entradas.push({ caminho: urlVerbete(v), lastmod: v.dataAtualizacao || undefined, changefreq: "monthly" });
+    const caminho = urlVerbete(v);
+    entradas.push({ caminho, lastmod: v.dataAtualizacao || undefined, changefreq: "monthly", par: verbeteTraduzido(v) ? caminho : undefined });
+  }
+  for (const v of verbetesPublicados.filter(verbeteTraduzido)) {
+    entradas.push({ caminho: urlVerbete(v, "en"), lastmod: v.dataAtualizacao || undefined, changefreq: "monthly", par: urlVerbete(v) });
   }
 
   const xml =

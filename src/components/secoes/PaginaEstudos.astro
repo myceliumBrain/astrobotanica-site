@@ -1,10 +1,11 @@
 ---
 // /estudos/: verbetes publicados agrupados por categoria, na ordem de
 // data/categorias_estudo.json (renderEstudosIndex). A busca por título
-// filtra no navegador; sem JS, a lista completa já está no HTML.
+// filtra no navegador; sem JS, a lista completa já está no HTML. Em EN, o
+// verbete sem tradução aparece em português, com selo e link para a página PT.
 import Base from "../../layouts/Base.astro";
 import { t, type Lang } from "../../lib/i18n";
-import { categoriasEstudo, urlVerbete, verbetesPublicados } from "../../lib/estudos";
+import { categoriasEstudo, nomeCategoria, verbeteNoIdioma, verbetesPublicados } from "../../lib/estudos";
 
 interface Props {
   lang: Lang;
@@ -13,7 +14,10 @@ interface Props {
 const { lang } = Astro.props;
 const publicados = verbetesPublicados;
 const grupos = categoriasEstudo
-  .map((categoria) => ({ categoria, itens: publicados.filter((v) => v.categoriaId === categoria.id) }))
+  .map((categoria) => ({
+    nome: nomeCategoria(categoria, lang),
+    itens: publicados.filter((v) => v.categoriaId === categoria.id).map((v) => ({ v, textos: verbeteNoIdioma(v, lang) })),
+  }))
   .filter((g) => g.itens.length > 0);
 ---
 
@@ -39,16 +43,17 @@ const grupos = categoriasEstudo
             />
           </div>
           <div id="estudos-list">
-            {grupos.map(({ categoria, itens }) => (
+            {grupos.map(({ nome, itens }) => (
               <section class="estudos-category">
-                <h2 class="estudos-category-heading">{categoria.nome}</h2>
+                <h2 class="estudos-category-heading">{nome}</h2>
                 <div class="article-grid">
-                  {itens.map((v) => (
-                    <a class="article-card" href={urlVerbete(v)} data-titulo={v.titulo.toLowerCase()}>
+                  {itens.map(({ v, textos }) => (
+                    <a class="article-card" href={textos.href} data-titulo={textos.titulo.toLowerCase()}>
                       <div class="article-card-image">{v.imagemCapa && <img src={`/${v.imagemCapa}`} alt="" loading="lazy" />}</div>
-                      <div class="article-card-kicker">{categoria.nome}</div>
-                      <div class="article-card-title">{v.titulo}</div>
-                      <div class="article-card-meta">{v.definicaoCurta}</div>
+                      <div class="article-card-kicker">{nome}</div>
+                      <div class="article-card-title" lang={textos.soPortugues ? "pt" : undefined}>{textos.titulo}</div>
+                      <div class="article-card-meta" lang={textos.soPortugues ? "pt" : undefined}>{textos.definicaoCurta}</div>
+                      {textos.soPortugues && <span class="selo-so-portugues">{t(lang, "listas.soPortugues")}</span>}
                     </a>
                   ))}
                 </div>
