@@ -2,7 +2,7 @@
 title: "Política de Privacidade"
 description: "Como o Astrobotânica trata dados pessoais de quem visita o site, de acordo com a LGPD. O site não usa cookies de rastreamento."
 lang: "pt"
-updated: "2026-10-31"
+updated: "2026-11-01"
 ---
 
 Esta política explica como o Astrobotânica trata os dados pessoais de quem visita **astrobotanica.com.br**, de acordo com a Lei Geral de Proteção de Dados Pessoais (LGPD, Lei nº 13.709/2018).
@@ -34,7 +34,7 @@ O site é hospedado no GitHub Pages, serviço da GitHub, Inc., nos Estados Unido
 
 ## Fontes tipográficas
 
-As fontes do site são carregadas do Google Fonts. Para isso, o seu navegador se conecta aos servidores do Google, que recebem o endereço IP e informações do navegador, conforme a [política de privacidade do Google](https://policies.google.com/privacy?hl=pt-BR). O Google Fonts não grava cookies.
+As fontes do site (Barlow, Barlow Condensed e IBM Plex Mono) são servidas pelo próprio astrobotanica.com.br. O seu navegador não se conecta a serviços de fontes de terceiros, como o Google Fonts.
 
 ## Links externos e compartilhamento
 

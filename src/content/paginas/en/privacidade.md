@@ -2,7 +2,7 @@
 title: "Privacy Policy"
 description: "How Astrobotânica handles the personal data of site visitors, in accordance with Brazil's LGPD. The site does not use tracking cookies."
 lang: "en"
-updated: "2026-10-31"
+updated: "2026-11-01"
 ---
 
 This policy explains how Astrobotânica handles the personal data of visitors to **astrobotanica.com.br**, in accordance with Brazil's General Data Protection Law (LGPD, Law No. 13,709/2018).
@@ -34,7 +34,7 @@ The site is hosted on GitHub Pages, a service of GitHub, Inc., in the United Sta
 
 ## Fonts
 
-The site's fonts are loaded from Google Fonts. To do so, your browser connects to Google's servers, which receive your IP address and browser information, according to [Google's Privacy Policy](https://policies.google.com/privacy?hl=en). Google Fonts does not set cookies.
+The site's fonts (Barlow, Barlow Condensed and IBM Plex Mono) are served by astrobotanica.com.br itself. Your browser does not connect to third-party font services such as Google Fonts.
 
 ## External links and sharing
 
