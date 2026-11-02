@@ -1,0 +1,13 @@
+---
+// /en/episodios/<id>/ — só para episódios com titleEn (ver PaginaEpisodio).
+import PaginaEpisodio from "../../../../components/PaginaEpisodio.astro";
+import { episodios, temTraducao, type Episodio } from "../../../../lib/episodios";
+
+export function getStaticPaths() {
+  return episodios.filter(temTraducao).map((episodio) => ({ params: { id: episodio.id }, props: { episodio } }));
+}
+
+const { episodio } = Astro.props as { episodio: Episodio };
+---
+
+<PaginaEpisodio episodio={episodio} lang="en" />

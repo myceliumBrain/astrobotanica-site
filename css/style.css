@@ -1038,3 +1038,17 @@ body.nav-open { overflow: hidden; }
   }
   .nav-overlay-panel a { font-size: clamp(2.8rem, 13vw, 4rem); }
 }
+
+/* Listas em inglês: item ainda sem tradução, mostrado em português. */
+.selo-so-portugues {
+  display: inline-block;
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}

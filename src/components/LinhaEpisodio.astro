@@ -3,7 +3,7 @@
 // descrição) e no painel da página inicial (sem).
 import { t, type Lang } from "../lib/i18n";
 import { formatarData } from "../lib/noticias";
-import { urlEpisodio, type Episodio } from "../lib/episodios";
+import { episodioNoIdioma, type Episodio } from "../lib/episodios";
 import { pad } from "../lib/listas";
 
 interface Props {
@@ -13,11 +13,12 @@ interface Props {
 }
 
 const { episodio: e, lang, comDescricao = false } = Astro.props;
-// Episódios ainda não têm versão EN: o áudio e os textos são em português.
-const idioma = lang === "en" ? "pt" : undefined;
+// Em EN, episódio sem tradução: textos em português, com selo e link para a página PT.
+const textos = episodioNoIdioma(e, lang);
+const idioma = textos.soPortugues ? "pt" : undefined;
 ---
 
-<a class="episode-row" href={urlEpisodio(e.id)}>
+<a class="episode-row" href={textos.href}>
   {
     e.image && (
       <div class="episode-row-image">
@@ -27,8 +28,9 @@ const idioma = lang === "en" ? "pt" : undefined;
   }
   <span class="episode-row-number">{t(lang, "episodio.epNumber", { number: pad(e.number) })}</span>
   <div class="episode-row-main">
-    <div class="episode-row-title" lang={idioma}>{e.title}</div>
-    {comDescricao && <p class="episode-row-desc" lang={idioma}>{e.description}</p>}
+    <div class="episode-row-title" lang={idioma}>{textos.title}</div>
+    {comDescricao && <p class="episode-row-desc" lang={idioma}>{textos.description}</p>}
+    {textos.soPortugues && <span class="selo-so-portugues">{t(lang, "listas.soPortugues")}</span>}
   </div>
   <div class="episode-row-meta">
     <span>{formatarData(e.date, lang)}</span>

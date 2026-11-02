@@ -24,20 +24,6 @@ const meta = [formatarData(n.date, lang), n.readingTime].filter(Boolean).join(" 
   <div class="article-card-kicker">{n.category}</div>
   <div class="article-card-title" lang={item.soPortugues ? "pt" : undefined}>{n.title}</div>
   <div class="article-card-meta">{meta}</div>
-  {item.soPortugues && <span class="article-card-selo">{t(lang, "listas.soPortugues")}</span>}
+  {item.soPortugues && <span class="selo-so-portugues">{t(lang, "listas.soPortugues")}</span>}
 </a>
 
-<style>
-  /* Lista EN: notícia ainda sem tradução. */
-  .article-card-selo {
-    align-self: flex-start;
-    margin-top: 6px;
-    padding: 1px 6px;
-    border: 1px solid var(--line);
-    font-family: var(--font-mono);
-    font-size: 0.66rem;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
-  }
-</style>
