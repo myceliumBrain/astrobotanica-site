@@ -101,7 +101,20 @@ Toda tela de edição segue o mesmo padrão:
   - Fotos antigas que ficam até a Fase 13: `images/integrantes/integrante-pedro.jpeg`
     e `images/integrantes/novo-integrante.jpg` (e as miniaturas delas).
 
-### P3 — Páginas editáveis
+### P3 — Páginas editáveis (primeira parte ✔ 2026-11-02)
+- Feito:
+  - "Páginas" na barra lateral segue o menu do site: cada item do menu é
+    uma entrada; os que têm mais de uma tela (Notícias, Podcast, Estudos,
+    Sobre) abrem com uma seta. O que não está no menu (Expediente, Normas…)
+    fica em "Fora do menu";
+  - texto das páginas (Sobre, Expediente, Política Editorial, Normas,
+    Privacidade) editável, em PT e EN, com título, descrição e data. O corpo
+    continua em Markdown (`admin/paginas-md.js`), e abrir e salvar sem mexer
+    não muda nenhum arquivo;
+  - item novo no menu com link `/slug` vira uma página: o painel mostra o
+    editor, e salvar cria `src/content/paginas/pt/<slug>.md`, publicada em
+    `/<slug>` e `/en/<slug>` por `src/pages/[pagina].astro`.
+- Falta: reorganizar os itens de "Páginas" (próximo pedido).
 - Sobre, Expediente, Política Editorial, Normas e Privacidade editáveis no
   painel: título, descrição (SEO), data de atualização e o texto completo, com
   o mesmo editor de texto das notícias, em PT e EN.
