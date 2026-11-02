@@ -9,7 +9,7 @@
   --bg-panel: #f4f4f2;
   --ink: #1d1f20;
   --ink-dim: color-mix(in srgb, var(--ink) 68%, transparent);
-  --ink-faint: color-mix(in srgb, var(--ink) 48%, transparent);
+  --ink-faint: color-mix(in srgb, var(--ink) 64%, transparent);
   --line: color-mix(in srgb, var(--ink) 15%, transparent);
 
   --accent: #7fad8b;
@@ -71,7 +71,7 @@ body {
 h1, h2, h3, h4 { margin: 0; font-family: var(--font-heading); font-weight: 600; line-height: 1.1; letter-spacing: -0.01em; }
 p { margin: 0; }
 ul { margin: 0; padding: 0; list-style: none; }
-a { color: var(--accent); }
+a { color: var(--accent-700); }
 a:hover { color: var(--accent-800); }
 img { max-width: 100%; display: block; }
 
@@ -130,8 +130,8 @@ button { font-family: inherit; }
   padding: 0.7rem 1.15rem; border-radius: var(--radius);
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
-.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn-primary:hover { background: var(--accent-700); border-color: var(--accent-700); color: #fff; }
+.btn-primary { background: var(--accent-700); border-color: var(--accent-700); color: #fff; }
+.btn-primary:hover { background: var(--accent-800); border-color: var(--accent-800); color: #fff; }
 .btn-secondary:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
 .btn-ghost { border-color: transparent; color: var(--accent-700); padding-inline: 0.2rem; }
 .btn-ghost:hover { color: var(--accent-800); background: none; }
