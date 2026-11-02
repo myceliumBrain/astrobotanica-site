@@ -4,6 +4,7 @@
 // matter (fonte original, tipo de estudo, revisão técnica, como citar,
 // erratas, licença). Blocos opcionais só aparecem se o campo estiver
 // preenchido.
+import ContadorAcessos from "./ContadorAcessos.astro";
 import Base from "../layouts/Base.astro";
 import { t, caminhoNoIdioma, type Lang } from "../lib/i18n";
 import { corpoHtmlDaPagina, formatarData, resumo, type Noticia } from "../lib/noticias";
@@ -340,6 +341,7 @@ const listasLaterais = [
       )
     }
   </section>
+  <ContadorAcessos />
 </Base>
 
 <script>
