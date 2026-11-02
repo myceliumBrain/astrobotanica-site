@@ -274,7 +274,7 @@ const listasLaterais = [
                 <hr class="article-divider" />
                 <div class="article-author-card">
                   {avatar && (
-                    <a class="article-author-photo" href={lang === "en" ? "/en/sobre" : "/sobre"}>
+                    <a class="article-author-photo" href={lang === "en" ? "/en/sobre" : "/sobre"} aria-label={n.author}>
                       <img src={`/${avatar}`} alt="" />
                     </a>
                   )}
