@@ -263,3 +263,23 @@ Lighthouse (celular, preview local):
 
 O que resta na notícia 14 (`image-alt`, `heading-order`) e no Expediente
 (`heading-order`) vem do texto publicado, mantido por decisão (D5).
+
+## Ensaio geral — Fase 10.1 (2026-11-02)
+
+| Verificação | Resultado |
+|---|---|
+| `main` desde a criação da branch | Sem commits novos (14 notícias, 9 traduzidas) |
+| `json-para-md.mjs` de novo | `.md` idênticos aos versionados |
+| `verificar-conteudo.mjs` | 0 diferenças |
+| Build | OK, sem avisos |
+| `verificar-urls.mjs` | 137/137 URLs, 18/18 checagens extras |
+| `verificar-seo.mjs` | OK (hreflang recíproco, seletor de idioma, pares do sitemap) |
+| `/rss.xml` | Igual ao anterior, fora o `lastBuildDate` |
+| Comparação visual (site no ar × build, 1280 px e 390 px) | Início, Notícias, notícia 13, Podcast, Estudos: iguais, com as mudanças previstas (paleta D1, autor e data na notícia) |
+
+Encontrado e corrigido no ensaio: o link "RSS feed" do menu em Notícias e
+Estudos tinha ficado de fora; voltou (nas páginas EN, para `/en/rss.xml`).
+
+Diferença mantida: em Estudos, sem verbete publicado, o site novo mostra só
+o aviso "Nenhum verbete publicado ainda", sem a caixa de busca vazia (ela
+aparece quando houver verbetes).
