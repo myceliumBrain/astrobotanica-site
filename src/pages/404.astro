@@ -1,0 +1,55 @@
+---
+// 404.html — o GitHub Pages serve este arquivo para qualquer caminho que não
+// existe. Uma página só para os dois idiomas (o Pages não escolhe 404 por
+// pasta). O script cobre o único padrão previsível de endereço quebrado:
+// /en/artigo/<id>/, /en/episodios/<id>/ ou /en/estudos/<cat>/<verbete>/ de
+// um item sem tradução (ou cuja tradução foi apagada no painel), que vai
+// para a versão em português.
+import Base from "../layouts/Base.astro";
+import { noticiasDoIdioma } from "../lib/noticias";
+import { episodios, temTraducao as episodioTraduzido, urlEpisodio } from "../lib/episodios";
+import { temTraducao as verbeteTraduzido, urlVerbete, verbetesPublicados } from "../lib/estudos";
+
+const semTraducao: Record<string, string> = {};
+const traduzidas = new Set((await noticiasDoIdioma("en")).map((n) => n.data.id));
+for (const n of await noticiasDoIdioma("pt")) {
+  if (!traduzidas.has(n.data.id)) semTraducao[`/en/artigo/${n.data.id}`] = `/artigo/${n.data.id}/`;
+}
+for (const e of episodios.filter((e) => !episodioTraduzido(e))) {
+  semTraducao[urlEpisodio(e.id, "en").replace(/\/$/, "")] = urlEpisodio(e.id);
+}
+for (const v of verbetesPublicados.filter((v) => !verbeteTraduzido(v))) {
+  semTraducao[urlVerbete(v, "en").replace(/\/$/, "")] = urlVerbete(v);
+}
+---
+
+<Base
+  lang="pt"
+  title="Página não encontrada — Astrobotânica"
+  description="O endereço que você abriu não existe ou mudou de lugar."
+  path="/" temOutroIdioma={false} destinoSemTraducao="/" indexavel={false}>
+  <section class="page-header wrap">
+    <h1>Página não encontrada</h1>
+    <p>O endereço que você abriu não existe ou mudou de lugar.</p>
+  </section>
+  <section class="section wrap pagina-404">
+    <p>Você pode voltar para a <a href="/">página inicial</a>, ver as <a href="/noticias">notícias</a>, os <a href="/podcast">episódios do podcast</a> ou os <a href="/estudos">estudos</a>.</p>
+    <p lang="en"><strong>Page not found.</strong> The address you opened doesn't exist or has moved. Go to the <a href="/en/">home page</a> or browse the <a href="/en/noticias">news</a>.</p>
+  </section>
+  <script type="application/json" id="sem-traducao" set:html={JSON.stringify(semTraducao)} />
+</Base>
+
+<script>
+  const tabela = JSON.parse(document.getElementById("sem-traducao")?.textContent || "{}") as Record<string, string>;
+  const caminho = location.pathname.replace(/\/(index\.html)?$/, "");
+  if (Object.prototype.hasOwnProperty.call(tabela, caminho)) location.replace(tabela[caminho]);
+</script>
+
+<style>
+  .pagina-404 a {
+    color: var(--accent-700);
+  }
+  .pagina-404 p + p {
+    margin-top: var(--space-3);
+  }
+</style>

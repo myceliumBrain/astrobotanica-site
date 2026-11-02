@@ -1,0 +1,13 @@
+---
+// /episodios/<id>/ — página de cada episódio (ver PaginaEpisodio).
+import PaginaEpisodio from "../../../components/PaginaEpisodio.astro";
+import { episodios, type Episodio } from "../../../lib/episodios";
+
+export function getStaticPaths() {
+  return episodios.map((episodio) => ({ params: { id: episodio.id }, props: { episodio } }));
+}
+
+const { episodio } = Astro.props as { episodio: Episodio };
+---
+
+<PaginaEpisodio episodio={episodio} lang="pt" />

@@ -1,0 +1,82 @@
+---
+// Página inicial, como renderHomeHighlights: até 5 notícias no topo
+// (1 destaque 50/50 + 4 pôsteres), banner de evento opcional, o restante em
+// grade horizontal; e o painel do podcast com até 6 episódios.
+import Base from "../../layouts/Base.astro";
+import CartaoNoticia from "../CartaoNoticia.astro";
+import CartaoNoticiaDestaque from "../CartaoNoticiaDestaque.astro";
+import LinhaEpisodio from "../LinhaEpisodio.astro";
+import { t, type Lang } from "../../lib/i18n";
+import { NOME_SITE } from "../../lib/seo";
+import { noticiasDaLista, selecionarDestaques } from "../../lib/listas";
+import { episodios } from "../../lib/episodios";
+
+interface Props {
+  lang: Lang;
+}
+
+const HOME_MAX_ITEMS = 6;
+const HOME_ARTICLES_TOP = 5;
+
+const { lang } = Astro.props;
+const noticias = await noticiasDaLista(lang);
+const topo = selecionarDestaques(noticias, HOME_ARTICLES_TOP, (n) => n.destaque);
+const restante = noticias.filter((n) => !topo.includes(n));
+const [destaque, ...proximas] = topo;
+const episodiosHome = selecionarDestaques(episodios, HOME_MAX_ITEMS, (e) => Boolean(e.featured));
+// Caminho relativo do painel ("images/...") vale a partir da raiz, também em /en/.
+const bannerCru = t(lang, "home.eventBannerImage");
+const bannerImagem = bannerCru && !/^(https?:)?\/\//.test(bannerCru) && !bannerCru.startsWith("/") ? `/${bannerCru}` : bannerCru;
+const bannerLink = t(lang, "home.eventBannerLink");
+---
+
+<Base lang={lang} title={t(lang, "home.metaTitle")} description={t(lang, "home.metaDescription")} path="/">
+  <h1 class="visually-hidden">{NOME_SITE}</h1>
+
+  <section class="section wrap" style="padding-top: var(--space-2)">
+    {noticias.length === 0 && <p class="empty-state">{t(lang, "home.emptyArticles")}</p>}
+    {destaque && <CartaoNoticiaDestaque item={destaque} lang={lang} />}
+    {
+      proximas.length > 0 && (
+        <div class="home-articles-row">
+          {proximas.map((item) => (
+            <CartaoNoticia item={item} lang={lang} />
+          ))}
+        </div>
+      )
+    }
+    {
+      bannerImagem &&
+        (bannerLink ? (
+          <a class="home-event-banner" href={bannerLink} target="_blank" rel="noopener noreferrer">
+            <img src={bannerImagem} alt="" loading="lazy" />
+          </a>
+        ) : (
+          <div class="home-event-banner">
+            <img src={bannerImagem} alt="" loading="lazy" />
+          </div>
+        ))
+    }
+    {
+      restante.length > 0 && (
+        <div class="article-grid">
+          {restante.map((item) => (
+            <CartaoNoticia item={item} lang={lang} variante="horizontal" />
+          ))}
+        </div>
+      )
+    }
+  </section>
+
+  <section class="section wrap">
+    <div class="feature-panel">
+      <div class="feature-panel-copy">
+        <h2>{t(lang, "home.panelKicker")}</h2>
+      </div>
+      <div class="feature-panel-episode">
+        {episodiosHome.length === 0 && <p class="empty-state">{t(lang, "home.emptyEpisodes")}</p>}
+        {episodiosHome.map((e) => <LinhaEpisodio episodio={e} lang={lang} />)}
+      </div>
+    </div>
+  </section>
+</Base>

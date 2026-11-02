@@ -1,8 +1,9 @@
 // ============================================================================
 // admin.js — painel de administração de conteúdo.
 //
-// Modelo: ao entrar, episodes.json/articles.json/site.json são carregados
-// uma vez para a memória (contentData). Reordenar, adicionar, remover e
+// Modelo: ao entrar, as notícias (src/content/noticias/{pt,en}/*.md, ver
+// noticias-md.js) e episodes.json/site.json etc. são carregados uma vez para
+// a memória (contentData). Reordenar, adicionar, remover e
 // editar campos só mudam essa cópia em memória e marcam a seção como suja
 // (dirty) — nada é gravado no GitHub até clicar em "Salvar no GitHub", que
 // faz o commit de cada arquivo sujo de uma vez. Os acessos (data/auth.json)
@@ -14,13 +15,20 @@
 // na memória da aba durante a sessão.
 // ============================================================================
 
+import {
+  PASTA_NOTICIAS,
+  arquivosParaNoticias,
+  mudancasDeArquivos,
+  noticiasParaArquivos,
+  problemasDasNoticias,
+} from "./noticias-md.js";
+
 const CONFIG = {
   owner: "myceliumBrain",
   repo: "astrobotanica-site",
   branch: "main",
   authPath: "data/auth.json",
   episodesPath: "data/episodes.json",
-  articlesPath: "data/articles.json",
   membersPath: "data/members.json",
   sitePath: "data/site.json",
   siteEnPath: "data/site.en.json",
@@ -28,8 +36,9 @@ const CONFIG = {
   categoriasEstudoPath: "data/categorias_estudo.json",
 };
 
+// Seções gravadas como um arquivo JSON cada. As notícias (seção "articles")
+// são gravadas à parte, um .md por notícia e idioma (ver salvarNoticias).
 const PATHS = {
-  articles: CONFIG.articlesPath,
   episodes: CONFIG.episodesPath,
   members: CONFIG.membersPath,
   site: CONFIG.sitePath,
@@ -87,16 +96,6 @@ const GENERAL_SCHEMA = [
       { key: "brand.name", label: "Nome (logo no menu e rodapé)", type: "text" },
       { key: "brand.footerTagline", label: "Frase do rodapé", type: "textarea" },
       { key: "brand.copyright", label: "Linha de copyright do rodapé", type: "text" },
-    ],
-  },
-  {
-    heading: "Menu de navegação",
-    fields: [
-      { key: "nav.articles", label: "Notícias", type: "text" },
-      { key: "nav.estudos", label: "Estudos", type: "text" },
-      { key: "nav.podcast", label: "Podcast", type: "text" },
-      { key: "nav.about", label: "Sobre", type: "text" },
-      { key: "nav.contact", label: "Contato", type: "text" },
     ],
   },
   {
@@ -457,6 +456,31 @@ async function getFile(path) {
     `/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${path}?ref=${CONFIG.branch}&_=${Date.now()}`
   );
   return { content: safeJsonParse(base64ToUtf8(data.content)), sha: data.sha };
+}
+
+// Texto de todos os .md de notícias (pt/ e en/), como { caminho: texto }.
+// Uma pasta que ainda não existe (ex: en/ sem nenhuma tradução) conta como
+// vazia.
+async function getNoticiasMarkdown() {
+  const repoBase = `/repos/${CONFIG.owner}/${CONFIG.repo}/contents`;
+  const arquivos = {};
+  for (const lang of ["pt", "en"]) {
+    let lista;
+    try {
+      lista = await ghRequest(`${repoBase}/${PASTA_NOTICIAS}/${lang}?ref=${CONFIG.branch}&_=${Date.now()}`);
+    } catch (err) {
+      if (err.status === 404) continue;
+      throw err;
+    }
+    const mds = lista.filter((item) => item.type === "file" && item.name.endsWith(".md"));
+    const textos = await Promise.all(
+      mds.map((item) =>
+        ghRequest(`${repoBase}/${item.path}?ref=${CONFIG.branch}&_=${Date.now()}`).then((d) => base64ToUtf8(d.content))
+      )
+    );
+    mds.forEach((item, i) => (arquivos[item.path] = textos[i]));
+  }
+  return arquivos;
 }
 
 // O GitHub responde 404 (ou 403) a uma escrita quando o token não tem
@@ -834,6 +858,9 @@ async function enterApp() {
 
 let contentData = { articles: null, episodes: null, members: null, site: null, siteEn: null, estudos: null, categoriasEstudo: null };
 const dirty = new Set();
+// Os .md de notícias como estavam no GitHub no último carregamento ou
+// salvamento — base para gravar só o que mudou (ver salvarNoticias).
+let noticiasMarkdownOriginais = {};
 
 // Campo de upload do banner de evento da Home (ver renderHomeEventBanner) —
 // guardado à parte porque, ao contrário dos campos de artigo/episódio/
@@ -930,7 +957,7 @@ async function loadContent() {
   setSaveStatus("carregando…");
   try {
     const [articles, episodes, members, site, siteEn, estudos, categoriasEstudo] = await Promise.all([
-      getFile(CONFIG.articlesPath),
+      getNoticiasMarkdown(),
       getFile(CONFIG.episodesPath),
       getFileOrEmpty(CONFIG.membersPath, []),
       getFile(CONFIG.sitePath),
@@ -938,7 +965,8 @@ async function loadContent() {
       getFileOrEmpty(CONFIG.estudosPath, []),
       getFileOrEmpty(CONFIG.categoriasEstudoPath, []),
     ]);
-    contentData.articles = articles.content;
+    noticiasMarkdownOriginais = articles;
+    contentData.articles = arquivosParaNoticias(articles);
     contentData.episodes = episodes.content;
     contentData.members = members.content || [];
     contentData.site = site.content;
@@ -962,6 +990,7 @@ async function loadContent() {
     renderEstudosList();
     renderGeneralForm();
     renderSiteSocialLinks();
+    renderSiteMenu();
     if (fixedArticles || fixedEpisodes || fixedEstudos || fixedCategoriasEstudo) {
       document.getElementById("save-btn").disabled = false;
       setSaveStatus("alterações pendentes", "pending");
@@ -985,9 +1014,11 @@ async function loadContent() {
 // gravar, pra nunca persistir o "../" no JSON.
 function toEditorPreviewHtml(html) {
   if (!html) return "";
-  const div = document.createElement("div");
+  // <template>: o HTML é analisado sem carregar nada — um <div> solto já
+  // baixaria cada imagem pelo caminho cru (/admin/images/…, 404).
+  const div = document.createElement("template");
   div.innerHTML = html;
-  div.querySelectorAll("img[src]").forEach((img) => {
+  div.content.querySelectorAll("img[src]").forEach((img) => {
     const src = img.getAttribute("src");
     if (src && !/^(https?:|blob:|\.\.\/|\/)/i.test(src)) {
       img.setAttribute("src", `../${src}`);
@@ -1002,7 +1033,11 @@ function toEditorPreviewHtml(html) {
 // (ver data-final-src em buildRichTextField/confirmBodyImages). Além disso
 // desfaz o "../" de preview (ver toEditorPreviewHtml) nas imagens já salvas.
 function finalizeRichTextHtml(container) {
-  const clone = container.cloneNode(true);
+  // Cópia num <template> (não carrega nada): num clone comum, trocar o src
+  // abaixo já faria o navegador baixar cada imagem pelo caminho sem "../".
+  const template = document.createElement("template");
+  template.innerHTML = container.innerHTML;
+  const clone = template.content;
   clone.querySelectorAll("img[data-final-src]").forEach((img) => {
     img.setAttribute("src", img.getAttribute("data-final-src"));
     img.removeAttribute("data-final-src");
@@ -1019,7 +1054,7 @@ function finalizeRichTextHtml(container) {
   clone.querySelectorAll("p, h2, h3").forEach((node) => {
     if (node.textContent.trim() === "" && !node.querySelector("img")) node.remove();
   });
-  return clone.innerHTML;
+  return template.innerHTML;
 }
 
 // Caminhos de imagem (não http(s), não blob: de pré-visualização) que
@@ -1028,9 +1063,10 @@ function finalizeRichTextHtml(container) {
 function extractImagePaths(html) {
   const paths = new Set();
   if (!html) return paths;
-  const div = document.createElement("div");
+  // <template> pelo mesmo motivo de toEditorPreviewHtml: não carrega as imagens.
+  const div = document.createElement("template");
   div.innerHTML = html;
-  div.querySelectorAll("img[src]").forEach((img) => {
+  div.content.querySelectorAll("img[src]").forEach((img) => {
     const src = img.getAttribute("src");
     if (src && !/^(https?:|blob:)/i.test(src)) paths.add(src);
   });
@@ -1050,12 +1086,20 @@ function applyArticleField(input) {
   if (input.dataset.richtext === "html") {
     const newHtml = finalizeRichTextHtml(input);
     // Imagem que estava no HTML salvo antes e não está mais no novo —
-    // saiu do texto (apagada no editor), então o arquivo fica sem uso;
-    // agenda a remoção junto do resto das alterações pendentes.
+    // saiu do texto (apagada no editor); se nenhum outro corpo (a outra
+    // língua desta notícia ou outra notícia) usar o mesmo arquivo, ele fica
+    // sem uso e a remoção é agendada junto do resto das alterações pendentes.
     const oldPaths = extractImagePaths(record[key]);
     const newPaths = extractImagePaths(newHtml);
+    const usedElsewhere = new Set();
+    contentData.articles.forEach((article) => {
+      ["body", "bodyEn"].forEach((k) => {
+        if (article === record && k === key) return;
+        extractImagePaths(article[k]).forEach((path) => usedElsewhere.add(path));
+      });
+    });
     oldPaths.forEach((path) => {
-      if (!newPaths.has(path)) {
+      if (!newPaths.has(path) && !usedElsewhere.has(path)) {
         pendingDeletions.push({ path, message: `admin: remove imagem não usada mais no corpo (${path})` });
       }
     });
@@ -1097,11 +1141,11 @@ function applyEpisodeField(input) {
   }
   if (input.dataset.multiline === "paragraphs") {
     const paragraphs = linesToParagraphs(input.value);
-    if (paragraphs.length === 0) delete record.transcript;
-    else record.transcript = paragraphs;
+    if (paragraphs.length === 0) delete record[key];
+    else record[key] = paragraphs;
     return;
   }
-  if ((key === "image" || key === "time") && !input.value) { delete record[key]; return; }
+  if (["image", "time", "titleEn", "descriptionEn"].includes(key) && !input.value.trim()) { delete record[key]; return; }
   record[key] = input.value;
 }
 
@@ -1119,7 +1163,7 @@ function applyCategoriaEstudoField(input) {
   const key = input.dataset.key;
   const record = contentData.categoriasEstudo[i];
   if (!record) return;
-  if (key === "descricao" && !input.value) { delete record[key]; return; }
+  if (["descricao", "nomeEn", "descricaoEn"].includes(key) && !input.value.trim()) { delete record[key]; return; }
   record[key] = input.value;
 }
 
@@ -1138,16 +1182,27 @@ function applyEstudoField(input) {
   }
   if (input.dataset.richtext === "html") {
     const newHtml = finalizeRichTextHtml(input);
+    // Como nas notícias: só remove a imagem se nenhum outro conteúdo (a
+    // outra língua deste verbete ou outro verbete) ainda usar o arquivo.
     const oldPaths = extractImagePaths(record[key]);
     const newPaths = extractImagePaths(newHtml);
+    const usedElsewhere = new Set();
+    contentData.estudos.forEach((verbete) => {
+      ["conteudo", "conteudoEn"].forEach((k) => {
+        if (verbete === record && k === key) return;
+        extractImagePaths(verbete[k]).forEach((path) => usedElsewhere.add(path));
+      });
+    });
     oldPaths.forEach((path) => {
-      if (!newPaths.has(path)) {
+      if (!newPaths.has(path) && !usedElsewhere.has(path)) {
         pendingDeletions.push({ path, message: `admin: remove imagem não usada mais no conteúdo (${path})` });
       }
     });
-    record[key] = newHtml;
+    if (key === "conteudoEn" && !newHtml) delete record.conteudoEn;
+    else record[key] = newHtml;
     return;
   }
+  if (["tituloEn", "definicaoCurtaEn"].includes(key) && !input.value.trim()) { delete record[key]; return; }
   record[key] = input.value;
 }
 
@@ -1172,6 +1227,7 @@ function collectAll() {
     setByPath(contentData.siteEn, input.dataset.siteEn, input.value);
   });
   collectSiteSocialLinks();
+  collectSiteMenu();
 }
 
 // Collectors por card: só sincronizam os campos daquele artigo/episódio
@@ -1216,6 +1272,31 @@ async function saveAll() {
     const memberIds = contentData.members?.map((m) => m.id) || [];
     const duplicate = memberIds.find((id, i) => memberIds.indexOf(id) !== i);
     if (duplicate) throw new Error(`dois integrantes com o mesmo identificador ("${duplicate}")`);
+    // Menu: item sem nome ou com link fora do formato faria o build falhar
+    // (ver src/lib/menu.ts).
+    if (dirty.has("site")) {
+      const problemas = problemasDoMenu(contentData.site.menu || []);
+      if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
+    }
+    // Episódios: data inválida faria o build do site falhar.
+    if (dirty.has("episodes")) {
+      const semData = contentData.episodes.filter((e) => !/^\d{4}-\d{2}-\d{2}$/.test(e.date || ""));
+      if (semData.length) throw new Error(`corrija antes de salvar: data inválida no episódio ${semData.map((e) => e.title || e.id).join(", ")}`);
+    }
+    // Notícias: valida e calcula os arquivos antes de qualquer envio — um
+    // título vazio ou uma data inválida faria o build do site falhar.
+    let noticias = null;
+    if (dirty.has("articles")) {
+      const problemas = problemasDasNoticias(contentData.articles);
+      if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
+      const arquivos = noticiasParaArquivos(contentData.articles);
+      noticias = { arquivos, mudancas: mudancasDeArquivos(noticiasMarkdownOriginais, arquivos) };
+      if (!confirmarApagarTraducoes(noticias.mudancas.apagar, arquivos)) {
+        setSaveStatus("alterações pendentes", "pending");
+        saveBtn.disabled = false;
+        return;
+      }
+    }
     for (const upload of pendingUploads) {
       await uploadBinaryFile(upload.path, upload.file, upload.message);
     }
@@ -1237,6 +1318,10 @@ async function saveAll() {
       });
     }
     for (const section of dirty) {
+      if (section === "articles") {
+        await salvarNoticias(noticias);
+        continue;
+      }
       // sha undefined (arquivo ainda não existe no repositório, ex: primeiro
       // salvamento de data/members.json) faz o PUT criar o arquivo em vez de
       // atualizar um existente — ver getFileOrEmpty.
@@ -1258,6 +1343,36 @@ async function saveAll() {
     toast(`Erro: ${err.message}`, "error");
     saveBtn.disabled = false;
   }
+}
+
+// Versão em inglês esvaziada (título e corpo EN em branco) apaga o .md EN da
+// notícia — pede confirmação antes, já que o texto traduzido some do site.
+// Os .md de notícias removidas inteiras já foram confirmados em removeArticle.
+function confirmarApagarTraducoes(apagar, arquivos) {
+  const traducoes = apagar.filter((caminho) => {
+    const m = new RegExp(`^${PASTA_NOTICIAS}/en/(.+)\\.md$`).exec(caminho);
+    return m && `${PASTA_NOTICIAS}/pt/${m[1]}.md` in arquivos;
+  });
+  if (traducoes.length === 0) return true;
+  const ids = traducoes.map((caminho) => caminho.split("/").pop().replace(/\.md$/, "")).join(", ");
+  return confirm(`A versão em inglês destas notícias está vazia e será apagada do site: ${ids}. Continuar?`);
+}
+
+// Grava as notícias num único commit, só com os .md que mudaram; apaga o .md
+// de uma notícia removida e o EN de uma tradução esvaziada.
+async function salvarNoticias({ arquivos, mudancas }) {
+  const entries = [
+    ...Object.entries(mudancas.gravar).map(([path, content]) => ({ path, mode: "100644", type: "blob", content })),
+    ...mudancas.apagar.map((path) => ({ path, mode: "100644", type: "blob", sha: null })),
+  ];
+  if (entries.length) {
+    try {
+      await commitTreeChange(entries, "admin: atualiza notícias");
+    } catch (err) {
+      throw explainWriteError(err);
+    }
+  }
+  noticiasMarkdownOriginais = arquivos;
 }
 
 // ----------------------------------------------------------------------------
@@ -2329,6 +2444,29 @@ function buildArticlePortugueseSection(article, i) {
 // isso, caindo pro campo em português quando algum não foi preenchido).
 // Fecha por padrão (mutuamente exclusiva com "Versão em português" — ver
 // buildArticleCard, que decide o estado inicial das duas).
+// Seção recolhível "Versão em inglês (opcional)" de episódio, verbete e
+// categoria — mesmo visual da notícia (buildArticleEnglishSection). Começa
+// fechada. Campos em branco = o item fica só em português no site.
+function buildEnglishSection(hint, fields) {
+  const wrap = el("div", "field full article-en-section");
+  const summary = el("button", "article-lang-summary");
+  summary.type = "button";
+  summary.appendChild(el("span", "article-lang-chevron", "▸"));
+  summary.appendChild(el("span", "", "Versão em inglês (opcional)"));
+  wrap.appendChild(summary);
+  const panel = el("div", "article-lang-panel fields-grid");
+  panel.appendChild(el("p", "field-hint full", hint));
+  fields.forEach((field) => panel.appendChild(field));
+  panel.hidden = true;
+  summary.addEventListener("click", () => {
+    const opening = panel.hidden;
+    panel.hidden = !opening;
+    summary.classList.toggle("open", opening);
+  });
+  wrap.appendChild(panel);
+  return wrap;
+}
+
 function buildArticleEnglishSection(article, i) {
   const wrap = el("div", "field full article-en-section");
 
@@ -2689,6 +2827,25 @@ function buildEpisodeCard(episode, i, total, container) {
   transcript.classList.add("full");
   transcript.querySelector("textarea").rows = 8;
   grid.appendChild(transcript);
+
+  const titleEn = buildInput("Título (EN)", "text", episode.titleEn, { episode: i, key: "titleEn" });
+  titleEn.classList.add("full");
+  const descriptionEn = buildTextarea("Descrição curta (EN)", episode.descriptionEn, { episode: i, key: "descriptionEn" });
+  descriptionEn.classList.add("full");
+  const transcriptEn = buildTextarea(
+    "Transcrição (EN, opcional) — um parágrafo por linha",
+    (episode.transcriptEn || []).join("\n"),
+    { episode: i, key: "transcriptEn" },
+    true
+  );
+  transcriptEn.classList.add("full");
+  transcriptEn.querySelector("textarea").rows = 8;
+  grid.appendChild(
+    buildEnglishSection(
+      "O episódio ganha página em inglês (/en/episodios/…) quando o título (EN) estiver preenchido. O áudio é o mesmo, em português.",
+      [titleEn, descriptionEn, transcriptEn]
+    )
+  );
 
   body.appendChild(grid);
 
@@ -3146,6 +3303,15 @@ function buildCategoriaEstudoCard(categoria, i, total) {
   descricao.classList.add("full");
   grid.appendChild(descricao);
 
+  const descricaoEn = buildTextarea("Descrição (EN)", categoria.descricaoEn, { categoriaEstudo: i, key: "descricaoEn" }, false, 2);
+  descricaoEn.classList.add("full");
+  grid.appendChild(
+    buildEnglishSection("Sem o nome (EN), o site em inglês mostra o nome em português. O slug da URL é o mesmo nos dois idiomas.", [
+      buildInput("Nome (EN)", "text", categoria.nomeEn, { categoriaEstudo: i, key: "nomeEn" }),
+      descricaoEn,
+    ])
+  );
+
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
@@ -3306,6 +3472,40 @@ function buildEstudoCard(verbete, i, total, container) {
   fontesField.appendChild(addFonteBtn);
   grid.appendChild(fontesField);
 
+  const tituloEn = buildInput("Título (EN)", "text", verbete.tituloEn, { verbete: i, key: "tituloEn" });
+  tituloEn.classList.add("full");
+  const definicaoCurtaEn = buildTextarea("Definição curta (EN)", verbete.definicaoCurtaEn, { verbete: i, key: "definicaoCurtaEn" }, false, 2);
+  definicaoCurtaEn.classList.add("full");
+  // id com "-en": prefixo de arquivo próprio para as imagens deste editor,
+  // como no corpo em inglês da notícia.
+  const conteudoEnField = buildRichTextField(
+    "Conteúdo (EN)",
+    verbete.conteudoEn,
+    { verbete: i, key: "conteudoEn" },
+    {
+      folder: "images/estudos",
+      id: `${verbete.id}-en`,
+      buildImageMessage: (path) => `admin: envia imagem do conteúdo em inglês do verbete "${verbete.titulo || verbete.id}" (${path})`,
+    }
+  );
+  conteudoEnField.classList.add("full");
+  // Como na notícia: copia o HTML do português (mesmas imagens, sem novo
+  // envio) para só traduzir o texto por cima.
+  const copyConteudoBtn = el("button", "btn btn-secondary btn-small full", "Copiar conteúdo do português");
+  copyConteudoBtn.type = "button";
+  copyConteudoBtn.addEventListener("click", () => {
+    collectAll();
+    const currentEn = finalizeRichTextHtml(conteudoEnField.querySelector(".rich-text-editor"));
+    if (currentEn && !confirm("Isso substitui o conteúdo em inglês atual pelo conteúdo em português (mesmas imagens). Continuar?")) return;
+    conteudoEnField.setValue(contentData.estudos[i].conteudo || "");
+  });
+  grid.appendChild(
+    buildEnglishSection(
+      "O verbete publicado ganha página em inglês (/en/estudos/…) quando o título (EN) estiver preenchido.",
+      [tituloEn, definicaoCurtaEn, copyConteudoBtn, conteudoEnField]
+    )
+  );
+
   grid.appendChild(buildCheckboxField("Publicado", verbete.publicado, { verbete: i, key: "publicado" }));
 
   body.appendChild(grid);
@@ -3314,6 +3514,7 @@ function buildEstudoCard(verbete, i, total, container) {
   const saveBtn = buildSaveCardButton(() => {
     imagemCapaField.confirmFileUpload();
     conteudoField.confirmBodyImages();
+    conteudoEnField.confirmBodyImages();
     collectEstudoCardFields(i);
     // dataAtualizacao não tem campo próprio no formulário — é sempre a data
     // deste "Salvar alterações", igual a como readingTime é recalculado a
@@ -3482,6 +3683,125 @@ function renderSiteSocialLinks() {
   list.addEventListener("input", () => markDirty("site"));
   addBtn.addEventListener("click", () => {
     list.appendChild(buildSiteSocialLinkRow());
+    markDirty("site");
+  });
+}
+
+// Menu de navegação (cabeçalho, menu do celular e coluna "Navegação" do
+// rodapé): itens livres em contentData.site.menu, na ordem da lista —
+// { rotulo, rotuloEn, link, visivel }. Esconder só tira do menu; a página
+// continua no ar. O site lê a lista em src/lib/menu.ts. Sem "menu" no
+// site.json, o painel parte do menu original (os textos de nav.*).
+function menuPadrao() {
+  const nav = contentData.site.nav || {};
+  const navEn = contentData.siteEn.nav || {};
+  return [
+    ["/noticias", "articles"],
+    ["/estudos", "estudos"],
+    ["/podcast", "podcast"],
+    ["/sobre", "about"],
+    ["/contato", "contact"],
+  ].map(([link, chave]) => ({ rotulo: nav[chave] || "", rotuloEn: navEn[chave] || "", link, visivel: true }));
+}
+
+function problemasDoMenu(menu) {
+  const problemas = [];
+  menu.forEach((item, i) => {
+    const nome = item.rotulo ? `"${item.rotulo}"` : `item ${i + 1}`;
+    if (!item.rotulo) problemas.push(`menu: ${nome} sem nome`);
+    if (!/^(\/|https?:\/\/)/.test(item.link)) problemas.push(`menu: link de ${nome} deve começar com "/" (página do site) ou "https://"`);
+  });
+  return problemas;
+}
+
+function buildSiteMenuRow(item) {
+  const row = el("div", "site-menu-row");
+
+  const visivelLabel = el("label", "site-menu-visivel");
+  const visivel = document.createElement("input");
+  visivel.type = "checkbox";
+  visivel.className = "site-menu-visivel-input";
+  visivel.checked = item?.visivel !== false;
+  visivelLabel.appendChild(visivel);
+  visivelLabel.appendChild(document.createTextNode(" Mostrar"));
+  visivelLabel.title = "Desmarcado: o item some do menu, mas a página continua no ar";
+  row.appendChild(visivelLabel);
+
+  const campo = (classe, placeholder, valor, rotulo) => {
+    const input = document.createElement("input");
+    input.className = `input ${classe}`;
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.value = valor ?? "";
+    input.setAttribute("aria-label", rotulo);
+    row.appendChild(input);
+  };
+  campo("site-menu-rotulo", "Nome", item?.rotulo, "Nome no menu");
+  campo("site-menu-rotulo-en", "Nome (EN)", item?.rotuloEn, "Nome no menu (EN)");
+  campo("site-menu-link", "/pagina ou https://...", item?.link, "Link");
+
+  const mover = (delta) => {
+    const lista = row.parentElement;
+    const irmao = delta < 0 ? row.previousElementSibling : row.nextElementSibling;
+    if (!irmao) return;
+    if (delta < 0) lista.insertBefore(row, irmao);
+    else lista.insertBefore(irmao, row);
+    atualizarBotoesDoMenu();
+    markDirty("site");
+  };
+  row.appendChild(buildReorderButtons(0, 1, () => mover(-1), () => mover(1)));
+
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => {
+    row.remove();
+    atualizarBotoesDoMenu();
+    markDirty("site");
+  });
+  row.appendChild(removeBtn);
+
+  return row;
+}
+
+// ▲ desabilitado no primeiro item, ▼ no último.
+function atualizarBotoesDoMenu() {
+  const linhas = Array.from(document.querySelectorAll("#site-menu-list .site-menu-row"));
+  linhas.forEach((row, i) => {
+    const [up, down] = row.querySelectorAll(".reorder-btn");
+    up.disabled = i === 0;
+    down.disabled = i === linhas.length - 1;
+  });
+}
+
+function collectSiteMenu() {
+  const list = document.getElementById("site-menu-list");
+  if (!list) return;
+  contentData.site.menu = Array.from(list.querySelectorAll(".site-menu-row"))
+    .map((row) => {
+      const item = {
+        rotulo: row.querySelector(".site-menu-rotulo").value.trim(),
+        rotuloEn: row.querySelector(".site-menu-rotulo-en").value.trim(),
+        link: row.querySelector(".site-menu-link").value.trim(),
+        visivel: row.querySelector(".site-menu-visivel-input").checked,
+      };
+      if (!item.rotuloEn) delete item.rotuloEn;
+      return item;
+    })
+    .filter((item) => item.rotulo || item.link);
+}
+
+function renderSiteMenu() {
+  const list = document.getElementById("site-menu-list");
+  const addBtn = document.getElementById("add-menu-item-btn");
+  if (!list || !addBtn) return;
+  list.innerHTML = "";
+  (contentData.site.menu || menuPadrao()).forEach((item) => list.appendChild(buildSiteMenuRow(item)));
+  atualizarBotoesDoMenu();
+  list.addEventListener("input", () => markDirty("site"));
+  list.addEventListener("change", () => markDirty("site"));
+  addBtn.addEventListener("click", () => {
+    list.appendChild(buildSiteMenuRow({ visivel: true }));
+    atualizarBotoesDoMenu();
     markDirty("site");
   });
 }

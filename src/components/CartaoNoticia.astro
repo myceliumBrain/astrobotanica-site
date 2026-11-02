@@ -1,0 +1,29 @@
+---
+// Cartão de notícia em grade (pôster + título), como buildArticleCard: usado
+// na lista de notícias e na página inicial. Variante "horizontal": imagem 16:9.
+import { t, type Lang } from "../lib/i18n";
+import { formatarData } from "../lib/noticias";
+import type { ItemNoticia } from "../lib/listas";
+import { srcsetImagem } from "../lib/capa";
+
+interface Props {
+  item: ItemNoticia;
+  lang: Lang;
+  variante?: "horizontal";
+}
+
+const { item, lang, variante } = Astro.props;
+const n = item.noticia.data;
+const imagem = variante ? n.image || n.imageVertical : n.imageVertical || n.image;
+const srcset = await srcsetImagem(n.id, imagem, imagem === n.image ? "capa" : "vertical");
+const meta = [formatarData(n.date, lang), n.readingTime].filter(Boolean).join(" · ");
+---
+
+<a class:list={["article-card", variante && `article-card--${variante}`]} href={item.href}>
+  <div class="article-card-image">{imagem && <img src={`/${imagem}`} srcset={srcset} sizes="(max-width: 640px) 50vw, 320px" alt="" loading="lazy" />}</div>
+  <div class="article-card-kicker">{n.category}</div>
+  <div class="article-card-title" lang={item.soPortugues ? "pt" : undefined}>{n.title}</div>
+  <div class="article-card-meta">{meta}</div>
+  {item.soPortugues && <span class="selo-so-portugues">{t(lang, "listas.soPortugues")}</span>}
+</a>
+

@@ -1,0 +1,510 @@
+---
+// Página de uma notícia: mesma estrutura e classes de renderArticleDetail()
+// no src/main.ts antigo, agora no HTML, mais os blocos editoriais do front
+// matter (fonte original, tipo de estudo, revisão técnica, como citar,
+// erratas, licença). Blocos opcionais só aparecem se o campo estiver
+// preenchido.
+import Base from "../layouts/Base.astro";
+import { t, caminhoNoIdioma, type Lang } from "../lib/i18n";
+import { corpoHtmlDaPagina, formatarData, resumo, type Noticia } from "../lib/noticias";
+import { citacaoAbnt, doiNormalizado, urlLattes, urlOrcid } from "../lib/citacao";
+import { dataIso, noticiaJsonLd } from "../lib/seo";
+import { srcsetImagem } from "../lib/capa";
+import { miniatura } from "../lib/miniatura";
+import { noticiasDaLista } from "../lib/listas";
+import { redesDeCompartilhamento } from "../lib/compartilhar";
+import CartaoNoticia from "./CartaoNoticia.astro";
+import membros from "../../data/members.json";
+import maisAcessadas from "../../data/pageviews.json";
+
+interface Props {
+  noticia: Noticia;
+  temOutroIdioma: boolean;
+}
+
+const { noticia, temOutroIdioma } = Astro.props;
+const n = noticia.data;
+const lang = n.lang as Lang;
+const path = `/artigo/${n.id}/`;
+const urlCanonica = new URL(caminhoNoIdioma(path, lang), Astro.site).href;
+
+const orcid = n.orcid ? urlOrcid(n.orcid) : undefined;
+const lattes = n.lattes ? urlLattes(n.lattes) : undefined;
+const temFonte = Boolean(n.fonte.citacao || n.fonte.url || n.fonte.doi);
+const doi = n.fonte.doi ? doiNormalizado(n.fonte.doi) : undefined;
+const erratas = [...n.erratas].sort((a, b) => a.data.localeCompare(b.data));
+
+const citacao = citacaoAbnt(
+  { autor: n.author, titulo: n.title, data: n.date, url: urlCanonica, volume: n.boletim.volume, numero: n.boletim.numero },
+  lang
+);
+
+const [licencaAntes, licencaDepois] = t(lang, "artigo.licenseText").split("{{license}}");
+const licencaUrl =
+  lang === "pt" ? "https://creativecommons.org/licenses/by/4.0/deed.pt-br" : "https://creativecommons.org/licenses/by/4.0/deed.en";
+
+// Metadados para previews em redes sociais e buscadores. A og-image é uma
+// só por notícia (em PT); sem capa, vale a imagem padrão do site.
+const tituloPagina = `${n.title} — Astrobotânica`;
+const descricao = resumo(noticia);
+const srcsetCapa = await srcsetImagem(n.id, n.image, "capa");
+const ogImagem = n.image ? new URL(`/artigo/${n.id}/og-image.jpg`, Astro.site).href : undefined;
+const jsonLd = noticiaJsonLd(noticia, {
+  url: urlCanonica,
+  descricao,
+  imagem: ogImagem,
+  urlOriginal: lang === "en" ? new URL(path, Astro.site).href : undefined,
+});
+const publicadoIso = dataIso(n.date, n.time);
+
+const redes = redesDeCompartilhamento(urlCanonica, n.title);
+
+// Cartão do autor: integrante com o mesmo nome em data/members.json.
+const membro = n.author ? membros.find((m) => m.name === n.author) : undefined;
+const avatar = n.authorAvatar || membro?.image;
+const bio = membro ? (lang === "en" && membro.descriptionEn) || membro.description : "";
+const primeiroLink = membro?.links?.[0];
+
+// Barra lateral (3 mais recentes, 3 mais acessadas segundo
+// data/pageviews.json) e "Continue lendo" (todas as outras).
+const SIDEBAR_MAX = 3;
+const outras = (await noticiasDaLista(lang)).filter((i) => i.noticia.data.id !== n.id);
+const acessadas = maisAcessadas.map((id) => outras.find((i) => i.noticia.data.id === id)).filter((i) => i !== undefined);
+const srcsetMiniatura = Object.fromEntries(
+  await Promise.all(outras.map(async (i) => [i.noticia.data.id, await srcsetImagem(i.noticia.data.id, i.noticia.data.image, "capa")]))
+);
+const listasLaterais = [
+  { titulo: t(lang, "artigo.latestHeading"), itens: outras.slice(0, SIDEBAR_MAX) },
+  { titulo: t(lang, "artigo.mostViewedHeading"), itens: acessadas.slice(0, SIDEBAR_MAX) },
+].filter((l) => l.itens.length > 0);
+---
+
+<Base
+  lang={lang}
+  title={tituloPagina}
+  description={descricao}
+  path={path}
+  temOutroIdioma={temOutroIdioma}
+  destinoSemTraducao="/noticias"
+  imagem={ogImagem}
+  ogTipo="article"
+  jsonLd={[jsonLd]}
+>
+  {/* O corpo das notícias usa caminhos relativos (src="images/..."), como no
+      site antigo — que também usava <base href="/"> em /artigo/<id>/. */}
+  <base slot="head" href="/" />
+  <Fragment slot="head">
+    <meta property="article:published_time" content={publicadoIso} />
+    {n.updated && <meta property="article:modified_time" content={n.updated} />}
+    {n.author && <meta property="article:author" content={n.author} />}
+    {n.category && <meta property="article:section" content={n.category} />}
+  </Fragment>
+  <article class="wrap" style="padding-top:2.5rem;padding-bottom:1.5rem">
+    <a href={lang === "en" ? "/en/noticias" : "/noticias"} class="btn btn-ghost" style="margin-bottom:1rem;display:inline-block">
+      {t(lang, "artigo.backLink")}
+    </a>
+    <div id="artigo-content">
+      <div class="noticia-tags">
+        {n.category && <span class="tag tag-accent">{n.category}</span>}
+        {n.tipo_estudo && <span class="tag tag-outline noticia-tipo-estudo">{n.tipo_estudo}</span>}
+      </div>
+      <h1>{n.title}</h1>
+      {n.subtitle && <p class="article-subtitle">{n.subtitle}</p>}
+
+      {
+        n.author && (
+          <p class="noticia-autor">
+            {t(lang, "artigo.byLine", { author: n.author })}
+            {orcid && (
+              <a class="noticia-id-link" href={orcid.url} target="_blank" rel="noopener noreferrer" title={`ORCID ${orcid.id}`}>
+                <span class="noticia-orcid-icone" aria-hidden="true">iD</span>
+                ORCID
+              </a>
+            )}
+            {lattes && (
+              <a class="noticia-id-link" href={lattes} target="_blank" rel="noopener noreferrer">
+                Lattes
+              </a>
+            )}
+          </p>
+        )
+      }
+      {
+        n.revisor_tecnico && (
+          <p class="noticia-revisor">
+            {t(lang, "artigo.reviewedBy")}: {n.revisor_tecnico}
+          </p>
+        )
+      }
+
+      <div class="article-meta-row">
+        <span class="article-byline-meta">
+          <time datetime={publicadoIso}>
+            {t(lang, "artigo.publishedOn", { date: formatarData(n.date, lang) })}{n.time && ` ${t(lang, "artigo.publishedAt", { time: n.time })}`}
+          </time>
+          {
+            n.updated && (
+              <>
+                {" · "}
+                <time datetime={n.updated}>{t(lang, "artigo.updatedOn", { date: formatarData(n.updated, lang) })}</time>
+              </>
+            )
+          }
+          {n.readingTime && ` · ${n.readingTime}`}
+        </span>
+        <div class="article-share">
+          <span class="article-share-label">{t(lang, "artigo.shareLabel")}</span>
+          {
+            redes.map((r) =>
+              r.url ? (
+                <a class="article-share-link" href={r.url} target={r.url.startsWith("mailto:") ? undefined : "_blank"} rel="noopener noreferrer" aria-label={t(lang, "artigo.shareOn", { network: r.nome })} title={r.nome} set:html={r.icone} />
+              ) : (
+                <a class="article-share-link noticia-share-copiar" href="#" hidden data-copiado={t(lang, "artigo.linkCopied")} aria-label={t(lang, "artigo.shareOn", { network: r.nome })} title={r.nome} set:html={r.icone} />
+              )
+            )
+          }
+        </div>
+      </div>
+
+      {
+        n.image && (
+          <>
+            <div class="article-cover">
+              <img
+                src={`/${n.image}`}
+                srcset={srcsetCapa}
+                sizes="100vw"
+                width="1200"
+                height="675"
+                fetchpriority="high"
+                alt=""
+              />
+            </div>
+            {n.imageCaption && <p class="article-cover-caption">{n.imageCaption}</p>}
+          </>
+        )
+      }
+
+      <div class="article-layout">
+        <div class="article-main">
+          <div class="article-body" set:html={corpoHtmlDaPagina(noticia)} />
+
+          {
+            temFonte && (
+              <aside class="noticia-caixa noticia-fonte">
+                <h2 class="noticia-caixa-titulo">{t(lang, "artigo.fonteHeading")}</h2>
+                {n.fonte.citacao && <p class="noticia-fonte-citacao">{n.fonte.citacao}</p>}
+                <p class="noticia-fonte-links">
+                  {n.fonte.url && (
+                    <a href={n.fonte.url} target="_blank" rel="noopener noreferrer">
+                      {t(lang, "artigo.fonteLink")} ↗
+                    </a>
+                  )}
+                  {doi && (
+                    <span>
+                      DOI:{" "}
+                      <a href={doi.url} target="_blank" rel="noopener noreferrer">
+                        {doi.doi}
+                      </a>
+                    </span>
+                  )}
+                </p>
+              </aside>
+            )
+          }
+
+          {
+            n.references && n.references.length > 0 && (
+              <div class="article-references">
+                <h2 class="article-references-heading">{t(lang, "artigo.referencesHeading")}</h2>
+                <ol class="article-references-list">
+                  {n.references.map((ref) => (
+                    <li>
+                      {ref.url ? (
+                        <a href={ref.url} target="_blank" rel="noopener noreferrer">
+                          {ref.text}
+                        </a>
+                      ) : (
+                        ref.text
+                      )}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )
+          }
+
+          {
+            erratas.length > 0 && (
+              <section class="article-references noticia-erratas">
+                <h2 class="article-references-heading">{t(lang, "artigo.erratasHeading")}</h2>
+                <ul class="article-references-list">
+                  {erratas.map((e) => (
+                    <li>
+                      <time datetime={e.data}>{formatarData(e.data, lang)}</time>: {e.texto}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )
+          }
+
+          <section class="noticia-caixa noticia-citar">
+            <div class="noticia-citar-topo">
+              <h2 class="noticia-caixa-titulo">{t(lang, "artigo.citeHeading")}</h2>
+              <button type="button" class="noticia-citar-copiar" data-copiado={t(lang, "artigo.citeCopied")} hidden>
+                {t(lang, "artigo.citeCopy")}
+              </button>
+            </div>
+            <p class="noticia-citar-texto">
+              {citacao.antes}<strong>{citacao.site}</strong>{citacao.depois} {citacao.acessoRotulo}{" "}
+              <span class="noticia-citar-acesso">{t(lang, "artigo.accessedPlaceholder")}</span>.
+            </p>
+          </section>
+
+          <footer class="noticia-licenca">
+            <h2 class="noticia-caixa-titulo">{t(lang, "artigo.licenseHeading")}</h2>
+            <p>
+              {licencaAntes}<a href={licencaUrl} rel="license noopener" target="_blank">{t(lang, "artigo.licenseName")}</a>{licencaDepois}
+            </p>
+          </footer>
+
+          {
+            n.author && (
+              <>
+                <hr class="article-divider" />
+                <div class="article-author-card">
+                  {avatar && (
+                    <a class="article-author-photo" href={lang === "en" ? "/en/sobre" : "/sobre"} aria-label={n.author}>
+                      <img src={miniatura(avatar)} alt="" loading="lazy" width="192" height="192" />
+                    </a>
+                  )}
+                  <div class="article-author-info">
+                    <div class="article-author-name">{n.author}</div>
+                    {bio && <p class="article-author-bio">{bio}</p>}
+                    <div class="article-author-actions">
+                      <a class="btn btn-primary" href={lang === "en" ? "/en/sobre" : "/sobre"}>
+                        {t(lang, "artigo.authorCta")}
+                      </a>
+                      {primeiroLink && (
+                        <a class="btn btn-secondary" href={primeiroLink.url} target="_blank" rel="noopener noreferrer">
+                          {primeiroLink.label}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )
+          }
+        </div>
+
+        {
+          listasLaterais.length > 0 && (
+            <aside class="article-sidebar">
+              {listasLaterais.map((lista) => (
+                <div class="article-sidebar-section">
+                  <span class="article-sidebar-heading">{lista.titulo}</span>
+                  <div class="article-sidebar-list">
+                    {lista.itens.map((i) => (
+                      <a class="article-sidebar-item" href={i.href}>
+                        {i.noticia.data.image && (
+                          <img class="article-sidebar-thumb" src={`/${i.noticia.data.image}`} srcset={srcsetMiniatura[i.noticia.data.id]} sizes="5rem" alt="" loading="lazy" />
+                        )}
+                        <span class="article-sidebar-title" lang={i.soPortugues ? "pt" : undefined}>
+                          {i.noticia.data.title}
+                        </span>
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </aside>
+          )
+        }
+      </div>
+    </div>
+  </article>
+
+  <section class="section wrap">
+    <h2 style="font-size:1.4rem;margin-bottom:1.5rem">{t(lang, "artigo.relatedHeading")}</h2>
+    {
+      outras.length === 0 ? (
+        <p class="empty-state">{t(lang, "artigo.noOthers")}</p>
+      ) : (
+        <div id="artigo-related" class="article-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));gap:1.5rem">
+          {outras.map((item) => (
+            <CartaoNoticia item={item} lang={lang} />
+          ))}
+        </div>
+      )
+    }
+  </section>
+</Base>
+
+<script>
+  // Instagram não tem link de compartilhamento: o botão copia o endereço da
+  // notícia e mostra um aviso curto (como handleInstagramShareClick).
+  document.querySelectorAll<HTMLAnchorElement>(".noticia-share-copiar").forEach((botao) => {
+    if (!navigator.clipboard) return;
+    botao.hidden = false;
+    botao.addEventListener("click", (e) => {
+      e.preventDefault();
+      navigator.clipboard.writeText(location.href).catch(() => {});
+      const aviso = document.createElement("span");
+      aviso.className = "article-share-copied";
+      aviso.textContent = botao.dataset.copiado ?? "";
+      botao.parentElement!.appendChild(aviso);
+      requestAnimationFrame(() => aviso.classList.add("visible"));
+      setTimeout(() => aviso.remove(), 2600);
+    });
+  });
+
+  // "Acesso em": a data do dia em que o leitor está citando, no mesmo
+  // formato ABNT da data de publicação (ex.: "1 nov. 2026").
+  const MESES = {
+    pt: ["jan.", "fev.", "mar.", "abr.", "maio", "jun.", "jul.", "ago.", "set.", "out.", "nov.", "dez."],
+    en: ["Jan.", "Feb.", "Mar.", "Apr.", "May", "June", "July", "Aug.", "Sept.", "Oct.", "Nov.", "Dec."],
+  };
+  const lang = document.documentElement.lang === "en" ? "en" : "pt";
+  const hoje = new Date();
+  document.querySelectorAll<HTMLElement>(".noticia-citar-acesso").forEach((el) => {
+    el.textContent = `${hoje.getDate()} ${MESES[lang][hoje.getMonth()]} ${hoje.getFullYear()}`;
+  });
+
+  document.querySelectorAll<HTMLButtonElement>(".noticia-citar-copiar").forEach((botao) => {
+    if (!navigator.clipboard) return;
+    botao.hidden = false;
+    const rotulo = botao.textContent;
+    botao.addEventListener("click", async () => {
+      const texto = botao.closest(".noticia-citar")?.querySelector(".noticia-citar-texto")?.textContent;
+      if (!texto) return;
+      await navigator.clipboard.writeText(texto.replace(/\s+/g, " ").trim());
+      botao.textContent = botao.dataset.copiado ?? rotulo;
+      setTimeout(() => (botao.textContent = rotulo), 2000);
+    });
+  });
+</script>
+
+<style>
+  /* Só o que é novo nesta página; o resto vem de css/style.css. */
+  /* Botão do Instagram: só com JS (copia o link); o display do CSS antigo anularia o hidden. */
+  .noticia-share-copiar[hidden] {
+    display: none;
+  }
+  .noticia-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+  }
+  .noticia-autor,
+  .noticia-revisor {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-dim);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.75rem;
+  }
+  .noticia-autor {
+    margin-top: var(--space-1);
+  }
+  .noticia-revisor {
+    margin-top: 0.25rem;
+    color: var(--ink-dim);
+  }
+  .noticia-id-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: var(--accent-700);
+    text-decoration: none;
+  }
+  .noticia-id-link:hover {
+    text-decoration: underline;
+  }
+  .noticia-orcid-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.05rem;
+    height: 1.05rem;
+    border-radius: 999px;
+    background: #a6ce39; /* verde oficial do ícone ORCID iD */
+    color: #fff;
+    font-family: var(--font-body);
+    font-size: 0.55rem;
+    font-weight: 600;
+  }
+  .noticia-caixa {
+    margin-top: var(--space-4);
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+  }
+  .noticia-fonte {
+    border-left: 3px solid var(--accent-700);
+  }
+  .noticia-caixa-titulo {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    margin-bottom: var(--space-1);
+  }
+  .noticia-fonte-citacao {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+  .noticia-fonte-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-3);
+    margin-top: var(--space-1);
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  .noticia-fonte-links a {
+    color: var(--accent-700);
+    word-break: break-all;
+  }
+  .noticia-citar-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+  .noticia-citar-copiar {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    color: var(--accent-800);
+    background: none;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+  }
+  .noticia-citar-copiar:hover {
+    border-color: var(--accent-700);
+  }
+  .noticia-citar-texto {
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--ink-dim);
+    overflow-wrap: anywhere;
+  }
+  .noticia-licenca {
+    margin-top: var(--space-4);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--line);
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: var(--ink-dim);
+  }
+  .noticia-licenca a {
+    color: var(--accent-700);
+  }
+</style>

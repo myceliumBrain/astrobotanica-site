@@ -1,0 +1,16 @@
+---
+import PaginaNoticia from "../../../../components/PaginaNoticia.astro";
+import { noticiasDoIdioma } from "../../../../lib/noticias";
+
+// Só notícias com tradução real ganham página em inglês.
+export async function getStaticPaths() {
+  return (await noticiasDoIdioma("en")).map((noticia) => ({
+    params: { id: noticia.data.id },
+    props: { noticia },
+  }));
+}
+
+const { noticia } = Astro.props;
+---
+
+<PaginaNoticia noticia={noticia} temOutroIdioma={true} />

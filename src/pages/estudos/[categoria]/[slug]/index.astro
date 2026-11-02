@@ -1,0 +1,16 @@
+---
+// /estudos/<categoria>/<verbete>/ — verbete publicado (ver PaginaVerbete).
+import PaginaVerbete from "../../../../components/PaginaVerbete.astro";
+import { categoriaDe, verbetesPublicados, type Verbete } from "../../../../lib/estudos";
+
+export function getStaticPaths() {
+  return verbetesPublicados.map((verbete) => ({
+    params: { categoria: categoriaDe(verbete).slug, slug: verbete.slug },
+    props: { verbete },
+  }));
+}
+
+const { verbete } = Astro.props as { verbete: Verbete };
+---
+
+<PaginaVerbete verbete={verbete} lang="pt" />

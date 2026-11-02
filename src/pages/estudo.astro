@@ -1,0 +1,23 @@
+---
+// /estudo?slug=<slug> e /estudo.html?slug=<slug> (pré-visualização antiga) →
+// /estudos/<categoria>/<slug>/. Hoje não há verbetes publicados, então
+// qualquer slug vai para o índice /estudos.
+import PaginaRedirecionamento from "../components/PaginaRedirecionamento.astro";
+import estudos from "../../data/estudos.json";
+import categorias from "../../data/categorias_estudo.json";
+
+interface Verbete {
+  slug: string;
+  categoriaId: string;
+  publicado?: boolean;
+}
+
+const slugDaCategoria = new Map(categorias.map((c) => [c.id, c.slug]));
+const destinos = Object.fromEntries(
+  (estudos as Verbete[])
+    .filter((v) => v.publicado && slugDaCategoria.has(v.categoriaId))
+    .map((v) => [v.slug, `/estudos/${slugDaCategoria.get(v.categoriaId)}/${v.slug}/`])
+);
+---
+
+<PaginaRedirecionamento parametro="slug" destinos={destinos} padrao="/estudos" lista="/estudos" rotuloLista="Ver os estudos" />

@@ -1,0 +1,67 @@
+name: Publicar o site (build Astro → GitHub Pages)
+
+# Gera o site com o Astro (saída em _site/) e publica no GitHub Pages.
+# Só funciona com Settings → Pages → Source em "GitHub Actions" (mudança
+# feita à mão na virada, Fase 11).
+#
+# Quando roda:
+# - push na main: o painel /admin salva com o token de quem está logado, e
+#   esse push dispara o workflow normalmente;
+# - depois do "Atualizar mais acessadas" (pageviews.yml): o commit que ele
+#   faz usa o GITHUB_TOKEN, e commits do GITHUB_TOKEN não disparam outros
+#   workflows por push — sem isso o "mais acessadas" nunca seria republicado;
+# - todo dia às 07:00 UTC, como reserva caso o pageviews.yml falhe ou não
+#   rode (o build é o mesmo; publicar de novo não muda nada);
+# - à mão (Actions → este workflow → Run workflow).
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ['Atualizar "mais acessadas"']
+    types: [completed]
+  schedule:
+    - cron: "0 7 * * *" # diário, 07:00 UTC — uma hora depois do pageviews.yml
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Um deploy de cada vez; um que já começou termina (cancelar no meio pode
+# deixar o Pages num estado intermediário).
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Instala as dependências (npm ci, pelo package-lock.json), roda o
+      # build e envia _site/ como artefato do Pages. O CNAME é conferido
+      # dentro do build-cmd: se faltar ou estiver diferente do da raiz, o
+      # passo falha antes do envio e nada é publicado.
+      - uses: withastro/action@a8b97df764791eb61fbf3338ef713b0e61ae05c5 # v6.1.4
+        with:
+          node-version: "22"
+          out-dir: _site
+          build-cmd: |
+            npm run build
+            if ! cmp -s CNAME _site/CNAME; then
+              echo "::error::_site/CNAME ausente ou diferente do CNAME da raiz — publicação cancelada"
+              exit 1
+            fi
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publicar no GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

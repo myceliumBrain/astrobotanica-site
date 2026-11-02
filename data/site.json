@@ -23,6 +23,38 @@
     "about": "Sobre",
     "contact": "Contato"
   },
+  "menu": [
+    {
+      "rotulo": "Notícias",
+      "rotuloEn": "Articles",
+      "link": "/noticias",
+      "visivel": true
+    },
+    {
+      "rotulo": "Estudos",
+      "rotuloEn": "Studies",
+      "link": "/estudos",
+      "visivel": false
+    },
+    {
+      "rotulo": "Podcast",
+      "rotuloEn": "Podcast",
+      "link": "/podcast",
+      "visivel": true
+    },
+    {
+      "rotulo": "Sobre",
+      "rotuloEn": "About",
+      "link": "/sobre",
+      "visivel": true
+    },
+    {
+      "rotulo": "Contato",
+      "rotuloEn": "Contact",
+      "link": "/contato",
+      "visivel": true
+    }
+  ],
   "footer": {
     "navHeading": "Navegação",
     "socialHeading": "Redes Sociais"

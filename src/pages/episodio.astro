@@ -1,0 +1,11 @@
+---
+// /episodio?id=<id> e /episodio.html?id=<id> (formato antigo) → /episodios/<id>/.
+// Sem id ou com id desconhecido, o site antigo mostrava o primeiro episódio.
+import PaginaRedirecionamento from "../components/PaginaRedirecionamento.astro";
+import { episodios, urlEpisodio } from "../lib/episodios";
+
+const destinos = Object.fromEntries(episodios.map((e) => [e.id, urlEpisodio(e.id)]));
+const padrao = episodios.length > 0 ? urlEpisodio(episodios[0].id) : "/podcast";
+---
+
+<PaginaRedirecionamento parametro="id" destinos={destinos} padrao={padrao} lista="/podcast" rotuloLista="Ver todos os episódios" />

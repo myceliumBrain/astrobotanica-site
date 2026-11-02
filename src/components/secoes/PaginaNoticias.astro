@@ -1,0 +1,36 @@
+---
+// /noticias: todas as notícias em grade, na ordem do site (renderArticleList).
+import Base from "../../layouts/Base.astro";
+import CartaoNoticia from "../CartaoNoticia.astro";
+import { caminhoNoIdioma, t, type Lang } from "../../lib/i18n";
+import { noticiasDaLista } from "../../lib/listas";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const noticias = await noticiasDaLista(lang);
+---
+
+<Base lang={lang} title={t(lang, "artigos.metaTitle")} description={t(lang, "artigos.metaDescription")} path="/noticias">
+  <a slot="nav-direita" href={caminhoNoIdioma("/rss.xml", lang)} class="rss-link">{t(lang, "common.rssFeed")}</a>
+  <section class="page-header wrap">
+    <h1>{t(lang, "artigos.title")}</h1>
+    <p>{t(lang, "artigos.intro")}</p>
+  </section>
+
+  <section class="section wrap">
+    {
+      noticias.length === 0 ? (
+        <p class="empty-state">{t(lang, "artigos.emptyList")}</p>
+      ) : (
+        <div class="article-grid">
+          {noticias.map((item) => (
+            <CartaoNoticia item={item} lang={lang} />
+          ))}
+        </div>
+      )
+    }
+  </section>
+</Base>

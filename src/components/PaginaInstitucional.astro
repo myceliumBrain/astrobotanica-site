@@ -1,0 +1,118 @@
+---
+// Página institucional a partir de src/content/paginas/<lang>/<slug>.md.
+// Enquanto o Markdown de uma página não existir, mostra a página provisória
+// (fora do índice dos buscadores). O hreflang só liga as duas versões quando
+// as duas têm texto de verdade.
+// Conteúdo extra passado como filho (ex.: integrantes em Sobre) vem depois
+// do texto.
+import { render } from "astro:content";
+import { paginaInstitucional } from "../lib/paginas";
+import Base from "../layouts/Base.astro";
+import PaginaProvisoria from "./PaginaProvisoria.astro";
+import { t, type Lang } from "../lib/i18n";
+import { formatarData } from "../lib/noticias";
+
+interface Props {
+  lang: Lang;
+  slug: string;
+}
+
+const { lang, slug } = Astro.props;
+const path = `/${slug}`;
+const pagina = await paginaInstitucional(lang, slug);
+const traducao = await paginaInstitucional(lang === "pt" ? "en" : "pt", slug);
+const { Content } = pagina ? await render(pagina) : { Content: null };
+---
+
+{
+  pagina && Content ? (
+    <Base
+      lang={lang}
+      title={`${pagina.data.title} — Astrobotânica`}
+      description={pagina.data.description || `${pagina.data.title} — Astrobotânica`}
+      path={path}
+      temOutroIdioma={Boolean(traducao)}
+      destinoSemTraducao={path}
+    >
+      <section class="page-header wrap">
+        <h1>{pagina.data.title}</h1>
+        {pagina.data.updated && (
+          <p class="article-byline-meta">
+            {t(lang, "paginas.updatedOn", { date: formatarData(pagina.data.updated, lang) })}
+          </p>
+        )}
+      </section>
+      <section class="section wrap">
+        <div class="article-body pagina-texto">
+          <Content />
+        </div>
+      </section>
+      <slot />
+    </Base>
+  ) : (
+    <PaginaProvisoria lang={lang} path={path} indexavel={false} temOutroIdioma={false} />
+  )
+}
+
+<style>
+  .pagina-texto {
+    max-width: var(--content-width);
+  }
+  .pagina-texto :global(ul),
+  .pagina-texto :global(ol) {
+    padding-left: 1.4rem;
+    margin-top: var(--space-2);
+  }
+  /* o reset de css/style.css tira os marcadores das listas */
+  .pagina-texto :global(ul) {
+    list-style: disc;
+  }
+  .pagina-texto :global(ol) {
+    list-style: decimal;
+  }
+  .pagina-texto :global(li + li) {
+    margin-top: var(--space-1);
+  }
+  .pagina-texto :global(p + ul),
+  .pagina-texto :global(ul + p) {
+    margin-top: var(--space-3);
+  }
+  .pagina-texto :global(a) {
+    color: var(--accent-700);
+  }
+  .pagina-texto :global(h3) {
+    margin-top: var(--space-4);
+  }
+  .pagina-texto :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: var(--space-3);
+    font-size: 0.95rem;
+  }
+  .pagina-texto :global(th),
+  .pagina-texto :global(td) {
+    text-align: left;
+    vertical-align: top;
+    padding: var(--space-1) var(--space-2) var(--space-1) 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .pagina-texto :global(th) {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .pagina-texto :global(td + td) {
+    overflow-wrap: anywhere; /* e-mails e URLs longos não estouram a tela */
+  }
+  .pagina-texto :global(td:first-child) {
+    color: var(--ink-dim);
+  }
+  @media (min-width: 600px) {
+    .pagina-texto :global(td:first-child) {
+      white-space: nowrap;
+    }
+  }
+</style>
