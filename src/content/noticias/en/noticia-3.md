@@ -27,7 +27,7 @@ readingTime: "4 min"
 image: "images/noticias/noticia-3-imagem-principal.png"
 imageCaption: "Estudo de cientista brasileira, publicado na revista Plos One em 01 de maio de 2024"
 imageVertical: "images/noticias/noticia-3-imagem-vertical.png"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Gonçalves R, Wamelink GWW, van der Putten P, Evers JB (2024) Intercropping on Mars: A promising system to optimise fresh food production in future martian colonies. PLOS ONE 19(5): e0302149. https://doi.org/10.1371/journal.pone.0302149"
     url: "https://journals.plos.org/plosone/article/metrics?id=10.1371/journal.pone.0302149#citedHeader"

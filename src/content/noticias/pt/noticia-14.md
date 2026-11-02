@@ -27,7 +27,7 @@ subtitle: "O artigo revisional \"Agricultural potential of lunar regolith – a 
 readingTime: "13 min"
 image: "images/noticias/noticia-14-imagem-principal.jpg"
 imageCaption: "vemos alface romana vermelha crescendo dentro do Habitat Avançado para Plantas do módulo de laboratório Kibo. Fonte: NASA (2024)"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Figura 1. Arte conceitual sobre colonização lunar"
     url: "https://web.archive.org/web/20070214021916/http://science.nasa.gov/newhome/headlines/msad28apr98_1a.htm"

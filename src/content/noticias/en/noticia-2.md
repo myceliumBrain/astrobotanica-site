@@ -27,7 +27,7 @@ readingTime: "5 min"
 image: "images/noticias/noticia-2-imagem-principal.jpg"
 imageCaption: "Estudo publicado em 26 de maio de 2026 na Frontiers, denominado \"Integrating resource utilization and bioregenerative life support systems for sustainable space exploration\""
 imageVertical: "images/noticias/noticia-2-imagem-vertical.jpg"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Esposito M, Tonietti L, Santomartino R, Giovannelli D, Chianese E, Rotundi A, Romano I, Poli A, Finore I, Cordone A and Di Donato P (2026) Integrating resource utilization and bioregenerative life support systems for sustainable space exploration. Front. Microbiol. 17:1837116. doi: 10.3389/fmicb.2026.1837116"
     url: "https://www.frontiersin.org/journals/microbiology/articles/10.3389/fmicb.2026.1837116/full"

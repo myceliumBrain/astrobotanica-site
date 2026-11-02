@@ -26,7 +26,7 @@ category: "Mycorrhizae"
 readingTime: "4 min"
 image: "images/noticias/noticia-1-imagem-principal.png"
 imageVertical: "images/noticias/noticia-1-imagem-vertical.png"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Justin D. Stewart et al., Global density and biomass of arbuscular mycorrhizal fungal networks.Science392,1171-1176(2026)"
     url: "https://www.science.org/doi/10.1126/science.adu4373"

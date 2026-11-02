@@ -27,7 +27,7 @@ subtitle: "Published in 2026 in npj Biofilms and Microbiomes (Nature Portfolio),
 readingTime: "5 min"
 image: "images/noticias/noticia-13-imagem-principal.jpg"
 imageVertical: "images/noticias/noticia-13-imagem-vertical.jpg"
-authorAvatar: "images/integrantes/novo-integrante.jpg"
+authorAvatar: "images/integrantes/eduardo-dreyer-simoes-saraiva.jpg"
 featured: true
 references:
   - text: "PGPR-mediated enhancement of soil nutrients, rhizosphere microbial ecology, and plant growth: a review"

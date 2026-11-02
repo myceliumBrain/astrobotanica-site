@@ -27,7 +27,7 @@ readingTime: "4 min"
 image: "images/noticias/noticia-4-imagem-principal.png"
 imageCaption: "Experimental setup for Trial A in the southwest section of the FLIES laboratory greenhouse. Pea plants were randomly arranged in eight 2 × 3 arrays on a movable bench. Each pot was placed on a paper plate to prevent water runoff, and a 40% shade cloth was suspended 0.76 m above the bench to mitigate excessive solar radiation exposure."
 imageVertical: "images/noticias/noticia-4-imagem-vertical.jpg"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "J. Emmanuel Mendoza, N. B. Lemke, J. K. Tomberlin bioRxiv 2025.11.14.688485; doi: https://doi.org/10.1101/2025.11.14.688485"
     url: "https://www.biorxiv.org/content/10.1101/2025.11.14.688485v1"

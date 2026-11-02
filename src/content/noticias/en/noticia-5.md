@@ -28,7 +28,7 @@ readingTime: "7 min"
 image: "images/noticias/noticia-5-imagem-principal.png"
 imageCaption: "Public hearing at the Chamber of Deputies' Committee on Science, Technology, and Innovation, themed \"Space agriculture as a strategic pillar of the space economy.\" Location: Annex II, Plenary Room 13. Start time: June 17, 2026, at 9:13 AM."
 imageVertical: "images/noticias/noticia-5-imagem-vertical.png"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Audiência Pública na Comissão de Ciência, Tecnologia e Inovação da Câmara dos Deputados - Tema: Agricultura espacial como eixo estratégico da economia do espaço"
     url: "https://www.youtube.com/live/y0khQXjhAIc"

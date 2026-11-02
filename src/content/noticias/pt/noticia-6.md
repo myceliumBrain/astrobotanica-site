@@ -28,7 +28,7 @@ readingTime: "4 min"
 image: "images/noticias/noticia-6-imagem-principal.png"
 imageCaption: "O instrumento STELLA-Q2 medindo uma folha de peperômia. (a) O instrumento STELLA-Q2 montado em uma haste de suporte. (b) O instrumento STELLA-Q em uma carcaça impressa em 3D. (c) A parte traseira do instrumento STELLA-Q2 com a tampa removida, mostrando a fiação interna composta apenas por conectores."
 imageVertical: "images/noticias/noticia-6-imagem-vertical.png"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "MIREL, P., et al, \"Science and Technology Education for Land / Life Assessment (STELLA): Democratizing Remote Sensing Science With Low-Cost Open-Source Instruments for Research and Education\", 2025."
     url: "https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025CN000284"

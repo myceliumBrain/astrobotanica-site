@@ -26,7 +26,7 @@ category: "Agricultura Espacial"
 readingTime: "5 min"
 image: "images/noticias/noticia-9-imagem-principal.jpg"
 imageVertical: "images/noticias/noticia-9-imagem-vertical.jpg"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Barcenilla BB, Kundel I, Hall E, Hilty N, Ulianich P, Cook J, Turley J, Yerram M, Min J-H, Castillo-González C and Shippen DE (2024) Telomere dynamics and oxidative stress in Arabidopsis grown in lunar regolith simulant. Front. Plant Sci. 15:1351613. doi: 10.3389/fpls.2024.1351613"
     url: "https://www.frontiersin.org/journals/plant-science/articles/10.3389/fpls.2024.1351613/full#cite"

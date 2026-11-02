@@ -27,7 +27,7 @@ subtitle: "A new study published in Scientific Reports details how the collabora
 readingTime: "9 min"
 image: "images/noticias/noticia-7-imagem-principal.jpeg"
 imageVertical: "images/noticias/noticia-7-imagem-vertical.jpeg"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "Atkin, J., Pierson, E., Gentry, T. et al. Bioremediation of lunar regolith simulant through mycorrhizal fungi and plant symbioses enables chickpea to seed. Sci Rep 16, 7498 (2026). https://doi.org/10.1038/s41598-026-35759-0"
     url: "https://www.nature.com/articles/s41598-026-35759-0"

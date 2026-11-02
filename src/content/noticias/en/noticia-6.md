@@ -27,7 +27,7 @@ subtitle: "The NASA article titled \"Science and Technology Education for Land a
 readingTime: "4 min"
 image: "images/noticias/noticia-6-imagem-principal.png"
 imageVertical: "images/noticias/noticia-6-imagem-vertical.png"
-authorAvatar: "images/integrantes/integrante-pedro.jpeg"
+authorAvatar: "images/integrantes/pedro-henrique-tenorio-alvarenga.jpeg"
 references:
   - text: "MIREL, P., et al, \"Science and Technology Education for Land / Life Assessment (STELLA): Democratizing Remote Sensing Science With Low-Cost Open-Source Instruments for Research and Education\", 2025."
     url: "https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025CN000284"
