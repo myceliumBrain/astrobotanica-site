@@ -3,6 +3,7 @@
 // buildMemberCard() no src/main.ts antigo, agora no HTML.
 import integrantes from "../../data/members.json";
 import { t, type Lang } from "../lib/i18n";
+import { miniatura } from "../lib/miniatura";
 
 interface Props {
   lang: Lang;
@@ -29,7 +30,7 @@ const lista = integrantes as Integrante[];
       <div id="members-list" class="members-grid">
         {lista.map((m) => (
           <div class="member-card">
-            <div class="member-photo">{m.image && <img src={`/${m.image}`} alt="" loading="lazy" />}</div>
+            <div class="member-photo">{m.image && <img src={miniatura(m.image)} alt="" loading="lazy" width="192" height="192" />}</div>
             <div class="card member-info">
               <div class="card-title">{m.name}</div>
               <p class="card-body">{lang === "en" && m.descriptionEn ? m.descriptionEn : m.description}</p>

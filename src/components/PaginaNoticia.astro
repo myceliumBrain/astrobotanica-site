@@ -10,6 +10,7 @@ import { corpoHtml, formatarData, resumo, type Noticia } from "../lib/noticias";
 import { citacaoAbnt, doiNormalizado, urlLattes, urlOrcid } from "../lib/citacao";
 import { dataIso, noticiaJsonLd } from "../lib/seo";
 import { srcsetImagem } from "../lib/capa";
+import { miniatura } from "../lib/miniatura";
 import { noticiasDaLista } from "../lib/listas";
 import { redesDeCompartilhamento } from "../lib/compartilhar";
 import CartaoNoticia from "./CartaoNoticia.astro";
@@ -275,7 +276,7 @@ const listasLaterais = [
                 <div class="article-author-card">
                   {avatar && (
                     <a class="article-author-photo" href={lang === "en" ? "/en/sobre" : "/sobre"} aria-label={n.author}>
-                      <img src={`/${avatar}`} alt="" />
+                      <img src={miniatura(avatar)} alt="" loading="lazy" width="192" height="192" />
                     </a>
                   )}
                   <div class="article-author-info">
