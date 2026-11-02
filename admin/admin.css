@@ -398,6 +398,14 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 .site-social-link-row { display: flex; gap: 0.5rem; }
 .site-social-link-row .site-social-link-label { flex: 0 0 30%; }
 .site-social-link-row .site-social-link-url { flex: 1; min-width: 0; }
+.site-menu-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
+.site-menu-row .input { flex: 1; min-width: 0; }
+.site-menu-row .site-menu-link { flex: 1.4; }
+.site-menu-visivel { display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; font-size: 0.85rem; }
+@media (max-width: 720px) {
+  .site-menu-row { flex-wrap: wrap; }
+  .site-menu-row .input { flex-basis: 100%; }
+}
 
 /* ── REFERÊNCIAS DE NOTÍCIA (lista de tamanho livre) ── */
 .article-references-list { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.6rem; }

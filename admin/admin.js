@@ -99,16 +99,6 @@ const GENERAL_SCHEMA = [
     ],
   },
   {
-    heading: "Menu de navegação",
-    fields: [
-      { key: "nav.articles", label: "Notícias", type: "text" },
-      { key: "nav.estudos", label: "Estudos", type: "text" },
-      { key: "nav.podcast", label: "Podcast", type: "text" },
-      { key: "nav.about", label: "Sobre", type: "text" },
-      { key: "nav.contact", label: "Contato", type: "text" },
-    ],
-  },
-  {
     heading: "Rodapé",
     fields: [
       { key: "footer.navHeading", label: "Título da coluna de navegação", type: "text" },
@@ -1000,6 +990,7 @@ async function loadContent() {
     renderEstudosList();
     renderGeneralForm();
     renderSiteSocialLinks();
+    renderSiteMenu();
     if (fixedArticles || fixedEpisodes || fixedEstudos || fixedCategoriasEstudo) {
       document.getElementById("save-btn").disabled = false;
       setSaveStatus("alterações pendentes", "pending");
@@ -1236,6 +1227,7 @@ function collectAll() {
     setByPath(contentData.siteEn, input.dataset.siteEn, input.value);
   });
   collectSiteSocialLinks();
+  collectSiteMenu();
 }
 
 // Collectors por card: só sincronizam os campos daquele artigo/episódio
@@ -1280,6 +1272,12 @@ async function saveAll() {
     const memberIds = contentData.members?.map((m) => m.id) || [];
     const duplicate = memberIds.find((id, i) => memberIds.indexOf(id) !== i);
     if (duplicate) throw new Error(`dois integrantes com o mesmo identificador ("${duplicate}")`);
+    // Menu: item sem nome ou com link fora do formato faria o build falhar
+    // (ver src/lib/menu.ts).
+    if (dirty.has("site")) {
+      const problemas = problemasDoMenu(contentData.site.menu || []);
+      if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
+    }
     // Episódios: data inválida faria o build do site falhar.
     if (dirty.has("episodes")) {
       const semData = contentData.episodes.filter((e) => !/^\d{4}-\d{2}-\d{2}$/.test(e.date || ""));
@@ -3685,6 +3683,125 @@ function renderSiteSocialLinks() {
   list.addEventListener("input", () => markDirty("site"));
   addBtn.addEventListener("click", () => {
     list.appendChild(buildSiteSocialLinkRow());
+    markDirty("site");
+  });
+}
+
+// Menu de navegação (cabeçalho, menu do celular e coluna "Navegação" do
+// rodapé): itens livres em contentData.site.menu, na ordem da lista —
+// { rotulo, rotuloEn, link, visivel }. Esconder só tira do menu; a página
+// continua no ar. O site lê a lista em src/lib/menu.ts. Sem "menu" no
+// site.json, o painel parte do menu original (os textos de nav.*).
+function menuPadrao() {
+  const nav = contentData.site.nav || {};
+  const navEn = contentData.siteEn.nav || {};
+  return [
+    ["/noticias", "articles"],
+    ["/estudos", "estudos"],
+    ["/podcast", "podcast"],
+    ["/sobre", "about"],
+    ["/contato", "contact"],
+  ].map(([link, chave]) => ({ rotulo: nav[chave] || "", rotuloEn: navEn[chave] || "", link, visivel: true }));
+}
+
+function problemasDoMenu(menu) {
+  const problemas = [];
+  menu.forEach((item, i) => {
+    const nome = item.rotulo ? `"${item.rotulo}"` : `item ${i + 1}`;
+    if (!item.rotulo) problemas.push(`menu: ${nome} sem nome`);
+    if (!/^(\/|https?:\/\/)/.test(item.link)) problemas.push(`menu: link de ${nome} deve começar com "/" (página do site) ou "https://"`);
+  });
+  return problemas;
+}
+
+function buildSiteMenuRow(item) {
+  const row = el("div", "site-menu-row");
+
+  const visivelLabel = el("label", "site-menu-visivel");
+  const visivel = document.createElement("input");
+  visivel.type = "checkbox";
+  visivel.className = "site-menu-visivel-input";
+  visivel.checked = item?.visivel !== false;
+  visivelLabel.appendChild(visivel);
+  visivelLabel.appendChild(document.createTextNode(" Mostrar"));
+  visivelLabel.title = "Desmarcado: o item some do menu, mas a página continua no ar";
+  row.appendChild(visivelLabel);
+
+  const campo = (classe, placeholder, valor, rotulo) => {
+    const input = document.createElement("input");
+    input.className = `input ${classe}`;
+    input.type = "text";
+    input.placeholder = placeholder;
+    input.value = valor ?? "";
+    input.setAttribute("aria-label", rotulo);
+    row.appendChild(input);
+  };
+  campo("site-menu-rotulo", "Nome", item?.rotulo, "Nome no menu");
+  campo("site-menu-rotulo-en", "Nome (EN)", item?.rotuloEn, "Nome no menu (EN)");
+  campo("site-menu-link", "/pagina ou https://...", item?.link, "Link");
+
+  const mover = (delta) => {
+    const lista = row.parentElement;
+    const irmao = delta < 0 ? row.previousElementSibling : row.nextElementSibling;
+    if (!irmao) return;
+    if (delta < 0) lista.insertBefore(row, irmao);
+    else lista.insertBefore(irmao, row);
+    atualizarBotoesDoMenu();
+    markDirty("site");
+  };
+  row.appendChild(buildReorderButtons(0, 1, () => mover(-1), () => mover(1)));
+
+  const removeBtn = el("button", "btn btn-danger btn-small", "Remover");
+  removeBtn.type = "button";
+  removeBtn.addEventListener("click", () => {
+    row.remove();
+    atualizarBotoesDoMenu();
+    markDirty("site");
+  });
+  row.appendChild(removeBtn);
+
+  return row;
+}
+
+// ▲ desabilitado no primeiro item, ▼ no último.
+function atualizarBotoesDoMenu() {
+  const linhas = Array.from(document.querySelectorAll("#site-menu-list .site-menu-row"));
+  linhas.forEach((row, i) => {
+    const [up, down] = row.querySelectorAll(".reorder-btn");
+    up.disabled = i === 0;
+    down.disabled = i === linhas.length - 1;
+  });
+}
+
+function collectSiteMenu() {
+  const list = document.getElementById("site-menu-list");
+  if (!list) return;
+  contentData.site.menu = Array.from(list.querySelectorAll(".site-menu-row"))
+    .map((row) => {
+      const item = {
+        rotulo: row.querySelector(".site-menu-rotulo").value.trim(),
+        rotuloEn: row.querySelector(".site-menu-rotulo-en").value.trim(),
+        link: row.querySelector(".site-menu-link").value.trim(),
+        visivel: row.querySelector(".site-menu-visivel-input").checked,
+      };
+      if (!item.rotuloEn) delete item.rotuloEn;
+      return item;
+    })
+    .filter((item) => item.rotulo || item.link);
+}
+
+function renderSiteMenu() {
+  const list = document.getElementById("site-menu-list");
+  const addBtn = document.getElementById("add-menu-item-btn");
+  if (!list || !addBtn) return;
+  list.innerHTML = "";
+  (contentData.site.menu || menuPadrao()).forEach((item) => list.appendChild(buildSiteMenuRow(item)));
+  atualizarBotoesDoMenu();
+  list.addEventListener("input", () => markDirty("site"));
+  list.addEventListener("change", () => markDirty("site"));
+  addBtn.addEventListener("click", () => {
+    list.appendChild(buildSiteMenuRow({ visivel: true }));
+    atualizarBotoesDoMenu();
     markDirty("site");
   });
 }
