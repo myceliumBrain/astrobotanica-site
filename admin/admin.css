@@ -285,6 +285,42 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 .nav-btn.active { color: var(--adm-accent); background: var(--adm-surface); border-left-color: var(--adm-accent); }
 .nav-btn .nav-count { color: var(--adm-muted); font-size: 0.72rem; }
 
+/* Páginas: item do menu com subitens (seta abre e fecha, ver
+   renderSidebarPaginas), selo "oculto no menu" e o rótulo "Fora do menu". */
+.nav-pai { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+.nav-pai::after {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  margin-left: auto;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-25%) rotate(45deg);
+  transition: transform 0.15s;
+  flex: none;
+  opacity: 0.7;
+}
+.nav-pai[aria-expanded="false"]::after { transform: rotate(-45deg); }
+.nav-pai[aria-expanded="false"] + .nav-subgrupo { display: none; }
+.nav-subgrupo .nav-btn { padding-left: 2.75rem; font-size: 0.74rem; }
+.nav-tag {
+  margin-left: 0.5rem;
+  color: var(--adm-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.nav-pai .nav-tag { margin-left: 0; }
+.nav-tag { white-space: nowrap; }
+.nav-rotulo {
+  font-family: var(--adm-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--adm-muted);
+  padding: 0.75rem 1.5rem 0.3rem 1.75rem;
+}
+
 /* ── CONTENT ── */
 .adm-content { flex: 1; padding: 2rem 2.5rem; max-width: 920px; }
 
