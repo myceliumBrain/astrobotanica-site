@@ -985,9 +985,11 @@ async function loadContent() {
 // gravar, pra nunca persistir o "../" no JSON.
 function toEditorPreviewHtml(html) {
   if (!html) return "";
-  const div = document.createElement("div");
+  // <template>: o HTML é analisado sem carregar nada — um <div> solto já
+  // baixaria cada imagem pelo caminho cru (/admin/images/…, 404).
+  const div = document.createElement("template");
   div.innerHTML = html;
-  div.querySelectorAll("img[src]").forEach((img) => {
+  div.content.querySelectorAll("img[src]").forEach((img) => {
     const src = img.getAttribute("src");
     if (src && !/^(https?:|blob:|\.\.\/|\/)/i.test(src)) {
       img.setAttribute("src", `../${src}`);
@@ -1002,7 +1004,11 @@ function toEditorPreviewHtml(html) {
 // (ver data-final-src em buildRichTextField/confirmBodyImages). Além disso
 // desfaz o "../" de preview (ver toEditorPreviewHtml) nas imagens já salvas.
 function finalizeRichTextHtml(container) {
-  const clone = container.cloneNode(true);
+  // Cópia num <template> (não carrega nada): num clone comum, trocar o src
+  // abaixo já faria o navegador baixar cada imagem pelo caminho sem "../".
+  const template = document.createElement("template");
+  template.innerHTML = container.innerHTML;
+  const clone = template.content;
   clone.querySelectorAll("img[data-final-src]").forEach((img) => {
     img.setAttribute("src", img.getAttribute("data-final-src"));
     img.removeAttribute("data-final-src");
@@ -1019,7 +1025,7 @@ function finalizeRichTextHtml(container) {
   clone.querySelectorAll("p, h2, h3").forEach((node) => {
     if (node.textContent.trim() === "" && !node.querySelector("img")) node.remove();
   });
-  return clone.innerHTML;
+  return template.innerHTML;
 }
 
 // Caminhos de imagem (não http(s), não blob: de pré-visualização) que
@@ -1028,9 +1034,10 @@ function finalizeRichTextHtml(container) {
 function extractImagePaths(html) {
   const paths = new Set();
   if (!html) return paths;
-  const div = document.createElement("div");
+  // <template> pelo mesmo motivo de toEditorPreviewHtml: não carrega as imagens.
+  const div = document.createElement("template");
   div.innerHTML = html;
-  div.querySelectorAll("img[src]").forEach((img) => {
+  div.content.querySelectorAll("img[src]").forEach((img) => {
     const src = img.getAttribute("src");
     if (src && !/^(https?:|blob:)/i.test(src)) paths.add(src);
   });
