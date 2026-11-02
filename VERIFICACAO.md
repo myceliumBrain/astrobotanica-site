@@ -240,3 +240,26 @@ O que ainda segura o item 7:
   que resta é a paleta herdada (rodapé, datas, legenda, links das referências)
   → decisão D1; e `alt`/ordem de títulos no corpo da notícia → decisão D5.
 - **Boas práticas 96:** falta o favicon → decisão D2.
+
+---
+
+## Decisões D1–D5 (2026-11-01)
+
+| Decisão | O que foi feito |
+|---|---|
+| D1 — Paleta | `--ink-faint` de 48% para 64% da tinta; links e botão principal em `--accent-700` |
+| D2 — Favicon | Provisório (broto verde) em `public/`: SVG, PNG 32 px e `apple-touch-icon` |
+| D3 — Fontes | Barlow, Barlow Condensed e IBM Plex Mono em `public/fonts/` (Fontsource, OFL), no site e no `/admin`; Privacidade atualizada |
+| D4 — Imagens do corpo | **Arquivos mantidos.** Na página da notícia elas ganham `loading="lazy"` (RSS e texto inalterados). Fotos de integrantes passam a ser servidas em miniatura WebP de 192 px |
+| D5 — Conteúdo | **Mantido como publicado.** Eventuais ajustes estéticos ficam para o fim da migração |
+
+Lighthouse (celular, preview local):
+
+| Página | Performance | Acessibilidade | Boas práticas | SEO |
+|---|---|---|---|---|
+| Início | 92 | 100 | 100 | 100 |
+| Notícia 14 | 91 (LCP 3,1 s) | 92 | 100 | 92 |
+| Sobre | 98 | 100 | 100 | 100 |
+
+O que resta na notícia 14 (`image-alt`, `heading-order`) e no Expediente
+(`heading-order`) vem do texto publicado, mantido por decisão (D5).
