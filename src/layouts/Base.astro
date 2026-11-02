@@ -101,7 +101,7 @@ const licencaUrl =
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="alternate" type="application/rss+xml" title="Astrobotânica — Notícias" href="/rss.xml" />
+    <link rel="alternate" type="application/rss+xml" title={lang === "en" ? "Astrobotânica — News" : "Astrobotânica — Notícias"} href={link("/rss.xml")} />
     <meta property="og:type" content={ogTipo} />
     <meta property="og:site_name" content={NOME_SITE} />
     <meta property="og:locale" content={lang === "en" ? "en_US" : "pt_BR"} />
