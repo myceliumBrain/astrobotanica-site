@@ -1052,3 +1052,45 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
 @media (max-width: 720px) { .site-menu-cabecalho { display: none; } }
 /* Categoria de estudo: o nome já está no campo editável. */
 .card--sem-cabecalho.open > .card-header { display: none; }
+
+/* ── PERFIL DE TESTE (ver mostrarFaixaDeTeste) ── */
+.adm-modo--teste { background: var(--aviso-claro); color: var(--aviso); }
+.faixa-teste {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.7rem 1.5rem;
+  background: var(--aviso-claro);
+  border-bottom: 1px solid #ecd9a8;
+  color: var(--tinta);
+  font-size: 0.95rem;
+}
+.faixa-teste-texto { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.faixa-teste-texto strong { color: var(--aviso); }
+.faixa-teste-simulados { font-family: var(--fonte-mono); font-size: 0.78rem; color: var(--tinta-suave); word-break: break-word; }
+.faixa-teste-simulados[hidden] { display: none; }
+.aviso-teste {
+  background: var(--aviso-claro);
+  border-radius: var(--raio);
+  padding: 0.8rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.95rem;
+}
+.aviso-teste p { margin: 0; }
+.selo-teste {
+  margin-left: 0.6rem;
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--aviso);
+  background: var(--aviso-claro);
+  border-radius: 2px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.admin-item-row--teste { border-style: dashed; }

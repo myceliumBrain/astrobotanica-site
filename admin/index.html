@@ -270,10 +270,7 @@
             </div>
             <div class="field">
               <label for="access-role">Categoria</label>
-              <select class="input" id="access-role">
-                <option value="colaborador">Colaborador (só Conteúdo)</option>
-                <option value="admin">Admin (painel inteiro)</option>
-              </select>
+              <select class="input" id="access-role"></select>
             </div>
             <div class="field">
               <label for="access-integrante">Integrante</label>
@@ -283,6 +280,35 @@
           </div>
           <div class="card-actions" style="justify-content:flex-start">
             <button type="button" id="access-submit" class="btn btn-primary btn-small">+ adicionar acesso</button>
+          </div>
+        </div>
+
+        <div class="admin-subform">
+          <h3>Criar perfil de teste</h3>
+          <p class="admin-hint">
+            Para ver o painel como outra categoria vê (por exemplo, como um
+            colaborador). Não precisa de token nem de senha: depois de criar,
+            clique em <strong>Entrar como este perfil</strong> na lista acima e
+            digite a sua senha de admin. Nesse modo, Publicar é só uma
+            simulação e nada muda no site.
+          </p>
+          <div class="fields-grid">
+            <div class="field">
+              <label for="teste-label">Nome do perfil</label>
+              <input class="input" id="teste-label" type="text" placeholder="ex: Teste — Colaborador" />
+            </div>
+            <div class="field">
+              <label for="teste-role">Categoria</label>
+              <select class="input" id="teste-role"></select>
+            </div>
+            <div class="field">
+              <label for="teste-integrante">Integrante (opcional)</label>
+              <select class="input" id="teste-integrante"></select>
+              <span class="field-hint">Para testar como se fosse essa pessoa (por exemplo, a autoria das notícias).</span>
+            </div>
+          </div>
+          <div class="card-actions" style="justify-content:flex-start">
+            <button type="button" id="teste-submit" class="btn btn-primary btn-small">+ criar perfil de teste</button>
           </div>
         </div>
       </div>
