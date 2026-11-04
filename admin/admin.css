@@ -380,7 +380,11 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 
 .card-body {
   max-height: 0;
-  overflow: hidden;
+  /* clip (e não hidden): corta o conteúdo durante a animação sem criar uma
+     caixa de rolagem, então o position: sticky da barra do editor continua
+     grudando na página mesmo quando o cartão abre sem passar pelo
+     transitionend (ex.: notícia nova). */
+  overflow: clip;
   padding: 0 1.15rem;
   border-top: 1px solid transparent;
   transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1), padding 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.2s;
@@ -703,7 +707,9 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
   /* Barra lateral não cabe ao lado do texto numa tela estreita — volta a
      ficar em cima, ocupando a largura toda, como uma barra normal. */
   .rich-text-layout { flex-direction: column; }
-  .rich-text-toolbar { flex-direction: row; flex-wrap: wrap; width: 100%; top: 0; }
+  /* order: -1 põe a barra antes do editor (no HTML ela vem depois); o top
+     segue a altura da .adm-topbar, que continua grudada no topo. */
+  .rich-text-toolbar { flex-direction: row; flex-wrap: wrap; width: 100%; order: -1; top: 56px; }
   .adm-topbar { padding: 0 1rem; }
   .adm-save-status { display: none; }
   .admin-item-row { flex-wrap: wrap; }

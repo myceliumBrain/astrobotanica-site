@@ -123,6 +123,34 @@ Toda tela de edição segue o mesmo padrão:
 - Textos de abertura das páginas Início, Notícias, Podcast, Estudos e Contato
   reunidos em "Páginas".
 
+### Rodada de reorganização e editor (decidida em 2026-11-04)
+Entra antes da P4. Decisões: uma tela para cada item no lugar dos cartões,
+publicar item por item sem o botão geral, e editor próprio (sem biblioteca),
+porque abrir e salvar sem mexer não pode alterar nenhum arquivo.
+
+- **R1 — Barra do editor acompanha o texto.** A causa é o
+  `overflow: hidden` do `.card-body`: um ancestral com overflow impede o
+  `position: sticky` da barra. O contorno em JS (liberar o overflow no fim da
+  animação) falha quando o cartão abre sem a animação completa. Correção:
+  `overflow: clip`, que corta sem criar caixa de rolagem.
+- **R2a — Navegação e telas.**
+  - Cada assunto num só lugar: o texto de abertura de Notícias, Podcast e
+    Estudos fica no topo da própria lista, num quadro "Texto da página".
+    "Páginas" fica só com as páginas de texto, numa lista simples, sem setas.
+  - Uma tela para cada item: a lista mostra título, data, autor e "falta
+    traduzir"; clicar abre o item numa tela inteira, com "← voltar".
+  - Mesmo padrão em todas as telas: abas PT | EN no topo e ações sempre
+    visíveis no rodapé da tela.
+- **R2b — Salvar em um passo.** Sai o "Salvar no GitHub" do topo; cada tela
+  tem **Publicar**, que envia aquele item num commit só. Sair de uma tela com
+  alterações não publicadas pede confirmação. O topo mostra só o estado.
+- **R3a — Atalhos do editor.** Ctrl+B, Ctrl+I, Ctrl+K (link); no começo da
+  linha, "## " vira título, "### " subtítulo, "- " lista, "1. " lista
+  numerada; "/" abre um menu de comandos.
+- **R3b — Formatação no próprio texto.** Menu flutuante ao selecionar
+  (negrito, itálico, link, título). A barra lateral fica só com o que não
+  depende de seleção.
+
 ### P4 — Rodapé e marca
 - Links institucionais do rodapé editáveis: adicionar, remover, reordenar,
   esconder, com nome PT/EN e link. Funciona como o menu.
