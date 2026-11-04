@@ -1319,6 +1319,7 @@ function finalizeRichTextHtml(container) {
       img.setAttribute("src", src.slice(3));
     }
   });
+  clone.querySelectorAll("[data-legenda]").forEach((node) => node.removeAttribute("data-legenda"));
   // Rede de segurança: parágrafo/subtítulo vazio nunca é salvo (some sua
   // margem à do vizinho e dobra o espaço no site publicado) — não importa se
   // veio de colar, de Enter em sequência ou de conteúdo antigo.
@@ -2057,6 +2058,7 @@ function ligarMenusDeSelecao() {
       if (m.parentElement.contains(e.target)) return;
       m.hidden = true;
       if (m.classList.contains("menu-blocos")) m.aberto = false;
+      if (m.classList.contains("menu-imagem")) m.parentElement.querySelector(".moldura-imagem").hidden = true;
     });
   });
 }
@@ -2182,7 +2184,7 @@ function buildRichTextField(labelText, value, dataset, opts) {
     : [
         { rotulo: "Texto", dica: "parágrafo comum", acao: () => virarBloco("p") },
         { rotulo: "Subtítulo", dica: "## + espaço", acao: () => virarBloco("h3") },
-        { rotulo: "Imagem", dica: "do computador", acao: () => imageInput.click() },
+        { rotulo: "Imagem", dica: "do computador, com legenda", acao: () => imageInput.click() },
       ];
 
   // Barra fina em cima do texto, só com o que não depende de selecionar
@@ -2432,6 +2434,21 @@ function buildRichTextField(labelText, value, dataset, opts) {
   linkBtn.addEventListener("mousedown", (e) => e.preventDefault());
   linkBtn.addEventListener("click", () => abrirCampoDeLink());
   botoesDaSelecao.appendChild(linkBtn);
+  // Pelo HTML, não pelo queryCommandValue: este lê o tamanho calculado, e o
+  // texto do editor é menor que o padrão do navegador.
+  function selecaoPequena() {
+    const sel = SEL();
+    if (!sel?.rangeCount) return false;
+    const n = sel.getRangeAt(0).commonAncestorContainer;
+    return !!(n.nodeType === 1 ? n : n.parentElement)?.closest('font[size="2"]');
+  }
+  // Texto pequeno, para legendas e notas (no modo HTML; o Markdown das
+  // páginas não tem tamanho).
+  const pequenoBtn = simples
+    ? null
+    : botaoDaSelecao("Texto pequeno", "Letra pequena, para legendas e notas (clique de novo para voltar ao normal)", "", () => {
+        document.execCommand("fontSize", false, selecaoPequena() ? "3" : "2");
+      });
   const tituloBtn = botaoDaSelecao(NOME_DO_TITULO, `Transformar a linha em ${NOME_DO_TITULO.toLowerCase()} (ou voltar a texto)`, "", alternarTitulo);
 
   const formLink = el("form", "menu-selecao-link");
@@ -2529,6 +2546,7 @@ function buildRichTextField(labelText, value, dataset, opts) {
     negritoBtn.classList.toggle("ativo", document.queryCommandState("bold"));
     italicoBtn.classList.toggle("ativo", document.queryCommandState("italic"));
     linkBtn.classList.toggle("ativo", !!linkNaSelecao());
+    pequenoBtn?.classList.toggle("ativo", selecaoPequena());
     tituloBtn.classList.toggle("ativo", (document.queryCommandValue("formatBlock") || "").toLowerCase() === TITULO);
     const rect = sel.getRangeAt(0).getBoundingClientRect();
     // No celular, o menu do próprio sistema aparece em cima da seleção.
@@ -2613,6 +2631,19 @@ function buildRichTextField(labelText, value, dataset, opts) {
   });
 
   editor.addEventListener("input", (e) => {
+    const linha = blocoAtual();
+    if (linha?.nodeType === 1 && linha.dataset.legenda !== undefined && linha.textContent) {
+      delete linha.dataset.legenda;
+      if (!linha.querySelector('font[size="2"]')) {
+        const f = document.createElement("font");
+        f.setAttribute("size", "2");
+        while (linha.firstChild) f.appendChild(linha.firstChild);
+        f.querySelectorAll("br").forEach((br) => br.remove());
+        linha.appendChild(f);
+        cursorEm(f, false);
+      }
+      return;
+    }
     if (e.inputType === "insertText" && e.data === "/" && !menuDeBlocos.aberto && !naLista()) {
       const bloco = blocoAtual();
       if (bloco && bloco.textContent === "/") abrirMenuDeBlocos({ barra: true });
@@ -2651,6 +2682,9 @@ function buildRichTextField(labelText, value, dataset, opts) {
     return maxN + 1;
   }
 
+  // A imagem entra num parágrafo só dela, depois da linha do cursor (ou no
+  // lugar da linha, se ela estiver vazia), com uma linha de legenda logo
+  // abaixo, já com o cursor nela.
   function insertImageAtSelection(img) {
     editor.focus();
     const sel = window.getSelection();
@@ -2658,17 +2692,56 @@ function buildRichTextField(labelText, value, dataset, opts) {
       sel.removeAllRanges();
       sel.addRange(savedRange);
     }
-    if (sel && sel.rangeCount > 0 && editor.contains(sel.anchorNode)) {
-      const range = sel.getRangeAt(0);
-      range.deleteContents();
-      range.insertNode(img);
-      range.setStartAfter(img);
-      range.setEndAfter(img);
-      sel.removeAllRanges();
-      sel.addRange(range);
-    } else {
-      editor.appendChild(img);
-    }
+    const pImg = document.createElement("p");
+    pImg.appendChild(img);
+    const bloco = blocoAtual();
+    if (!bloco) editor.appendChild(pImg);
+    else if (bloco.nodeType === 1 && bloco.tagName === "P" && !bloco.textContent.trim() && !bloco.querySelector("img")) bloco.replaceWith(pImg);
+    else bloco.after(pImg);
+    criarLinhaDeLegenda(pImg);
+    saveSelection();
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  // ── Legendas ──
+  // A legenda é texto pequeno (<font size="2">) logo depois da imagem — o
+  // mesmo formato das legendas já publicadas, para as novas e as antigas
+  // ficarem iguais no site.
+  function criarLinhaDeLegenda(blocoDaImagem) {
+    const leg = document.createElement("p");
+    leg.dataset.legenda = "";
+    leg.appendChild(document.createElement("br"));
+    blocoDaImagem.after(leg);
+    cursorEm(leg, true);
+    return leg;
+  }
+  function cursorEm(no, inicio) {
+    const r = document.createRange();
+    r.selectNodeContents(no);
+    r.collapse(inicio);
+    SEL().removeAllRanges();
+    SEL().addRange(r);
+  }
+  function blocoDe(no) {
+    while (no && no.parentNode !== editor) no = no.parentNode;
+    return no;
+  }
+  const ehLegenda = (no) => no?.nodeType === 1 && (no.matches('font[size="2"]') || !!no.querySelector?.('font[size="2"]'));
+  // Legenda que já existe para a imagem: texto pequeno logo depois dela, na
+  // mesma linha (formato antigo) ou na linha seguinte.
+  function legendaDe(img) {
+    let n = img.nextSibling;
+    while (n && ((n.nodeType === 3 && !n.nodeValue.trim()) || n.nodeName === "BR")) n = n.nextSibling;
+    if (ehLegenda(n)) return n;
+    const prox = blocoDe(img)?.nextElementSibling;
+    if (prox && (prox.dataset.legenda !== undefined || (ehLegenda(prox.firstElementChild) && prox.textContent.trim()))) return prox;
+    return null;
+  }
+  function escreverLegenda(img) {
+    const leg = legendaDe(img);
+    editor.focus();
+    if (leg) cursorEm(leg, false);
+    else criarLinhaDeLegenda(blocoDe(img));
     saveSelection();
   }
 
@@ -2689,11 +2762,81 @@ function buildRichTextField(labelText, value, dataset, opts) {
   imageBtn.addEventListener("mousedown", (e) => e.preventDefault());
   imageBtn.addEventListener("click", () => imageInput.click());
 
+  let imagemParaTrocar = null;
   imageInput.addEventListener("change", () => {
     const file = imageInput.files[0];
-    if (!file) return;
-    insertPendingImage(file);
     imageInput.value = "";
+    const alvo = imagemParaTrocar;
+    imagemParaTrocar = null;
+    if (!file) return;
+    if (alvo && editor.contains(alvo)) {
+      // Arquivo novo com nome novo; o antigo sai do texto e é apagado ao
+      // publicar (ver extractImagePaths).
+      alvo.src = URL.createObjectURL(file);
+      alvo.dataset.finalSrc = `${opts.folder}/${opts.id}-imagem-${nextImageNumber()}.${fileExtension(file.name, "jpg")}`;
+      alvo.pendingFile = file;
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      mostrarMenuDaImagem(alvo);
+      return;
+    }
+    insertPendingImage(file);
+  });
+
+  // ── Menu da imagem ──
+  // Clicar numa imagem do texto: Trocar, Legenda, Remover. A moldura é um
+  // quadro por cima (fora do texto), para não gravar nada no HTML.
+  const menuDaImagem = el("div", "menu-editor menu-imagem");
+  menuDaImagem.hidden = true;
+  const moldura = el("div", "moldura-imagem");
+  moldura.hidden = true;
+  let imagemAtual = null;
+  const botaoDaImagem = (texto, acao, classe) => {
+    const b = el("button", `menu-selecao-btn ${classe || ""}`, texto);
+    b.type = "button";
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      const img = imagemAtual;
+      esconderMenuDaImagem();
+      if (img && editor.contains(img)) acao(img);
+    });
+    menuDaImagem.appendChild(b);
+  };
+  botaoDaImagem("Trocar imagem", (img) => {
+    imagemParaTrocar = img;
+    imageInput.click();
+  });
+  botaoDaImagem("Legenda", escreverLegenda);
+  botaoDaImagem("Remover imagem", (img) => {
+    if (!confirm("Tirar esta imagem do texto? A legenda dela continua; apague-a se quiser.")) return;
+    const bloco = blocoDe(img);
+    img.remove();
+    if (bloco?.nodeType === 1 && !bloco.textContent.trim() && !bloco.querySelector("img")) bloco.remove();
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  }, "menu-selecao-btn--perigo");
+  wrap.append(menuDaImagem, moldura);
+
+  function mostrarMenuDaImagem(img) {
+    imagemAtual = img;
+    const base = wrap.getBoundingClientRect();
+    const r = img.getBoundingClientRect();
+    Object.assign(moldura.style, { left: `${r.left - base.left}px`, top: `${r.top - base.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+    moldura.hidden = false;
+    posicionar(menuDaImagem, { left: r.left, top: r.top + 8, width: r.width, bottom: r.top + 8, height: 0 }, { abaixo: true });
+  }
+  function esconderMenuDaImagem() {
+    imagemAtual = null;
+    menuDaImagem.hidden = true;
+    moldura.hidden = true;
+  }
+  editor.addEventListener("click", (e) => {
+    if (e.target.tagName === "IMG") mostrarMenuDaImagem(e.target);
+    else esconderMenuDaImagem();
+  });
+  editor.addEventListener("input", () => {
+    if (imagemAtual) esconderMenuDaImagem();
+  });
+  editor.addEventListener("keydown", () => {
+    if (imagemAtual) esconderMenuDaImagem();
   });
 
   // Colar uma imagem de verdade (print, arquivo copiado do sistema) direto
