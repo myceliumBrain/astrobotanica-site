@@ -820,7 +820,11 @@ function showPanel(name) {
   document.querySelectorAll(".section-panel").forEach((p) => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
   const panel = document.getElementById("panel-" + name);
-  if (panel) panel.classList.add("active");
+  if (panel) {
+    panel.classList.add("active");
+    ajustarAlturas(panel);
+    document.fonts?.ready.then(() => ajustarAlturas(panel));
+  }
   abrirTela(panel?.querySelector(":scope > .barra-publicar") ? panel : null, SECOES_DE_TEXTOS);
   atualizarBarrasDeLista();
   irParaOConteudo();
@@ -1903,6 +1907,10 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     row.appendChild(clearBtn);
   }
   wrap.appendChild(row);
+  // Com arquivo no campo, "Escolher" some (ver updateButtonStates) e esta
+  // dica diz como trocar.
+  const dicaTrocar = opts.allowClear ? el("span", "field-hint file-upload-trocar", "Para trocar, clique em Remover e depois escolha o novo arquivo.") : null;
+  if (dicaTrocar) wrap.appendChild(dicaTrocar);
 
   const status = el("span", "file-upload-status");
   wrap.appendChild(status);
@@ -1965,6 +1973,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     fileInput.disabled = hasContent;
     fileLabel.classList.toggle("disabled", hasContent);
     if (clearBtn) clearBtn.disabled = !hasContent;
+    if (dicaTrocar) dicaTrocar.hidden = !hasContent;
   }
   updateButtonStates();
 
@@ -3459,6 +3468,21 @@ function buildArticleEnglishSection(article, i, card) {
 }
 
 // Linha de informação só para ler, em "Detalhes da publicação".
+// Tela de item no formato da notícia: à esquerda, o conteúdo com a cara da
+// página publicada; ao lado, os detalhes (datas, fotos, endereço…).
+function telaComDetalhes(card, body, principal, detalhes, titulo) {
+  card.classList.add("card--previa");
+  const tela = el("div", "tela-previa");
+  const colPrincipal = el("div", "tela-principal");
+  principal.forEach((n) => colPrincipal.appendChild(n));
+  const aside = el("aside", "tela-detalhes");
+  aside.appendChild(el("h2", "tela-detalhes-titulo", titulo));
+  detalhes.forEach((n) => aside.appendChild(n));
+  tela.appendChild(colPrincipal);
+  tela.appendChild(aside);
+  body.appendChild(tela);
+}
+
 function detalheSoLeitura(rotulo, valor, dica) {
   const f = el("div", "field detalhe-leitura");
   f.appendChild(el("label", "", rotulo));
@@ -3705,44 +3729,37 @@ function buildEpisodeCard(episode, i, total, container) {
 
   const body = el("div", "card-body");
   wireCardAccordion(card, header, body, container, "Podcast");
-  const grid = el("div", "fields-grid");
+  const principal = [];
+  const detalhes = [];
 
-  const title = buildInput("Título", "text", episode.title, { episode: i, key: "title" });
-  title.classList.add("full");
-  const description = buildTextarea("Descrição curta", episode.description, { episode: i, key: "description" });
-  description.classList.add("full");
+  const title = noEstiloDoSite(buildInput("Título", "text", episode.title, { episode: i, key: "title" }), "titulo", "Escreva o título do episódio");
+  const description = noEstiloDoSite(buildTextarea("Descrição curta", episode.description, { episode: i, key: "description" }), "subtitulo", "Uma ou duas frases sobre o episódio");
   const transcript = buildTextarea(
     "Transcrição (opcional) — um parágrafo por linha",
     (episode.transcript || []).join("\n"),
     { episode: i, key: "transcript" },
     true
   );
-  transcript.classList.add("full");
-  transcript.querySelector("textarea").rows = 8;
+  noEstiloDoSite(transcript, "texto", "Cole aqui a transcrição, um parágrafo por linha");
 
-  const titleEn = buildInput("Título (EN)", "text", episode.titleEn, { episode: i, key: "titleEn" });
-  titleEn.classList.add("full");
-  const descriptionEn = buildTextarea("Descrição curta (EN)", episode.descriptionEn, { episode: i, key: "descriptionEn" });
-  descriptionEn.classList.add("full");
+  const titleEn = noEstiloDoSite(buildInput("Título em inglês", "text", episode.titleEn, { episode: i, key: "titleEn" }), "titulo");
+  const descriptionEn = noEstiloDoSite(buildTextarea("Descrição curta em inglês", episode.descriptionEn, { episode: i, key: "descriptionEn" }), "subtitulo");
   const transcriptEn = buildTextarea(
-    "Transcrição (EN, opcional) — um parágrafo por linha",
+    "Transcrição em inglês (opcional) — um parágrafo por linha",
     (episode.transcriptEn || []).join("\n"),
     { episode: i, key: "transcriptEn" },
     true
   );
-  transcriptEn.classList.add("full");
-  transcriptEn.querySelector("textarea").rows = 8;
+  noEstiloDoSite(transcriptEn, "texto");
 
-  grid.appendChild(
+  principal.push(
     blocoDeIdiomas({
       pt: [title, description, transcript],
       en: [titleEn, descriptionEn, transcriptEn],
       pares: [["title", "titleEn"], ["description", "descriptionEn"], ["transcript", "transcriptEn"]],
-      dica: "O episódio ganha página em inglês (/en/episodios/…) quando o título (EN) estiver preenchido. O áudio é o mesmo, em português.",
+      dica: "A página em inglês do episódio aparece no site quando o título em inglês estiver preenchido. O áudio é o mesmo, em português.",
     })
   );
-
-  grid.appendChild(el("h3", "section-heading full", "Áudio, data e destaque"));
 
   const audioField = buildFileUploadField(
     "Áudio do episódio",
@@ -3750,29 +3767,25 @@ function buildEpisodeCard(episode, i, total, container) {
     { episode: i, key: "audioSrc" },
     {
       accept: "audio/mpeg,.mp3",
-      buttonText: "Enviar .mp3",
+      buttonText: "Escolher áudio (.mp3)",
       allowClear: true,
       buildPath: () => `audio/${episode.id}.mp3`,
       buildMessage: (path) => `admin: envia áudio do episódio "${episode.title || episode.id}" (${path})`,
     }
   );
-  audioField.classList.add("full");
-  grid.appendChild(audioField);
-
-  grid.appendChild(buildSpinnerNumberField("Número", episode.number, { episode: i, key: "number" }));
-  grid.appendChild(buildInput("Duração", "text", episode.duration, { episode: i, key: "duration" }, "38:00 ou —"));
-  grid.appendChild(buildInput("Data", "date", episode.date, { episode: i, key: "date" }));
-  grid.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no podcast.xml)", "time", episode.time, { episode: i, key: "time" }));
-
-  grid.appendChild(
+  detalhes.push(audioField);
+  detalhes.push(buildSpinnerNumberField("Número do episódio", episode.number, { episode: i, key: "number" }));
+  detalhes.push(buildInput("Duração", "text", episode.duration, { episode: i, key: "duration" }, "38:00"));
+  detalhes.push(buildInput("Data de publicação", "date", episode.date, { episode: i, key: "date" }));
+  detalhes.push(buildInput("Hora (opcional, horário de Brasília)", "time", episode.time, { episode: i, key: "time" }));
+  detalhes.push(
     buildCheckboxField(
-      "Destacar na Home",
+      "Mostrar em destaque na página inicial",
       episode.featured,
       { episode: i, key: "featured" },
       () => enforceFeaturedLimit("episodes")
     )
   );
-  grid.appendChild(buildReadOnlyField("Identificador (id)", episode.id));
 
   const imageField = buildFileUploadField(
     "Imagem do episódio (opcional)",
@@ -3780,17 +3793,17 @@ function buildEpisodeCard(episode, i, total, container) {
     { episode: i, key: "image" },
     {
       accept: "image/*",
-      buttonText: "Enviar imagem",
+      buttonText: "Escolher foto",
       preview: true,
       allowClear: true,
       buildPath: (file) => `images/episodios/${episode.id}-imagem-principal.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia imagem do episódio "${episode.title || episode.id}" (${path})`,
     }
   );
-  imageField.classList.add("full");
-  grid.appendChild(imageField);
+  detalhes.push(imageField);
+  detalhes.push(detalheSoLeitura("Endereço no site", `astrobotanica.com.br/episodios/${episode.id}`));
 
-  body.appendChild(grid);
+  telaComDetalhes(card, body, principal, detalhes, "Detalhes do episódio");
 
   const actions = el("div", "card-actions");
   const saveBtn = buildSaveCardButton(() => {
@@ -3800,7 +3813,7 @@ function buildEpisodeCard(episode, i, total, container) {
     markDirty("episodes");
   });
   actions.appendChild(saveBtn);
-  const removeBtn = el("button", "btn btn-danger btn-small", "Remover episódio");
+  const removeBtn = el("button", "btn btn-danger btn-small", "Tirar episódio do site");
   removeBtn.type = "button";
   removeBtn.addEventListener("click", () => removeEpisode(i));
   actions.appendChild(removeBtn);
@@ -3823,7 +3836,7 @@ function moveEpisode(from, to) {
 
 function removeEpisode(i) {
   const episode = contentData.episodes[i];
-  if (!confirm(`Remover o episódio "${episode.title || "(sem título)"}"? A remoção é publicada agora.`)) return;
+  if (!confirm(`Tirar o episódio "${episode.title || "(sem título)"}" do site? Ele sai do site agora mesmo (em um ou dois minutos).`)) return;
   fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.episodes.splice(i, 1);
@@ -4072,23 +4085,24 @@ function buildMemberCard(member, i, total) {
 
   const body = el("div", "card-body");
   wireCardAccordion(card, header, body, null, "Integrantes");
-  const grid = el("div", "fields-grid");
+  const principal = [];
+  const detalhes = [];
 
   // Só editável enquanto o integrante ainda não foi salvo no GitHub (ver
   // _isNew em addMember/saveAll) — depois disso trava pra sempre, igual ao id
   // de artigo/episódio (buildReadOnlyField), pelo mesmo motivo: renomear um id
   // já em uso desalinha o caminho da foto e qualquer notícia que já tenha
   // selecionado esse integrante como autor.
-  const nameField = buildInput("Nome completo", "text", member.name, { member: i, key: "name" });
+  const nameField = noEstiloDoSite(buildInput("Nome completo", "text", member.name, { member: i, key: "name" }), "titulo", "Nome e sobrenome");
   if (member._isNew) {
     // Integrante novo: o id é gerado do nome completo enquanto ele é
     // digitado. Só o admin pode ajustá-lo à mão; a partir daí o nome não
     // mexe mais nele (_idManual, só em memória, como _isNew).
-    const idField = buildInput("Identificador (id)", "text", member.id, { member: i, key: "id" }, "gerado do nome completo");
+    const idField = buildInput("Código interno", "text", member.id, { member: i, key: "id" }, "gerado do nome completo");
     const idInput = idField.querySelector("input");
     idInput.disabled = ROLE !== "admin";
     idField.appendChild(
-      el("span", "field-hint", "Nome completo sem acentos, ex.: eduardo-dreyer-simoes-saraiva. Também é o nome do arquivo da foto. Não muda depois de salvo.")
+      el("span", "field-hint", "Preenchido sozinho a partir do nome (ex.: eduardo-dreyer-simoes-saraiva). Não muda depois de publicado.")
     );
     const otherIds = () => contentData.members.filter((m) => m !== member).map((m) => m.id);
     nameField.querySelector("input").addEventListener("input", (e) => {
@@ -4097,22 +4111,18 @@ function buildMemberCard(member, i, total) {
     idInput.addEventListener("input", () => {
       member._idManual = true;
     });
-    grid.appendChild(idField);
-  } else {
-    grid.appendChild(buildReadOnlyField("Identificador (id)", member.id));
+    detalhes.push(idField);
   }
-  grid.appendChild(nameField);
+  principal.push(nameField);
 
-  const description = buildTextarea("Descrição", member.description, { member: i, key: "description" });
-  description.classList.add("full");
-  const descriptionEn = buildTextarea("Descrição (EN)", member.descriptionEn, { member: i, key: "descriptionEn" });
-  descriptionEn.classList.add("full");
-  grid.appendChild(
+  const description = noEstiloDoSite(buildTextarea("Descrição", member.description, { member: i, key: "description" }), "texto", "Quem é, o que estuda, o que faz no Astrobotânica");
+  const descriptionEn = noEstiloDoSite(buildTextarea("Descrição em inglês", member.descriptionEn, { member: i, key: "descriptionEn" }), "texto");
+  principal.push(
     blocoDeIdiomas({
       pt: [description],
       en: [descriptionEn],
       pares: [["description", "descriptionEn"]],
-      dica: "Aparece no Sobre em inglês. Sem a descrição (EN), mostra a descrição em português.",
+      dica: "Aparece no Sobre em inglês. Sem a descrição em inglês, mostra a descrição em português.",
     })
   );
 
@@ -4122,15 +4132,15 @@ function buildMemberCard(member, i, total) {
     { member: i, key: "image" },
     {
       accept: "image/*",
-      buttonText: "Enviar foto",
+      buttonText: "Escolher foto",
       preview: true,
+      previewClass: "file-upload-preview--avatar",
       allowClear: true,
       buildPath: (file) => `images/integrantes/${memberSlug(i, member)}.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia foto do integrante "${member.name || member.id}" (${path})`,
     }
   );
-  photoField.classList.add("full");
-  grid.appendChild(photoField);
+  detalhes.unshift(photoField);
 
   const linksField = el("div", "field full");
   linksField.appendChild(el("label", "", "Links (Instagram, Lattes, site pessoal, etc.)"));
@@ -4141,9 +4151,9 @@ function buildMemberCard(member, i, total) {
   addLinkBtn.type = "button";
   addLinkBtn.addEventListener("click", () => linksList.appendChild(buildMemberLinkRow()));
   linksField.appendChild(addLinkBtn);
-  grid.appendChild(linksField);
+  detalhes.push(linksField);
 
-  body.appendChild(grid);
+  telaComDetalhes(card, body, principal, detalhes, "Foto e links");
 
   const actions = el("div", "card-actions");
   const saveBtn = buildSaveCardButton(() => {
@@ -4152,7 +4162,7 @@ function buildMemberCard(member, i, total) {
     markDirty("members");
   });
   actions.appendChild(saveBtn);
-  const removeBtn = el("button", "btn btn-danger btn-small", "Remover integrante");
+  const removeBtn = el("button", "btn btn-danger btn-small", "Tirar integrante do site");
   removeBtn.type = "button";
   removeBtn.addEventListener("click", () => removeMember(i));
   actions.appendChild(removeBtn);
@@ -4179,7 +4189,7 @@ function removeMember(i) {
   if (!canEditMember(member)) return;
   const linked = (accessCache?.content?.tokens || []).filter((t) => member.id && t.integrante === member.id);
   const aviso = linked.length ? ` O acesso "${linked.map((t) => t.label).join('", "')}" vai ficar sem integrante (dá para ligar outro em "Acessos").` : "";
-  if (!confirm(`Remover o integrante "${member.name || "(sem nome)"}"? A remoção é publicada agora.${aviso}`)) return;
+  if (!confirm(`Tirar "${member.name || "(sem nome)"}" da lista de integrantes do site? Sai do site agora mesmo (em um ou dois minutos).${aviso}`)) return;
   fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.members.splice(i, 1);
@@ -4263,6 +4273,7 @@ function renderCategoriasEstudoList() {
 function buildCategoriaEstudoCard(categoria, i, total) {
   const card = el("div", "card");
   card.id = `categoria-estudo-card-${i}`;
+  card.classList.add("card--sem-cabecalho");
 
   const header = el("div", "card-header");
   const left = el("div", "card-header-left");
@@ -4278,29 +4289,26 @@ function buildCategoriaEstudoCard(categoria, i, total) {
   wireCardAccordion(card, header, body, null, "Estudos");
   const grid = el("div", "fields-grid");
 
-  const slugField = buildInput("Slug (usado na URL)", "text", categoria.slug, { categoriaEstudo: i, key: "slug" }, "geologia-e-solo-espacial");
-  const nomeField = buildInput("Nome", "text", categoria.nome, { categoriaEstudo: i, key: "nome" });
-  nomeField.classList.add("full");
+  const slugField = buildInput("Final do endereço no site", "text", categoria.slug, { categoriaEstudo: i, key: "slug" }, "geologia-e-solo-espacial");
+  slugField.classList.add("full");
+  slugField.appendChild(el("span", "field-hint", "astrobotanica.com.br/estudos/este-texto/ — preenchido sozinho a partir do nome. Sem acentos nem espaços. Mudar depois quebra links já compartilhados."));
+  const nomeField = noEstiloDoSite(buildInput("Nome da categoria", "text", categoria.nome, { categoriaEstudo: i, key: "nome" }), "titulo", "Nome da categoria");
   nomeField.querySelector("input").addEventListener("blur", (e) => {
     const slugInput = slugField.querySelector("input");
     if (!slugInput.value.trim()) slugInput.value = slugify(e.target.value);
   });
-  const descricao = buildTextarea("Descrição (opcional)", categoria.descricao, { categoriaEstudo: i, key: "descricao" }, false, 2);
-  descricao.classList.add("full");
-  const nomeEn = buildInput("Nome (EN)", "text", categoria.nomeEn, { categoriaEstudo: i, key: "nomeEn" });
-  nomeEn.classList.add("full");
-  const descricaoEn = buildTextarea("Descrição (EN)", categoria.descricaoEn, { categoriaEstudo: i, key: "descricaoEn" }, false, 2);
-  descricaoEn.classList.add("full");
+  const descricao = noEstiloDoSite(buildTextarea("Descrição (opcional)", categoria.descricao, { categoriaEstudo: i, key: "descricao" }, false, 2), "subtitulo", "Uma frase sobre o que entra nesta categoria");
+  const nomeEn = noEstiloDoSite(buildInput("Nome em inglês", "text", categoria.nomeEn, { categoriaEstudo: i, key: "nomeEn" }), "titulo");
+  const descricaoEn = noEstiloDoSite(buildTextarea("Descrição em inglês", categoria.descricaoEn, { categoriaEstudo: i, key: "descricaoEn" }, false, 2), "subtitulo");
   grid.appendChild(
     blocoDeIdiomas({
       pt: [nomeField, descricao],
       en: [nomeEn, descricaoEn],
       pares: [["nome", "nomeEn"], ["descricao", "descricaoEn"]],
-      dica: "Sem o nome (EN), o site em inglês mostra o nome em português. O slug da URL é o mesmo nos dois idiomas.",
+      dica: "Sem o nome em inglês, o site em inglês mostra o nome em português. O endereço é o mesmo nos dois idiomas.",
     })
   );
   grid.appendChild(slugField);
-  grid.appendChild(buildReadOnlyField("Identificador (id)", categoria.id));
 
   body.appendChild(grid);
 
@@ -4310,7 +4318,7 @@ function buildCategoriaEstudoCard(categoria, i, total) {
     markDirty("categoriasEstudo");
   });
   actions.appendChild(saveBtn);
-  const removeBtn = el("button", "btn btn-danger btn-small", "Remover categoria");
+  const removeBtn = el("button", "btn btn-danger btn-small", "Tirar categoria do site");
   removeBtn.type = "button";
   removeBtn.addEventListener("click", () => removeCategoriaEstudo(i));
   actions.appendChild(removeBtn);
@@ -4335,10 +4343,10 @@ function removeCategoriaEstudo(i) {
   const categoria = contentData.categoriasEstudo[i];
   const inUse = contentData.estudos.some((v) => v.categoriaId === categoria.id);
   if (inUse) {
-    toast(`Não é possível remover "${categoria.nome || categoria.id}": ainda há verbetes cadastrados nessa categoria.`, "error");
+    toast(`Não dá para tirar "${categoria.nome || categoria.id}": ainda há verbetes nessa categoria. Mude a categoria deles antes.`, "error");
     return;
   }
-  if (!confirm(`Remover a categoria "${categoria.nome || "(sem nome)"}"? A remoção é publicada agora.`)) return;
+  if (!confirm(`Tirar a categoria "${categoria.nome || "(sem nome)"}" do site? Ela sai do site agora mesmo (em um ou dois minutos).`)) return;
   fecharItem(document.querySelector(".section-panel.em-detalhe"));
   contentData.categoriasEstudo.splice(i, 1);
   renderCategoriasEstudoList();
@@ -4398,27 +4406,31 @@ function buildEstudoCard(verbete, i, total, container) {
 
   const body = el("div", "card-body");
   wireCardAccordion(card, header, body, container, "Estudos");
-  const grid = el("div", "fields-grid");
+  const principal = [];
+  const detalhes = [];
 
-  const slugField = buildInput("Slug (usado na URL)", "text", verbete.slug, { verbete: i, key: "slug" }, "regolito-simulado");
-  const tituloField = buildTextarea("Título", verbete.titulo, { verbete: i, key: "titulo" }, false, 2);
-  tituloField.classList.add("full");
+  const slugField = buildInput("Final do endereço no site", "text", verbete.slug, { verbete: i, key: "slug" }, "regolito-simulado");
+  slugField.appendChild(el("span", "field-hint", "Preenchido sozinho a partir do título. Sem acentos nem espaços. Mudar depois quebra links já compartilhados."));
+  const tituloField = noEstiloDoSite(buildTextarea("Título", verbete.titulo, { verbete: i, key: "titulo" }, false, 2), "titulo", "Escreva o título do verbete");
   tituloField.querySelector("textarea").addEventListener("blur", (e) => {
     const slugInput = slugField.querySelector("input");
     if (!slugInput.value.trim()) slugInput.value = slugify(e.target.value);
   });
 
-  const definicaoCurta = buildTextarea(
-    "Definição curta (1-2 frases — aparece nos cards e no topo do verbete)",
-    verbete.definicaoCurta,
-    { verbete: i, key: "definicaoCurta" },
-    false,
-    2
+  const definicaoCurta = noEstiloDoSite(
+    buildTextarea(
+      "Definição curta (1 ou 2 frases — aparece nos cartões e no topo do verbete)",
+      verbete.definicaoCurta,
+      { verbete: i, key: "definicaoCurta" },
+      false,
+      2
+    ),
+    "subtitulo",
+    "Em uma ou duas frases, o que é"
   );
-  definicaoCurta.classList.add("full");
 
   const conteudoField = buildRichTextField(
-    "Conteúdo (contexto, como funciona, por que importa para a astrobotânica)",
+    "Texto do verbete (contexto, como funciona, por que importa para a astrobotânica)",
     verbete.conteudo,
     { verbete: i, key: "conteudo" },
     {
@@ -4427,16 +4439,14 @@ function buildEstudoCard(verbete, i, total, container) {
       buildImageMessage: (path) => `admin: envia imagem do conteúdo do verbete "${verbete.titulo || verbete.id}" (${path})`,
     }
   );
-  conteudoField.classList.add("full");
+  noEstiloDoSite(conteudoField, "corpo");
 
-  const tituloEn = buildInput("Título (EN)", "text", verbete.tituloEn, { verbete: i, key: "tituloEn" });
-  tituloEn.classList.add("full");
-  const definicaoCurtaEn = buildTextarea("Definição curta (EN)", verbete.definicaoCurtaEn, { verbete: i, key: "definicaoCurtaEn" }, false, 2);
-  definicaoCurtaEn.classList.add("full");
+  const tituloEn = noEstiloDoSite(buildInput("Título em inglês", "text", verbete.tituloEn, { verbete: i, key: "tituloEn" }), "titulo");
+  const definicaoCurtaEn = noEstiloDoSite(buildTextarea("Definição curta em inglês", verbete.definicaoCurtaEn, { verbete: i, key: "definicaoCurtaEn" }, false, 2), "subtitulo");
   // id com "-en": prefixo de arquivo próprio para as imagens deste editor,
   // como no corpo em inglês da notícia.
   const conteudoEnField = buildRichTextField(
-    "Conteúdo (EN)",
+    "Texto do verbete em inglês",
     verbete.conteudoEn,
     { verbete: i, key: "conteudoEn" },
     {
@@ -4445,10 +4455,10 @@ function buildEstudoCard(verbete, i, total, container) {
       buildImageMessage: (path) => `admin: envia imagem do conteúdo em inglês do verbete "${verbete.titulo || verbete.id}" (${path})`,
     }
   );
-  conteudoEnField.classList.add("full");
+  noEstiloDoSite(conteudoEnField, "corpo");
   // Como na notícia: copia o HTML do português (mesmas imagens, sem novo
   // envio) para só traduzir o texto por cima.
-  const copyConteudoBtn = el("button", "btn btn-secondary btn-small full", "Copiar conteúdo do português");
+  const copyConteudoBtn = el("button", "btn btn-secondary btn-small full", "Copiar o texto em português para traduzir por cima");
   copyConteudoBtn.type = "button";
   copyConteudoBtn.addEventListener("click", () => {
     collectAll();
@@ -4457,39 +4467,37 @@ function buildEstudoCard(verbete, i, total, container) {
     conteudoEnField.setValue(contentData.estudos[i].conteudo || "");
   });
 
-  grid.appendChild(
+  principal.push(
     blocoDeIdiomas({
       pt: [tituloField, definicaoCurta, conteudoField],
       en: [tituloEn, definicaoCurtaEn, copyConteudoBtn, conteudoEnField],
       pares: [["titulo", "tituloEn"], ["definicaoCurta", "definicaoCurtaEn"], ["conteudo", "conteudoEn"]],
-      dica: "O verbete publicado ganha página em inglês (/en/estudos/…) quando o título (EN) estiver preenchido.",
+      dica: "A página em inglês do verbete aparece no site quando o título em inglês estiver preenchido.",
     })
   );
 
-  grid.appendChild(el("h3", "section-heading full", "Categoria, fontes e publicação"));
-  grid.appendChild(buildVerbeteCategoriaField(verbete, i));
-  grid.appendChild(slugField);
+  detalhes.push(buildCheckboxField("Publicado no site (desmarcado, fica só aqui no painel, como rascunho)", verbete.publicado, { verbete: i, key: "publicado" }));
+  detalhes.push(buildVerbeteCategoriaField(verbete, i));
 
   const imagemCapaField = buildFileUploadField(
-    "Imagem de capa (opcional)",
+    "Foto de capa (opcional)",
     verbete.imagemCapa,
     { verbete: i, key: "imagemCapa" },
     {
       accept: "image/*",
-      buttonText: "Enviar imagem",
+      buttonText: "Escolher foto",
       preview: true,
       allowClear: true,
       buildPath: (file) => `images/estudos/${verbete.id}-capa.${fileExtension(file.name, "jpg")}`,
       buildMessage: (path) => `admin: envia imagem de capa do verbete "${verbete.titulo || verbete.id}" (${path})`,
     }
   );
-  imagemCapaField.classList.add("full");
-  grid.appendChild(imagemCapaField);
+  detalhes.push(imagemCapaField);
+  detalhes.push(slugField);
 
-  grid.appendChild(buildTermosRelacionadosField(verbete, i));
-
-  const fontesField = el("div", "field full");
-  fontesField.appendChild(el("label", "", "Fontes e leitura complementar (opcional)"));
+  const fontesField = el("div", "field full campo-referencias");
+  fontesField.appendChild(el("h2", "previa-secao", "Fontes e leitura complementar"));
+  fontesField.appendChild(el("span", "field-hint", "Opcional. Uma fonte por linha: o texto da referência e, se tiver, o link."));
   const fontesList = el("div", "article-references-list");
   (verbete.fontes || []).forEach((fonte) => fontesList.appendChild(buildArticleReferenceRow(fonte)));
   fontesField.appendChild(fontesList);
@@ -4497,12 +4505,12 @@ function buildEstudoCard(verbete, i, total, container) {
   addFonteBtn.type = "button";
   addFonteBtn.addEventListener("click", () => fontesList.appendChild(buildArticleReferenceRow()));
   fontesField.appendChild(addFonteBtn);
-  grid.appendChild(fontesField);
+  principal.push(fontesField);
+  const termos = buildTermosRelacionadosField(verbete, i);
+  termos.classList.add("campo-referencias");
+  principal.push(termos);
 
-  grid.appendChild(buildCheckboxField("Publicado", verbete.publicado, { verbete: i, key: "publicado" }));
-  grid.appendChild(buildReadOnlyField("Identificador (id)", verbete.id));
-
-  body.appendChild(grid);
+  telaComDetalhes(card, body, principal, detalhes, "Detalhes do verbete");
 
   const actions = el("div", "card-actions");
   const saveBtn = buildSaveCardButton(() => {
@@ -4517,7 +4525,7 @@ function buildEstudoCard(verbete, i, total, container) {
     markDirty("estudos");
   });
   actions.appendChild(saveBtn);
-  const removeBtn = el("button", "btn btn-danger btn-small", "Remover verbete");
+  const removeBtn = el("button", "btn btn-danger btn-small", "Tirar verbete do site");
   removeBtn.type = "button";
   removeBtn.addEventListener("click", () => removeEstudo(i));
   actions.appendChild(removeBtn);
@@ -4539,7 +4547,7 @@ function moveEstudo(from, to) {
 
 function removeEstudo(i) {
   const verbete = contentData.estudos[i];
-  if (!confirm(`Remover o verbete "${verbete.titulo || "(sem título)"}"? A remoção é publicada agora.`)) return;
+  if (!confirm(`Tirar o verbete "${verbete.titulo || "(sem título)"}" do site? Ele sai do site agora mesmo (em um ou dois minutos).`)) return;
   fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.estudos.splice(i, 1);
@@ -4760,6 +4768,21 @@ function problemasDoMenu(menu) {
   return problemas;
 }
 
+// Nomes das colunas, alinhados com as linhas: mesma estrutura de
+// buildSiteMenuRow, com as partes que não são texto invisíveis.
+function cabecalhoDoMenu() {
+  const row = buildSiteMenuRow({});
+  row.className = "site-menu-row site-menu-cabecalho";
+  row.setAttribute("aria-hidden", "true");
+  const nomes = ["Nome no menu", "Nome no site em inglês", "Endereço (página do site ou https://…)"];
+  row.querySelectorAll("input[type=text]").forEach((input, n) => {
+    const span = el("span", input.className, nomes[n]);
+    input.replaceWith(span);
+  });
+  row.querySelector(".site-menu-visivel").lastChild.textContent = " Mostrar";
+  return row;
+}
+
 function buildSiteMenuRow(item) {
   const row = el("div", "site-menu-row");
 
@@ -4845,6 +4868,7 @@ function renderSiteMenu() {
   atualizarBotoesDoMenu();
   if (list.dataset.ligado) return;
   list.dataset.ligado = "1";
+  list.before(cabecalhoDoMenu());
   list.addEventListener("input", menuMudou);
   list.addEventListener("change", menuMudou);
   addBtn.addEventListener("click", () => {
@@ -5007,7 +5031,7 @@ function garantirPainelDePagina(slug, nome) {
   if (!pagina.pt) {
     dica.textContent = `Esta página ainda não existe no site. Escreva o título e o texto e clique em "Publicar" para criá-la em /${slug}.`;
   } else {
-    dica.textContent = `Texto da página /${slug}${slug === "sobre" ? ". A lista de integrantes aparece logo abaixo do texto e é editada em Conteúdo → Integrantes" : ""}.`;
+    dica.textContent = `Texto da página astrobotanica.com.br/${slug}${slug === "sobre" ? ". A lista de integrantes aparece logo abaixo do texto e se edita em Integrantes" : ""}.`;
   }
   panel.appendChild(dica);
 
@@ -5018,15 +5042,17 @@ function garantirPainelDePagina(slug, nome) {
     const bloco = el("div", `fields-grid campo-${lang}`);
     const ds = (campo) => ({ pagina: slug, lang, campo });
     const titulo = buildInput("Título", "text", dados?.campos.title ?? (lang === "pt" ? nome || "" : ""), ds("title"));
-    bloco.appendChild(titulo);
+    bloco.appendChild(noEstiloDoSite(titulo, "titulo", "Título da página"));
     const atualizado = buildInput("Atualizado em (opcional, aparece no topo)", "date", dados?.campos.updated || "", ds("updated"));
     bloco.appendChild(atualizado);
-    const descricao = buildTextarea("Descrição (SEO e compartilhamento)", dados?.campos.description || "", ds("description"));
-    descricao.classList.add("full");
-    bloco.appendChild(descricao);
-    const texto = buildRichTextField("Texto", markdownParaHtml(dados?.corpo || ""), ds("corpo"), { simples: true });
-    texto.classList.add("full");
-    bloco.appendChild(texto);
+    const texto = buildRichTextField("Texto da página", markdownParaHtml(dados?.corpo || ""), ds("corpo"), { simples: true });
+    bloco.appendChild(noEstiloDoSite(texto, "corpo"));
+    const descricao = buildTextarea(
+      "Resumo curto (aparece no Google e quando alguém compartilha o link)",
+      dados?.campos.description || "",
+      ds("description")
+    );
+    bloco.appendChild(noEstiloDoSite(descricao, "legenda-capa", "Uma ou duas frases sobre a página"));
     if (lang === "en") {
       bloco.appendChild(
         el("p", "admin-hint full", "Sem texto em inglês, /en/" + slug + " mostra a página provisória. Para tirar a versão em inglês, esvazie o título e o texto.")

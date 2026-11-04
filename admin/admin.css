@@ -611,7 +611,9 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
   pointer-events: none;
 }
 .file-upload-btn { flex: none; white-space: nowrap; }
-.file-upload-btn.disabled { opacity: 0.5; pointer-events: none; }
+/* Com arquivo no campo, só "Remover" (a dica .file-upload-trocar explica). */
+.file-upload-btn.disabled { display: none; }
+.file-upload-trocar[hidden] { display: none; }
 .file-upload-status { font-size: 0.88rem; color: var(--tinta-fraca); min-height: 1.2em; }
 .file-upload-status[data-kind="ok"] { color: var(--verde); }
 .file-upload-status[data-kind="err"] { color: var(--perigo); }
@@ -1018,3 +1020,35 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
 /* Na tela da notícia, o caminho do arquivo não interessa: a foto aparece. */
 .campo-previa .file-upload-row .input,
 .tela-detalhes .file-upload-row .input { display: none; }
+
+/* Título e texto também em campos de uma linha e caixas simples
+   (episódio, verbete, integrante, categoria). */
+.campo-previa--titulo input[type="text"] {
+  font-family: var(--fonte-titulo);
+  font-weight: 600;
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  padding: 0.35rem 0.6rem;
+}
+.campo-previa--texto textarea {
+  font-size: 1.05rem;
+  line-height: 1.75;
+  padding: 1rem 1.1rem;
+  min-height: 8rem;
+}
+.tela-principal > .field + .field,
+.tela-principal > .bloco-idiomas + .field { margin-top: 1rem; }
+.tela-detalhes .member-link-row { flex-wrap: wrap; }
+.tela-detalhes .member-link-row .member-link-label { flex: 1 1 100%; }
+
+/* Nomes das colunas do Menu (cabecalhoDoMenu) */
+.site-menu-cabecalho { margin-bottom: 0.2rem; }
+.site-menu-cabecalho .input { border-color: transparent; background: none; padding-top: 0; padding-bottom: 0; font-size: 0.85rem; font-weight: 600; color: var(--tinta-suave); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.site-menu-cabecalho input[type="checkbox"],
+.site-menu-cabecalho .reorder-btns,
+.site-menu-cabecalho .btn { visibility: hidden; }
+.site-menu-cabecalho .site-menu-visivel { font-size: 0.85rem; font-weight: 600; color: var(--tinta-suave); }
+@media (max-width: 720px) { .site-menu-cabecalho { display: none; } }
+/* Categoria de estudo: o nome já está no campo editável. */
+.card--sem-cabecalho.open > .card-header { display: none; }
