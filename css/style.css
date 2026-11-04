@@ -678,6 +678,10 @@ body.nav-open { overflow: hidden; }
   line-height: 1.75;
 }
 .article-body p + p { margin-top: var(--space-3); }
+/* Texto comum num tamanho só: o antigo "Médio" do editor (<font size="4">)
+   e o "Normal" (size 3) aparecem no tamanho do corpo; o "Pequeno" (size 2),
+   usado nas legendas das figuras, continua pequeno. */
+.article-body font[size="3"], .article-body font[size="4"] { font-size: inherit; }
 .article-body img { max-width: 100%; height: auto; display: block; border-radius: 4px; margin: var(--space-3) auto; }
 .article-body h2, .article-body h3 { font-size: 1.3rem; margin-top: var(--space-4); margin-bottom: var(--space-1); }
 .article-body > h2:first-child, .article-body > h3:first-child { margin-top: 0; }

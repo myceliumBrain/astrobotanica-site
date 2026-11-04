@@ -155,7 +155,33 @@ porque abrir e salvar sem mexer não pode alterar nenhum arquivo.
   link digitado no próprio menu. A barra lateral saiu; em cima do texto fica
   só "+ Inserir" (o mesmo menu do "/") e "Imagem". Saiu também o "Tamanho da
   fonte" (o subtítulo cumpre esse papel); textos antigos com tamanho
-  continuam como estão.
+  continuam como estão. *Revisto na R4/E1: o texto pequeno voltou, porque é
+  assim que as legendas das figuras são escritas.*
+
+### Rodada R4 — painel com a cara do site (decidida em 2026-11-04)
+Quem usa o painel são cientistas sem nenhuma noção de programação. O painel
+tem de parecer a página do site, com cara de "lugar de editar".
+
+- **E1 — Legendas e imagens.** ✅ Feito. "Imagem" põe a figura numa linha
+  própria com a linha de legenda logo abaixo, em texto pequeno
+  (`<font size="2">`, o formato das legendas já publicadas). Clicar na imagem
+  mostra Trocar / Legenda / Remover. "Texto pequeno" no menu da seleção. Um
+  só tamanho de texto normal: `size="3"` e `size="4"` aparecem no tamanho
+  normal no site.
+- **E2 — Visual do site.** ✅ Feito. Tema claro com as cores e fontes do site,
+  faixa "modo de edição", "Ver o site" e, no celular, o botão "Menu".
+- **E3 — Notícia editada no formato da página.** ✅ Feito. Categoria, título,
+  subtítulo, "Por: … · Publicado em …", capa com legenda e texto, na ordem e
+  com a letra da página publicada; autor, data, destaque, foto em pé e
+  endereço em "Detalhes da publicação", ao lado.
+- **E4 — Tela inicial.** ✅ Feito. "Olá! O que você quer fazer?", com o botão
+  grande "Escrever uma notícia nova" e atalhos para cada parte; listas com
+  miniatura, categoria, data e autor.
+- **E5 — Mesmo formato nas outras telas.** ✅ Feito. Episódio, verbete e
+  integrante com o conteúdo à esquerda e os detalhes ao lado; categoria e
+  páginas de texto com título e texto no estilo do site; menu com o nome das
+  colunas. Sem termos técnicos ("slug", "id", "SEO", "(EN)"). Campo de foto
+  com arquivo mostra só "Remover", com a dica de como trocar.
 
 ### P4 — Rodapé e marca
 - Links institucionais do rodapé editáveis: adicionar, remover, reordenar,

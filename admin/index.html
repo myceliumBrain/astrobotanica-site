@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta name="robots" content="noindex, nofollow" />
-<title>Admin — Astrobotânica</title>
+<title>Painel de edição — Astrobotânica</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 <link rel="stylesheet" href="admin.css" />
 </head>
@@ -13,7 +13,7 @@
 <!-- Tela 1: primeiro acesso (só aparece se data/auth.json ainda não tem nenhum acesso cadastrado) -->
 <div id="setup-screen" class="admin-screen">
   <div class="admin-card">
-    <h1>Primeiro acesso</h1>
+    <h1>Astrobotanica <span>primeiro acesso ao painel</span></h1>
     <p class="admin-hint">
       Ainda não existe nenhum acesso cadastrado. Cole um token de acesso
       pessoal do GitHub (fine-grained, restrito ao repositório
@@ -44,7 +44,7 @@
 <!-- Tela 2: login (senha apenas — testada contra todos os acessos cadastrados) -->
 <div id="login-screen" class="admin-screen" hidden>
   <div class="admin-card">
-    <h1>astrobotânica / admin</h1>
+    <h1>Astrobotanica <span>painel de edição</span></h1>
     <p class="admin-hint">Digite sua senha para continuar.</p>
     <div class="field">
       <label for="login-password">Senha</label>
@@ -63,26 +63,32 @@
 <!-- Tela 3: app -->
 <div id="app-screen" hidden>
   <div class="adm-topbar">
-    <span class="adm-topbar-logo">astrobotânica / admin</span>
+    <div class="adm-topbar-left">
+      <button type="button" class="adm-topbar-logo" id="logo-btn" title="Voltar para o início do painel">Astrobotanica</button>
+      <span class="adm-modo">modo de edição</span>
+    </div>
     <div class="adm-topbar-right">
+      <a class="adm-ver-site" href="/" target="_blank" rel="noopener">Ver o site ↗</a>
       <span id="save-status" class="adm-save-status">carregando…</span>
       <button type="button" class="adm-user" id="user-btn" title="Dados de acesso"></button>
       <button type="button" class="btn btn-secondary btn-small" id="logout-btn">Sair</button>
+      <button type="button" class="btn btn-secondary btn-small adm-menu-btn" id="menu-btn" aria-expanded="false">Menu</button>
     </div>
   </div>
 
   <div class="adm-layout">
     <aside class="adm-sidebar">
+      <button type="button" class="nav-btn nav-inicio active" data-panel="inicio">Início do painel</button>
       <button type="button" class="sidebar-section" data-group="conteudo" aria-expanded="true">Conteúdo</button>
       <div class="sidebar-group">
-        <button type="button" class="nav-btn active" data-panel="articles">Notícias <span class="nav-count" id="nav-count-articles"></span></button>
+        <button type="button" class="nav-btn" data-panel="articles">Notícias <span class="nav-count" id="nav-count-articles"></span></button>
         <button type="button" class="nav-btn" data-panel="episodes">Podcast <span class="nav-count" id="nav-count-episodes"></span></button>
         <button type="button" class="nav-btn" data-panel="estudos">Estudos <span class="nav-count" id="nav-count-estudos"></span></button>
         <button type="button" class="nav-btn" data-panel="members">Integrantes <span class="nav-count" id="nav-count-members"></span></button>
       </div>
-      <button type="button" class="sidebar-section admin-only" data-group="paginas" aria-expanded="false">Páginas</button>
+      <button type="button" class="sidebar-section admin-only" data-group="paginas" aria-expanded="false">Páginas do site</button>
       <div class="sidebar-group admin-only" id="sidebar-pages"></div>
-      <button type="button" class="sidebar-section admin-only" data-group="site" aria-expanded="false">Site</button>
+      <button type="button" class="sidebar-section admin-only" data-group="site" aria-expanded="false">Menu e rodapé</button>
       <div class="sidebar-group admin-only">
         <button type="button" class="nav-btn" data-panel="menu">Menu</button>
         <button type="button" class="nav-btn" data-panel="general">Rodapé e marca</button>
@@ -96,7 +102,52 @@
     </aside>
 
     <main class="adm-content">
-      <div class="section-panel active" id="panel-articles">
+      <div class="section-panel active" id="panel-inicio">
+        <h1 class="inicio-titulo">Olá<span id="inicio-nome"></span>! O que você quer fazer?</h1>
+        <p class="inicio-dica">
+          Aqui você escreve e corrige o que aparece no site. Nada muda no site
+          até você clicar em <strong>Publicar</strong>, e cada tela tem o seu.
+        </p>
+        <button type="button" class="inicio-principal" data-ir="nova-noticia">
+          <span class="inicio-principal-icone" aria-hidden="true">+</span>
+          <span>
+            <span class="inicio-cartao-titulo">Escrever uma notícia nova</span>
+            <span class="inicio-cartao-dica">Abre uma notícia em branco, já com a cara que ela vai ter no site.</span>
+          </span>
+        </button>
+        <div class="inicio-grade">
+          <button type="button" class="inicio-cartao" data-ir="articles">
+            <span class="inicio-cartao-titulo">Notícias</span>
+            <span class="inicio-cartao-dica">Corrigir, traduzir ou tirar notícias do ar.</span>
+          </button>
+          <button type="button" class="inicio-cartao" data-ir="episodes">
+            <span class="inicio-cartao-titulo">Podcast</span>
+            <span class="inicio-cartao-dica">Episódios, áudios e transcrições.</span>
+          </button>
+          <button type="button" class="inicio-cartao" data-ir="estudos">
+            <span class="inicio-cartao-titulo">Estudos</span>
+            <span class="inicio-cartao-dica">Os verbetes do glossário e suas categorias.</span>
+          </button>
+          <button type="button" class="inicio-cartao" data-ir="members">
+            <span class="inicio-cartao-titulo">Integrantes</span>
+            <span class="inicio-cartao-dica">Quem faz o Astrobotânica: fotos, descrições e links.</span>
+          </button>
+          <button type="button" class="inicio-cartao admin-only" data-ir="menu">
+            <span class="inicio-cartao-titulo">Menu e rodapé</span>
+            <span class="inicio-cartao-dica">Os links do topo do site, as redes sociais e o rodapé.</span>
+          </button>
+          <button type="button" class="inicio-cartao" data-ir="account">
+            <span class="inicio-cartao-titulo">Minha conta</span>
+            <span class="inicio-cartao-dica">Seu nome e sua senha de acesso.</span>
+          </button>
+        </div>
+        <div class="admin-only">
+          <h2 class="inicio-subtitulo">Páginas do site</h2>
+          <p class="inicio-dica">Textos das páginas fixas, como Sobre, Contato e Expediente.</p>
+          <div class="inicio-paginas" id="inicio-paginas"></div>
+        </div>
+      </div>
+      <div class="section-panel" id="panel-articles">
         <div class="panel-header">
           <span class="panel-title">Notícias</span>
           <div class="panel-header-counts">
@@ -104,19 +155,19 @@
             <span class="panel-count" id="featured-count-articles"></span>
           </div>
         </div>
-        <button type="button" class="add-btn add-btn-top" id="add-article-btn">+ adicionar notícia</button>
+        <button type="button" class="add-btn add-btn-top" id="add-article-btn">+ Escrever uma notícia nova</button>
         <div id="articles-list"></div>
       </div>
 
       <div class="section-panel" id="panel-episodes">
         <div class="panel-header">
-          <span class="panel-title">Podcast — episódios</span>
+          <span class="panel-title">Podcast</span>
           <div class="panel-header-counts">
             <span class="panel-count" id="count-episodes"></span>
             <span class="panel-count" id="featured-count-episodes"></span>
           </div>
         </div>
-        <button type="button" class="add-btn add-btn-top" id="add-episode-btn">+ adicionar episódio</button>
+        <button type="button" class="add-btn add-btn-top" id="add-episode-btn">+ Novo episódio</button>
         <div id="episodes-list"></div>
       </div>
 
@@ -132,7 +183,7 @@
           os demais aparecem só para leitura.
         </p>
         <div id="members-list"></div>
-        <button type="button" class="add-btn" id="add-member-btn">+ adicionar integrante</button>
+        <button type="button" class="add-btn" id="add-member-btn">+ Novo integrante</button>
       </div>
 
       <div class="section-panel" id="panel-estudos">
@@ -142,12 +193,12 @@
             <span class="panel-count" id="count-estudos"></span>
           </div>
         </div>
-        <button type="button" class="add-btn add-btn-top" id="add-estudo-btn">+ adicionar verbete</button>
+        <button type="button" class="add-btn add-btn-top" id="add-estudo-btn">+ Novo verbete</button>
         <div id="estudos-list"></div>
 
         <h3 class="section-heading">Categorias de estudo <span class="panel-count" id="count-categorias-estudo"></span></h3>
         <div id="categorias-estudo-list"></div>
-        <button type="button" class="add-btn" id="add-categoria-estudo-btn">+ adicionar categoria</button>
+        <button type="button" class="add-btn" id="add-categoria-estudo-btn">+ Nova categoria</button>
       </div>
 
       <div class="section-panel admin-only" id="panel-menu">
