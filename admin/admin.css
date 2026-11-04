@@ -574,46 +574,22 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
   aspect-ratio: 4 / 3;
 }
 
-/* ── CORPO COM FORMATAÇÃO (negrito, itálico, tamanho, parágrafos, imagens) ── */
-/* Editor à esquerda, barra de botões à direita (ver .rich-text-layout) — a
-   barra é sticky (gruda abaixo da .adm-topbar, top:56px) então acompanha o
-   scroll conforme o corpo é mais alto que a tela: fica sempre alcançável do
-   lado do texto, mesmo editando perto do fim de um corpo longo. Some por
-   padrão; só fica visível/clicável enquanto o foco está em algum lugar
-   dentro do campo (editor ou os próprios controles da barra), via
-   :focus-within — não depende de rastrear foco/blur manualmente. */
-.rich-text-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-}
-.rich-text-layout .rich-text-editor {
-  flex: 1;
-  min-width: 0;
-}
+/* ── CORPO COM FORMATAÇÃO ── */
+/* Barra fina em cima do texto (+ Inserir, Imagem), grudada abaixo da
+   .adm-topbar enquanto se rola um texto longo. Negrito, itálico, link e
+   título ficam no menu que aparece ao selecionar um trecho (.menu-selecao);
+   "/" numa linha vazia abre o mesmo menu do "+ Inserir" (.menu-blocos). */
+.rich-text-field { position: relative; }
 .rich-text-toolbar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
-  flex: none;
-  width: 7.5rem;
   position: sticky;
   top: 56px;
   z-index: 5;
-  background: var(--adm-surface);
-  padding: 0.5rem 0.4rem;
-  border-radius: 3px;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
-  pointer-events: none;
-}
-.rich-text-field:focus-within .rich-text-toolbar {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(0);
-  pointer-events: auto;
+  background: var(--adm-black);
+  padding: 0.35rem 0;
 }
 .rich-text-btn {
   font-family: var(--adm-mono);
@@ -623,24 +599,77 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
   background: var(--adm-surface-2);
   border: 1px solid var(--adm-border);
   color: var(--adm-off-white);
-  padding: 0.4rem 0.7rem;
+  padding: 0.35rem 0.7rem;
   border-radius: 3px;
   transition: all 0.15s;
 }
 .rich-text-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
-.rich-text-btn--italic { font-style: italic; }
-.rich-text-select {
+.rich-text-dica {
+  margin-left: auto;
   font-family: var(--adm-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.03em;
-  background: var(--adm-surface-2);
-  border: 1px solid var(--adm-border);
-  color: var(--adm-off-white);
-  padding: 0.4rem 0.5rem;
-  border-radius: 3px;
-  transition: border-color 0.15s;
+  font-size: 0.68rem;
+  color: var(--adm-muted);
 }
-.rich-text-select:hover, .rich-text-select:focus { border-color: var(--adm-accent); color: var(--adm-accent); }
+
+.menu-editor {
+  position: absolute;
+  z-index: 30;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 4px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+.menu-editor[hidden] { display: none; }
+.menu-blocos { display: flex; flex-direction: column; min-width: 15rem; padding: 0.3rem; }
+.menu-blocos-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  color: var(--adm-white);
+  font-family: var(--adm-sans);
+  font-size: 0.92rem;
+}
+.menu-blocos-item:hover, .menu-blocos-item.ativo { background: var(--adm-surface-2); }
+.menu-blocos-item.ativo .menu-blocos-rotulo { color: var(--adm-accent); }
+.menu-blocos-dica { font-family: var(--adm-mono); font-size: 0.68rem; color: var(--adm-muted); }
+
+.menu-selecao { padding: 0.25rem; white-space: nowrap; }
+.menu-selecao-botoes, .menu-selecao-link { display: flex; align-items: center; gap: 0.2rem; }
+.menu-selecao-botoes[hidden], .menu-selecao-link[hidden] { display: none; }
+.menu-selecao-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--adm-off-white);
+  font-family: var(--adm-mono);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  min-width: 2rem;
+}
+.menu-selecao-btn:hover { background: var(--adm-surface-2); color: var(--adm-white); }
+.menu-selecao-btn.ativo { color: var(--adm-accent); border-color: var(--adm-accent); }
+.menu-selecao-btn--negrito { font-weight: 700; }
+.menu-selecao-btn--italico { font-style: italic; font-family: Georgia, serif; font-size: 0.85rem; }
+.menu-selecao-btn[hidden] { display: none; }
+.menu-selecao-campo {
+  width: 16rem;
+  max-width: 60vw;
+  background: var(--adm-black);
+  border: 1px solid var(--adm-border);
+  border-radius: 3px;
+  color: var(--adm-white);
+  font-family: var(--adm-mono);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.5rem;
+}
+.menu-selecao-campo:focus { outline: none; border-color: var(--adm-accent); }
+
 .rich-text-editor {
   min-height: 12rem;
   line-height: 1.6;
@@ -650,6 +679,13 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 .rich-text-editor:focus { border-color: var(--adm-accent); }
 .rich-text-editor p { margin: 0 0 0.9em; }
 .rich-text-editor img { max-width: 100%; display: block; margin: 0.6em 0; border-radius: 3px; }
+.rich-text-editor h2 { font-size: 1.35rem; margin: 1.1em 0 0.5em; }
+.rich-text-editor h3 { font-size: 1.15rem; margin: 1em 0 0.45em; }
+.rich-text-editor > :first-child { margin-top: 0; }
+.rich-text-editor ul, .rich-text-editor ol { padding-left: 1.4rem; margin: 0 0 0.9em; }
+.rich-text-editor ul { list-style: disc; }
+.rich-text-editor ol { list-style: decimal; }
+.rich-text-editor a { color: var(--adm-accent); text-decoration: underline; }
 
 /* ── REORDER ── */
 .reorder-btns { display: flex; flex-direction: column; gap: 2px; flex: none; }
@@ -739,12 +775,7 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
   .adm-layout { flex-direction: column; }
   .adm-sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--adm-border); }
   .fields-grid { grid-template-columns: 1fr; }
-  /* Barra lateral não cabe ao lado do texto numa tela estreita — volta a
-     ficar em cima, ocupando a largura toda, como uma barra normal. */
-  .rich-text-layout { flex-direction: column; }
-  /* order: -1 põe a barra antes do editor (no HTML ela vem depois); o top
-     segue a altura da .adm-topbar, que continua grudada no topo. */
-  .rich-text-toolbar { flex-direction: row; flex-wrap: wrap; width: 100%; order: -1; top: 56px; }
+  .rich-text-dica { display: none; }
   .adm-topbar { padding: 0 1rem; }
   .adm-save-status { display: none; }
   .admin-item-row { flex-wrap: wrap; }

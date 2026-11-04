@@ -2034,6 +2034,33 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   return wrap;
 }
 
+// Um só ouvinte de seleção para todos os editores (eles são recriados a
+// cada redesenho da lista): avisa o editor onde está a seleção, e esconde o
+// menu dos outros.
+let menusDeSelecaoLigados = false;
+function ligarMenusDeSelecao() {
+  if (menusDeSelecaoLigados) return;
+  menusDeSelecaoLigados = true;
+  document.addEventListener("selectionchange", () => {
+    if (document.activeElement?.closest?.(".menu-selecao")) return;
+    const n = window.getSelection()?.anchorNode;
+    const editor = (n?.nodeType === 1 ? n : n?.parentElement)?.closest?.(".rich-text-editor");
+    document.querySelectorAll(".menu-selecao:not([hidden])").forEach((m) => {
+      if (!editor || !m.parentElement.contains(editor)) m.hidden = true;
+    });
+    editor?.atualizarMenuDeSelecao?.();
+  });
+  // Clicar fora do campo fecha os menus, mesmo onde o clique não muda a
+  // seleção (cabeçalho, botões).
+  document.addEventListener("mousedown", (e) => {
+    document.querySelectorAll(".menu-editor:not([hidden])").forEach((m) => {
+      if (m.parentElement.contains(e.target)) return;
+      m.hidden = true;
+      if (m.classList.contains("menu-blocos")) m.aberto = false;
+    });
+  });
+}
+
 // Divide o parágrafo no cursor sempre do mesmo jeito ao apertar Enter no
 // corpo — o Enter nativo do contenteditable é inconsistente: dependendo de
 // como a formatação (negrito/tamanho de fonte) estava aplicada na linha,
@@ -2090,8 +2117,11 @@ function splitEditorParagraphAtCursor(editor) {
   // Garante que o lado "antes" do corte também seja um <p> — se já era
   // (caso normal), só reaproveita; se era texto solto (bug antigo), envolve
   // agora, corrigindo o espaçamento dali pra frente.
+  // Título, lista e outros blocos ficam como estão (só texto solto ou
+  // elementos de linha, como <b> ou <span>, ganham o <p>).
   let before = topNode;
-  if (!(before.nodeType === Node.ELEMENT_NODE && before.tagName === "P")) {
+  const ehBloco = before.nodeType === Node.ELEMENT_NODE && /^(P|H[1-6]|UL|OL|TABLE|BLOCKQUOTE|DIV|FIGURE)$/.test(before.tagName);
+  if (!ehBloco) {
     const wrapP = document.createElement("p");
     editor.insertBefore(wrapP, before);
     wrapP.appendChild(before);
@@ -2105,119 +2135,80 @@ function splitEditorParagraphAtCursor(editor) {
   placeCursor(newP);
 }
 
-// Campo de corpo com formatação: negrito, parágrafos (Enter/contenteditable)
-// e imagens inseridas no meio do texto. O conteúdo é salvo como HTML puro e
-// desenhado direto no site via innerHTML (ver renderArticleDetail em
-// src/main.ts) — mesmo modelo de confiança do resto do painel: só quem tem
-// acesso ao GitHub edita esse conteúdo.
+// Campo de corpo com formatação, editor próprio (sem biblioteca: abrir e
+// publicar sem mexer não pode alterar o texto guardado). Selecionar um
+// trecho mostra o menu com negrito, itálico, link e título; "/" numa linha
+// vazia (ou "+ Inserir") abre a lista de blocos; atalhos: Ctrl/⌘+B, I, K, e
+// "## " no começo da linha (nas páginas de texto também "- " e "1. ").
 //
-// Imagem inserida no corpo segue o mesmo fluxo de "pendente até confirmar,
-// enviado só no Salvar no GitHub" do buildFileUploadField: ao escolher um
-// arquivo, ele entra no editor com um src temporário (blob local, só para
-// pré-visualização) e o caminho definitivo guardado em data-final-src;
-// wrap.confirmBodyImages() (chamado pelo "Salvar alterações" do card) é que
-// de fato enfileira o arquivo em pendingUploads, e finalizeRichTextHtml()
-// troca o src temporário pelo definitivo na hora de gravar no JSON.
+// Notícias e verbetes guardam o corpo como HTML, desenhado direto no site
+// (mesmo modelo de confiança do resto do painel: só quem tem acesso ao
+// GitHub edita). Páginas de texto (opts.simples) passam por Markdown (ver
+// paginas-md.js), então não têm imagem.
+//
+// Imagem inserida no corpo segue o mesmo fluxo de "pendente até publicar"
+// do buildFileUploadField: ao escolher um arquivo, ele entra no editor com
+// um src temporário (blob local, só para pré-visualização) e o caminho
+// definitivo guardado em data-final-src; wrap.confirmBodyImages() (chamado
+// pelo "Publicar" da tela) é que de fato enfileira o arquivo em
+// pendingUploads, e finalizeRichTextHtml() troca o src temporário pelo
+// definitivo na hora de gravar.
 function buildRichTextField(labelText, value, dataset, opts) {
   const wrap = el("div", "field rich-text-field");
   wrap.appendChild(el("label", "", labelText));
 
-  const toolbar = el("div", "rich-text-toolbar");
+  // Formatos de cada modo. O corpo das notícias e dos verbetes é HTML e o
+  // site estiliza subtítulo (h3), negrito, itálico, link e imagem (ver
+  // .article-body em css/style.css). As páginas de texto viram Markdown
+  // (paginas-md.js) e aceitam também seção (h2) e listas, estilizadas em
+  // PaginaInstitucional.astro.
+  const simples = !!opts.simples;
+  const TITULO = simples ? "h2" : "h3";
+  const NOME_DO_TITULO = simples ? "Seção" : "Subtítulo";
 
-  const boldBtn = el("button", "rich-text-btn", "Negrito");
-  boldBtn.type = "button";
-  boldBtn.title = "Negrito";
-  boldBtn.addEventListener("mousedown", (e) => e.preventDefault());
-  boldBtn.addEventListener("click", () => document.execCommand("bold"));
-  toolbar.appendChild(boldBtn);
-
-  const italicBtn = el("button", "rich-text-btn rich-text-btn--italic", "Itálico");
-  italicBtn.type = "button";
-  italicBtn.title = "Itálico";
-  italicBtn.addEventListener("mousedown", (e) => e.preventDefault());
-  italicBtn.addEventListener("click", () => document.execCommand("italic"));
-  toolbar.appendChild(italicBtn);
-
-  // Subtítulo de verdade (H3) em vez de simular com negrito + tamanho de
-  // fonte + linha em branco antes — o espaçamento de um <h3> vem do CSS do
-  // site (.article-body h2, h3), sempre igual, sem depender de o autor
-  // acertar manualmente o "respiro" antes/depois.
-  const headingBtn = el("button", "rich-text-btn", "Subtítulo");
-  headingBtn.type = "button";
-  headingBtn.title = "Alternar o parágrafo atual para subtítulo";
-  headingBtn.addEventListener("mousedown", (e) => e.preventDefault());
-  headingBtn.addEventListener("click", () => {
-    const current = document.queryCommandValue("formatBlock");
-    document.execCommand("formatBlock", false, /^h3$/i.test(current) ? "p" : "h3");
-  });
-  toolbar.appendChild(headingBtn);
-
-  // Mesma quebra determinística do Enter (ver splitEditorParagraphAtCursor),
-  // só que por clique — útil se o cursor já estiver ali e for mais rápido
-  // clicar do que apertar Enter, ou em qualquer caso onde o atalho de
-  // teclado não for percebido.
-  const breakBtn = el("button", "rich-text-btn", "Pular linha");
-  breakBtn.type = "button";
-  breakBtn.title = "Novo parágrafo (mesmo espaçamento sempre, independente do que veio antes)";
-  breakBtn.addEventListener("mousedown", (e) => e.preventDefault());
-  breakBtn.addEventListener("click", () => {
-    splitEditorParagraphAtCursor(editor);
-    saveSelection();
-  });
-  toolbar.appendChild(breakBtn);
-
-  // Escala de tamanho legada do execCommand("fontSize") (1 a 7, padrão 3) —
-  // rotulada por nome em vez do número cru, pra ficar claro no menu.
-  const sizeSelect = document.createElement("select");
-  sizeSelect.className = "rich-text-select";
-  sizeSelect.title = "Tamanho da fonte";
-  [
-    { value: "", label: "Tamanho da fonte" },
-    { value: "2", label: "Pequeno" },
-    { value: "3", label: "Normal" },
-    { value: "4", label: "Médio" },
-    { value: "5", label: "Grande" },
-    { value: "6", label: "Muito grande" },
-  ].forEach(({ value, label }) => {
-    const opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = label;
-    sizeSelect.appendChild(opt);
-  });
-  if (!opts.simples) toolbar.appendChild(sizeSelect);
-
-  // Modo simples (páginas de texto, salvas em Markdown — ver paginas-md.js):
-  // sem tamanho de fonte nem imagem, com seção (H2), link e listas.
-  if (opts.simples) {
-    const botao = (texto, titulo, acao) => {
-      const b = el("button", "rich-text-btn", texto);
-      b.type = "button";
-      b.title = titulo;
-      b.addEventListener("mousedown", (e) => e.preventDefault());
-      b.addEventListener("click", acao);
-      toolbar.appendChild(b);
-    };
-    botao("Seção", "Alternar o parágrafo atual para título de seção", () => {
-      const current = document.queryCommandValue("formatBlock");
-      document.execCommand("formatBlock", false, /^h2$/i.test(current) ? "p" : "h2");
-    });
-    botao("Link", "Transformar o texto selecionado em link", () => {
-      const url = prompt("Endereço do link (https://… ou /pagina-do-site):");
-      if (url?.trim()) document.execCommand("createLink", false, url.trim());
-    });
-    botao("Lista", "Lista com marcadores", () => document.execCommand("insertUnorderedList"));
-    botao("Lista numerada", "Lista numerada", () => document.execCommand("insertOrderedList"));
-  }
-
-  const imageBtn = el("button", "rich-text-btn", "+ imagem");
-  imageBtn.type = "button";
-  imageBtn.title = "Inserir imagem no corpo";
   const imageInput = document.createElement("input");
   imageInput.type = "file";
   imageInput.accept = "image/*";
   imageInput.hidden = true;
+
+  const ITENS_DO_MENU = simples
+    ? [
+        { rotulo: "Texto", dica: "parágrafo comum", acao: () => virarBloco("p") },
+        { rotulo: "Seção", dica: "## + espaço", acao: () => virarBloco("h2") },
+        { rotulo: "Subseção", dica: "### + espaço", acao: () => virarBloco("h3") },
+        { rotulo: "Lista", dica: "- + espaço", acao: () => virarLista("ul") },
+        { rotulo: "Lista numerada", dica: "1. + espaço", acao: () => virarLista("ol") },
+      ]
+    : [
+        { rotulo: "Texto", dica: "parágrafo comum", acao: () => virarBloco("p") },
+        { rotulo: "Subtítulo", dica: "## + espaço", acao: () => virarBloco("h3") },
+        { rotulo: "Imagem", dica: "do computador", acao: () => imageInput.click() },
+      ];
+
+  // Barra fina em cima do texto, só com o que não depende de selecionar
+  // texto; negrito, itálico, link e título ficam no menu que aparece ao
+  // selecionar um trecho (ver "Menu da seleção" abaixo).
+  const toolbar = el("div", "rich-text-toolbar");
+  const inserirBtn = el("button", "rich-text-btn", "+ Inserir");
+  inserirBtn.type = "button";
+  inserirBtn.title = simples ? "Seção, subseção ou lista na linha do cursor" : "Subtítulo ou imagem na linha do cursor";
+  inserirBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  inserirBtn.addEventListener("click", () => {
+    if (menuDeBlocos.aberto) return fecharMenuDeBlocos();
+    garantirCursor();
+    abrirMenuDeBlocos({ ancora: inserirBtn });
+  });
+  toolbar.appendChild(inserirBtn);
+
+  const imageBtn = el("button", "rich-text-btn", "Imagem");
+  imageBtn.type = "button";
+  imageBtn.title = "Inserir imagem na posição do cursor";
   imageBtn.appendChild(imageInput);
-  if (!opts.simples) toolbar.appendChild(imageBtn);
+  if (!simples) toolbar.appendChild(imageBtn);
+
+  toolbar.appendChild(
+    el("span", "rich-text-dica", "Selecione um trecho para formatar · digite / numa linha vazia para inserir")
+  );
 
   const editor = document.createElement("div");
   editor.className = "input rich-text-editor";
@@ -2235,15 +2226,8 @@ function buildRichTextField(labelText, value, dataset, opts) {
   // sempre recalculado a partir do HTML finalizado em applyArticleField.
   if (opts.onInput) editor.addEventListener("input", () => opts.onInput(editor.innerHTML));
 
-  // Editor à esquerda, barra de botões à direita (ver .rich-text-layout no
-  // CSS) — a barra é sticky, então acompanha o scroll conforme o corpo é
-  // mais alto que a tela, ficando sempre alcançável mesmo editando perto do
-  // fim de um texto longo (sem isso, editar o final exigia rolar de volta
-  // pro topo do campo pra alcançar os botões).
-  const layout = el("div", "rich-text-layout");
-  layout.appendChild(editor);
-  layout.appendChild(toolbar);
-  wrap.appendChild(layout);
+  wrap.appendChild(toolbar);
+  wrap.appendChild(editor);
 
   // Clicar no botão de imagem tira o foco do editor (é um <button>), então
   // sem guardar a seleção de texto a imagem sempre cairia no fim do
@@ -2258,6 +2242,388 @@ function buildRichTextField(labelText, value, dataset, opts) {
   editor.addEventListener("keyup", saveSelection);
   editor.addEventListener("mouseup", saveSelection);
 
+  // ── Blocos: título, parágrafo, lista ──
+  const SEL = () => window.getSelection();
+  const elementoDoCursor = () => {
+    const n = SEL()?.anchorNode;
+    return n ? (n.nodeType === 1 ? n : n.parentElement) : null;
+  };
+  const naLista = () => !!elementoDoCursor()?.closest("li");
+  function blocoAtual() {
+    const sel = SEL();
+    if (!sel?.rangeCount || !editor.contains(sel.anchorNode) || sel.anchorNode === editor) return null;
+    let no = sel.anchorNode;
+    while (no.parentNode !== editor) no = no.parentNode;
+    return no;
+  }
+  function textoAntesDoCursor(bloco) {
+    const r = SEL().getRangeAt(0);
+    const antes = document.createRange();
+    antes.setStart(bloco, 0);
+    antes.setEnd(r.startContainer, r.startOffset);
+    return antes;
+  }
+  // Depois de apagar o "## " ou o "/…": linha vazia ganha um <br> (senão
+  // some) e o cursor volta para o começo dela, antes do <br> — com o cursor
+  // depois dele, o formatBlock divide a linha em duas.
+  function prepararLinha(bloco) {
+    if (bloco.nodeType !== 1 || bloco.textContent || bloco.querySelector("img")) return;
+    if (!bloco.querySelector("br")) bloco.appendChild(document.createElement("br"));
+    const r = document.createRange();
+    r.setStart(bloco, 0);
+    r.collapse(true);
+    SEL().removeAllRanges();
+    SEL().addRange(r);
+  }
+  function sairDaLista() {
+    const li = elementoDoCursor()?.closest("li");
+    if (li) document.execCommand(li.parentElement.tagName === "OL" ? "insertOrderedList" : "insertUnorderedList");
+  }
+  function virarBloco(tag) {
+    sairDaLista();
+    document.execCommand("formatBlock", false, tag);
+    // O formatBlock do Chrome às vezes deixa um <p></p> totalmente vazio
+    // (invisível) logo depois da linha: tira só esse, vizinho da linha.
+    const bloco = blocoAtual();
+    for (const vizinho of [bloco?.previousSibling, bloco?.nextSibling]) {
+      if (vizinho?.nodeType === 1 && /^(P|DIV)$/.test(vizinho.tagName) && !vizinho.textContent && !vizinho.querySelector("br, img")) vizinho.remove();
+    }
+  }
+  function virarLista(tag) {
+    const cmd = tag === "ol" ? "insertOrderedList" : "insertUnorderedList";
+    if (!document.queryCommandState(cmd)) document.execCommand(cmd);
+  }
+  function alternarTitulo() {
+    const atual = (document.queryCommandValue("formatBlock") || "").toLowerCase();
+    virarBloco(atual === TITULO ? "p" : TITULO);
+  }
+  // Cursor no editor: o que estava guardado, ou o fim do texto.
+  function garantirCursor() {
+    const sel = SEL();
+    if (sel?.rangeCount && editor.contains(sel.anchorNode)) return;
+    editor.focus();
+    if (savedRange) {
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+      return;
+    }
+    if (!editor.lastChild) editor.innerHTML = "<p><br></p>";
+    const r = document.createRange();
+    r.selectNodeContents(editor.lastChild);
+    r.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+  // Escrever "## " (e, nas páginas, "- " ou "1. ") no começo de uma linha.
+  const ATALHOS_DE_LINHA = simples
+    ? { "#": () => virarBloco("h2"), "##": () => virarBloco("h2"), "###": () => virarBloco("h3"), "-": () => virarLista("ul"), "*": () => virarLista("ul"), "1.": () => virarLista("ol") }
+    : { "##": () => virarBloco("h3"), "###": () => virarBloco("h3") };
+
+  // Posição de um retângulo da tela dentro do campo (os menus ficam em
+  // position:absolute no .rich-text-field).
+  function posicionar(menu, rect, { abaixo = false } = {}) {
+    const base = wrap.getBoundingClientRect();
+    menu.style.visibility = "hidden";
+    menu.hidden = false;
+    const largura = menu.offsetWidth;
+    const altura = menu.offsetHeight;
+    let esquerda = rect.left - base.left + (abaixo ? 0 : rect.width / 2 - largura / 2);
+    esquerda = Math.max(0, Math.min(esquerda, wrap.clientWidth - largura));
+    let topo = abaixo ? rect.bottom - base.top + 6 : rect.top - base.top - altura - 8;
+    if (!abaixo && rect.top - altura - 8 < 64) topo = rect.bottom - base.top + 8;
+    menu.style.left = `${esquerda}px`;
+    menu.style.top = `${topo}px`;
+    menu.style.visibility = "";
+  }
+  function retanguloDoCursor() {
+    const sel = SEL();
+    if (!sel?.rangeCount) return editor.getBoundingClientRect();
+    const r = sel.getRangeAt(0);
+    const rect = r.getClientRects()[0] || r.getBoundingClientRect();
+    if (rect && (rect.width || rect.height)) return rect;
+    const bloco = blocoAtual();
+    return (bloco?.nodeType === 1 ? bloco : editor).getBoundingClientRect();
+  }
+
+  // ── Menu "/" e "+ Inserir" ──
+  // Lista de blocos que dá para pôr na linha do cursor. Pelo "/", o que se
+  // digita depois da barra filtra a lista, e escolher apaga o "/…".
+  const menuDeBlocos = el("div", "menu-editor menu-blocos");
+  menuDeBlocos.hidden = true;
+  menuDeBlocos.setAttribute("role", "listbox");
+  menuDeBlocos.aberto = false;
+  let itensVisiveis = [];
+  let itemAtivo = 0;
+  let pelaBarra = false;
+  const semAcento = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  function desenharMenuDeBlocos(filtro = "") {
+    menuDeBlocos.innerHTML = "";
+    itensVisiveis = ITENS_DO_MENU.filter((it) => semAcento(it.rotulo).includes(semAcento(filtro)));
+    itemAtivo = Math.min(itemAtivo, Math.max(0, itensVisiveis.length - 1));
+    itensVisiveis.forEach((it, k) => {
+      const b = el("button", "menu-blocos-item");
+      b.type = "button";
+      b.setAttribute("role", "option");
+      if (k === itemAtivo) b.classList.add("ativo");
+      b.appendChild(el("span", "menu-blocos-rotulo", it.rotulo));
+      b.appendChild(el("span", "menu-blocos-dica", it.dica));
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", () => escolherBloco(it));
+      menuDeBlocos.appendChild(b);
+    });
+    return itensVisiveis.length;
+  }
+  function abrirMenuDeBlocos({ ancora = null, barra = false } = {}) {
+    pelaBarra = barra;
+    itemAtivo = 0;
+    desenharMenuDeBlocos();
+    menuDeBlocos.aberto = true;
+    if (ancora) posicionar(menuDeBlocos, ancora.getBoundingClientRect(), { abaixo: true });
+    else posicionar(menuDeBlocos, retanguloDoCursor(), { abaixo: true });
+  }
+  function fecharMenuDeBlocos() {
+    menuDeBlocos.hidden = true;
+    menuDeBlocos.aberto = false;
+    pelaBarra = false;
+  }
+  function escolherBloco(it) {
+    garantirCursor();
+    if (pelaBarra) {
+      // Apaga o "/" e o filtro digitado, deixando a linha vazia.
+      const bloco = blocoAtual();
+      if (bloco) {
+        textoAntesDoCursor(bloco).deleteContents();
+        prepararLinha(bloco);
+      }
+    }
+    fecharMenuDeBlocos();
+    saveSelection();
+    it.acao();
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    saveSelection();
+  }
+  wrap.appendChild(menuDeBlocos);
+
+  // ── Menu da seleção ──
+  // Aparece em cima do trecho selecionado: negrito, itálico, link e título.
+  // O link é digitado no próprio menu (sem janela do navegador).
+  const menuDeSelecao = el("div", "menu-editor menu-selecao");
+  menuDeSelecao.hidden = true;
+  const botoesDaSelecao = el("div", "menu-selecao-botoes");
+  const botaoDaSelecao = (texto, titulo, classe, acao) => {
+    const b = el("button", `menu-selecao-btn ${classe || ""}`, texto);
+    b.type = "button";
+    b.title = titulo;
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      acao();
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      atualizarMenuDeSelecao();
+    });
+    botoesDaSelecao.appendChild(b);
+    return b;
+  };
+  const atalho = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl+";
+  const negritoBtn = botaoDaSelecao("B", `Negrito (${atalho}B)`, "menu-selecao-btn--negrito", () => document.execCommand("bold"));
+  const italicoBtn = botaoDaSelecao("I", `Itálico (${atalho}I)`, "menu-selecao-btn--italico", () => document.execCommand("italic"));
+  const linkBtn = el("button", "menu-selecao-btn", "Link");
+  linkBtn.type = "button";
+  linkBtn.title = `Link (${atalho}K)`;
+  linkBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  linkBtn.addEventListener("click", () => abrirCampoDeLink());
+  botoesDaSelecao.appendChild(linkBtn);
+  const tituloBtn = botaoDaSelecao(NOME_DO_TITULO, `Transformar a linha em ${NOME_DO_TITULO.toLowerCase()} (ou voltar a texto)`, "", alternarTitulo);
+
+  const formLink = el("form", "menu-selecao-link");
+  formLink.hidden = true;
+  const campoLink = document.createElement("input");
+  campoLink.type = "text";
+  campoLink.className = "menu-selecao-campo";
+  campoLink.placeholder = "https://… ou /pagina-do-site";
+  campoLink.setAttribute("aria-label", "Endereço do link");
+  const okLink = el("button", "menu-selecao-btn", "OK");
+  okLink.type = "submit";
+  const tirarLink = el("button", "menu-selecao-btn", "Tirar link");
+  tirarLink.type = "button";
+  formLink.append(campoLink, okLink, tirarLink);
+  menuDeSelecao.append(botoesDaSelecao, formLink);
+  wrap.appendChild(menuDeSelecao);
+
+  let rangeDoLink = null;
+  const linkNaSelecao = () => elementoDoCursor()?.closest("a");
+  function abrirCampoDeLink() {
+    const sel = SEL();
+    if (!sel?.rangeCount || !editor.contains(sel.anchorNode)) return;
+    const a = linkNaSelecao();
+    if (sel.isCollapsed) {
+      if (!a) {
+        toast("Selecione o trecho que vai virar link.", "error");
+        return;
+      }
+      const r = document.createRange();
+      r.selectNodeContents(a);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+    rangeDoLink = sel.getRangeAt(0).cloneRange();
+    botoesDaSelecao.hidden = true;
+    formLink.hidden = false;
+    tirarLink.hidden = !a;
+    campoLink.value = a?.getAttribute("href") || "";
+    posicionar(menuDeSelecao, rangeDoLink.getBoundingClientRect());
+    campoLink.focus();
+    campoLink.select();
+  }
+  function voltarParaASelecao() {
+    editor.focus();
+    if (rangeDoLink) {
+      const sel = SEL();
+      sel.removeAllRanges();
+      sel.addRange(rangeDoLink);
+    }
+    rangeDoLink = null;
+    formLink.hidden = true;
+    botoesDaSelecao.hidden = false;
+  }
+  formLink.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const url = campoLink.value.trim();
+    voltarParaASelecao();
+    if (url) document.execCommand("createLink", false, url);
+    else if (linkNaSelecao()) document.execCommand("unlink");
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    atualizarMenuDeSelecao();
+  });
+  tirarLink.addEventListener("click", () => {
+    voltarParaASelecao();
+    const a = linkNaSelecao();
+    if (a) {
+      const r = document.createRange();
+      r.selectNodeContents(a);
+      SEL().removeAllRanges();
+      SEL().addRange(r);
+      document.execCommand("unlink");
+    }
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    atualizarMenuDeSelecao();
+  });
+  campoLink.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    voltarParaASelecao();
+    atualizarMenuDeSelecao();
+  });
+
+  function atualizarMenuDeSelecao() {
+    if (!formLink.hidden && menuDeSelecao.contains(document.activeElement)) return;
+    const sel = SEL();
+    const ativo = sel?.rangeCount && !sel.isCollapsed && editor.contains(sel.anchorNode) && editor.contains(sel.focusNode) && sel.toString().trim();
+    if (!ativo) {
+      menuDeSelecao.hidden = true;
+      formLink.hidden = true;
+      botoesDaSelecao.hidden = false;
+      return;
+    }
+    formLink.hidden = true;
+    botoesDaSelecao.hidden = false;
+    negritoBtn.classList.toggle("ativo", document.queryCommandState("bold"));
+    italicoBtn.classList.toggle("ativo", document.queryCommandState("italic"));
+    linkBtn.classList.toggle("ativo", !!linkNaSelecao());
+    tituloBtn.classList.toggle("ativo", (document.queryCommandValue("formatBlock") || "").toLowerCase() === TITULO);
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    // No celular, o menu do próprio sistema aparece em cima da seleção.
+    posicionar(menuDeSelecao, rect, { abaixo: matchMedia("(pointer: coarse)").matches });
+  }
+  editor.atualizarMenuDeSelecao = atualizarMenuDeSelecao;
+  ligarMenusDeSelecao();
+
+  editor.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!wrap.contains(document.activeElement)) fecharMenuDeBlocos();
+    }, 0);
+  });
+
+  // ── Teclado ──
+  editor.addEventListener("keydown", (e) => {
+    if (menuDeBlocos.aberto) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const n = itensVisiveis.length;
+        if (n) itemAtivo = (itemAtivo + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+        desenharMenuDeBlocos(pelaBarra ? (blocoAtual()?.textContent || "").slice(1) : "");
+        return;
+      }
+      if ((e.key === "Enter" || e.key === "Tab") && itensVisiveis.length) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        escolherBloco(itensVisiveis[itemAtivo]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        fecharMenuDeBlocos();
+        return;
+      }
+    }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+      const tecla = e.key.toLowerCase();
+      if (tecla === "b" || tecla === "i") {
+        e.preventDefault();
+        document.execCommand(tecla === "b" ? "bold" : "italic");
+        editor.dispatchEvent(new Event("input", { bubbles: true }));
+        atualizarMenuDeSelecao();
+        return;
+      }
+      if (tecla === "k") {
+        e.preventDefault();
+        abrirCampoDeLink();
+        return;
+      }
+      // Sublinhado não existe no site (o Markdown não tem, e o corpo das
+      // notícias segue o mesmo conjunto de formatos).
+      if (tecla === "u") {
+        e.preventDefault();
+        return;
+      }
+    }
+    const sel = SEL();
+    if (!sel?.rangeCount || !sel.isCollapsed) return;
+    if (e.key === " " && !naLista()) {
+      const bloco = blocoAtual();
+      if (!bloco) return;
+      const antes = textoAntesDoCursor(bloco);
+      const aplicar = ATALHOS_DE_LINHA[antes.toString()];
+      if (!aplicar) return;
+      e.preventDefault();
+      antes.deleteContents();
+      prepararLinha(bloco);
+      aplicar();
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+    // Backspace no começo de um título: volta a ser texto comum.
+    if (e.key === "Backspace") {
+      const bloco = blocoAtual();
+      if (bloco?.nodeType === 1 && /^H[1-6]$/.test(bloco.tagName) && textoAntesDoCursor(bloco).toString() === "") {
+        e.preventDefault();
+        document.execCommand("formatBlock", false, "p");
+        editor.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+  });
+
+  editor.addEventListener("input", (e) => {
+    if (e.inputType === "insertText" && e.data === "/" && !menuDeBlocos.aberto && !naLista()) {
+      const bloco = blocoAtual();
+      if (bloco && bloco.textContent === "/") abrirMenuDeBlocos({ barra: true });
+      return;
+    }
+    if (menuDeBlocos.aberto && pelaBarra) {
+      const texto = blocoAtual()?.textContent || "";
+      if (!texto.startsWith("/") || !desenharMenuDeBlocos(texto.slice(1))) fecharMenuDeBlocos();
+    }
+  });
+
   // Enter (sem Shift) sempre quebra o parágrafo do mesmo jeito, em vez de
   // deixar o comportamento nativo do contenteditable decidir (ver
   // splitEditorParagraphAtCursor acima). Shift+Enter continua nativo
@@ -2268,24 +2634,6 @@ function buildRichTextField(labelText, value, dataset, opts) {
     if (opts.simples && window.getSelection()?.anchorNode?.parentElement?.closest("li, td, th")) return;
     e.preventDefault();
     splitEditorParagraphAtCursor(editor);
-    saveSelection();
-  });
-
-  // Abrir o <select> também tira o foco do editor — guarda a seleção antes
-  // de abrir (mousedown) e restaura na hora de aplicar (change), mesma
-  // lógica do botão de imagem.
-  sizeSelect.addEventListener("mousedown", saveSelection);
-  sizeSelect.addEventListener("change", () => {
-    const value = sizeSelect.value;
-    sizeSelect.value = "";
-    if (!value) return;
-    editor.focus();
-    const sel = window.getSelection();
-    if (savedRange) {
-      sel.removeAllRanges();
-      sel.addRange(savedRange);
-    }
-    document.execCommand("fontSize", false, value);
     saveSelection();
   });
 
