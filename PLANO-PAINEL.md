@@ -123,6 +123,40 @@ Toda tela de edição segue o mesmo padrão:
 - Textos de abertura das páginas Início, Notícias, Podcast, Estudos e Contato
   reunidos em "Páginas".
 
+### Rodada de reorganização e editor (decidida em 2026-11-04)
+Entra antes da P4. Decisões: uma tela para cada item no lugar dos cartões,
+publicar item por item sem o botão geral, e editor próprio (sem biblioteca),
+porque abrir e salvar sem mexer não pode alterar nenhum arquivo.
+
+- **R1 — Barra do editor acompanha o texto.** ✅ Feito. A causa era o
+  `overflow: hidden` do `.card-body`: um ancestral com overflow impede o
+  `position: sticky` da barra.
+- **R2a — Navegação e telas.** ✅ Feito.
+  - Cada assunto num só lugar: os textos de Notícias, Podcast e Estudos ficam
+    no topo da própria lista ("Textos da página"). "Páginas" é uma lista
+    simples: Início, as páginas do menu e as que estão fora dele.
+  - Uma tela para cada item: a lista mostra título, categoria, data, autor e
+    "falta traduzir"; clicar abre o item numa tela inteira, com "← voltar".
+  - Mesmo padrão em todas as telas: abas Português | English e ações sempre
+    visíveis no rodapé.
+- **R2b — Publicar em um passo.** ✅ Feito. Sai o "Salvar no GitHub" do topo;
+  cada tela tem **Publicar**, que grava só aquela parte. Sair de uma tela com
+  alterações pergunta e descarta; remover publica na hora; a ordem da lista é
+  publicada pela barra que aparece no rodapé da lista (com "Desfazer"). O
+  topo mostra só o estado.
+- **R3a — Atalhos do editor.** ✅ Feito. Ctrl+B, Ctrl+I, Ctrl+K (link); no
+  começo da linha, "## " vira subtítulo; nas páginas de texto, "## " seção,
+  "### " subseção, "- " lista e "1. " lista numerada; Backspace no começo de
+  um título volta a texto; "/" numa linha vazia abre o menu de blocos.
+  Notícias e verbetes não têm lista: o CSS do site (`.article-body`) não
+  estiliza listas, então elas apareceriam sem marcador.
+- **R3b — Formatação no próprio texto.** ✅ Feito. Menu flutuante ao
+  selecionar (negrito, itálico, link, subtítulo/seção), com o endereço do
+  link digitado no próprio menu. A barra lateral saiu; em cima do texto fica
+  só "+ Inserir" (o mesmo menu do "/") e "Imagem". Saiu também o "Tamanho da
+  fonte" (o subtítulo cumpre esse papel); textos antigos com tamanho
+  continuam como estão.
+
 ### P4 — Rodapé e marca
 - Links institucionais do rodapé editáveis: adicionar, remover, reordenar,
   esconder, com nome PT/EN e link. Funciona como o menu.

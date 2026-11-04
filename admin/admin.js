@@ -3,11 +3,11 @@
 //
 // Modelo: ao entrar, as notícias (src/content/noticias/{pt,en}/*.md, ver
 // noticias-md.js) e episodes.json/site.json etc. são carregados uma vez para
-// a memória (contentData). Reordenar, adicionar, remover e
-// editar campos só mudam essa cópia em memória e marcam a seção como suja
-// (dirty) — nada é gravado no GitHub até clicar em "Salvar no GitHub", que
-// faz o commit de cada arquivo sujo de uma vez. Os acessos (data/auth.json)
-// são a exceção: cada ação ali já commita na hora, como antes.
+// a memória (contentData). Cada tela (um item, ou uma tela de textos do
+// site) tem o próprio "Publicar", que grava só aquela parte (ver "Publicação
+// por tela"); remover um item publica na hora, e a ordem da lista é
+// publicada pela barra no rodapé da lista. Os acessos (data/auth.json) já
+// commitam a cada ação, como antes.
 //
 // Autenticação: cada pessoa usa seu próprio token de acesso pessoal do
 // GitHub, criptografado (AES-GCM, chave derivada via PBKDF2 a partir da
@@ -120,10 +120,9 @@ const GENERAL_SCHEMA = [
   },
 ];
 
-// Telas de "Páginas" na barra lateral, na ordem do menu do site: as
-// páginas institucionais primeiro, depois cada seção com a sua lista e a sua
-// página de item. Os campos são textos fixos do site (data/site.json e
-// data/site.en.json) usados nessas páginas.
+// Textos fixos do site (data/site.json e data/site.en.json), agrupados por
+// página. Cada grupo aparece numa tela (ver TELAS_DE_TEXTOS); "sobre" fica na
+// tela do texto do Sobre (ver garantirPainelDePagina).
 const PAGE_SCHEMA = [
   {
     key: "home",
@@ -136,7 +135,7 @@ const PAGE_SCHEMA = [
   },
   {
     key: "sobre",
-    label: "Sobre",
+    label: "Seção \"Integrantes\"",
     fields: [
       { key: "sobre.membersHeading", label: "Título da seção \"Integrantes\"", type: "text" },
     ],
@@ -155,7 +154,7 @@ const PAGE_SCHEMA = [
   },
   {
     key: "artigos",
-    label: "Notícias — lista",
+    label: "Página com a lista de notícias",
     fields: [
       { key: "artigos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
       { key: "artigos.title", label: "Título", type: "text" },
@@ -164,7 +163,7 @@ const PAGE_SCHEMA = [
   },
   {
     key: "artigo",
-    label: "Notícias — página da notícia",
+    label: "Página de cada notícia",
     fields: [
       { key: "artigo.backLink", label: "Link \"voltar\"", type: "text" },
       { key: "artigo.byLine", label: "Texto do autor (use {{author}})", type: "text" },
@@ -174,7 +173,7 @@ const PAGE_SCHEMA = [
   },
   {
     key: "podcast",
-    label: "Podcast — lista",
+    label: "Página com a lista de episódios",
     fields: [
       { key: "podcast.metaDescription", label: "Descrição (SEO)", type: "textarea" },
       { key: "podcast.title", label: "Título", type: "text" },
@@ -183,7 +182,7 @@ const PAGE_SCHEMA = [
   },
   {
     key: "episodio",
-    label: "Podcast — página do episódio",
+    label: "Página de cada episódio",
     fields: [
       { key: "episodio.backLink", label: "Link \"voltar\"", type: "text" },
       { key: "episodio.relatedHeading", label: "Título \"outros episódios\"", type: "text" },
@@ -191,7 +190,7 @@ const PAGE_SCHEMA = [
   },
   {
     key: "estudos",
-    label: "Estudos — lista",
+    label: "Página com a lista de verbetes",
     fields: [
       { key: "estudos.metaDescription", label: "Descrição (SEO)", type: "textarea" },
       { key: "estudos.title", label: "Título", type: "text" },
@@ -201,7 +200,7 @@ const PAGE_SCHEMA = [
   },
   {
     key: "estudo",
-    label: "Estudos — página do verbete",
+    label: "Página de cada verbete",
     fields: [
       { key: "estudo.backLink", label: "Link \"voltar\"", type: "text" },
       { key: "estudo.updatedAt", label: "Texto \"atualizado em\" (use {{date}})", type: "text" },
@@ -782,11 +781,6 @@ function setupNav() {
       setSidebarGroup(toggle, toggle.getAttribute("aria-expanded") !== "true");
       return;
     }
-    const pai = e.target.closest(".nav-pai");
-    if (pai) {
-      pai.setAttribute("aria-expanded", String(pai.getAttribute("aria-expanded") !== "true"));
-      return;
-    }
     const btn = e.target.closest(".nav-btn");
     if (!btn) return;
     showPanel(btn.dataset.panel);
@@ -797,39 +791,75 @@ let painelAtual = null;
 
 function showPanel(name) {
   if (ROLE !== "admin" && document.getElementById("panel-" + name)?.closest(".admin-only")) return;
+  if (!podeSairDaTela()) return;
   painelAtual = name;
+  document.querySelectorAll(".section-panel.em-detalhe").forEach(fecharItem);
   document.querySelectorAll(".section-panel").forEach((p) => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
   const panel = document.getElementById("panel-" + name);
   if (panel) panel.classList.add("active");
-  const btn = document.querySelector(`.nav-btn[data-panel="${name}"]`);
+  abrirTela(panel?.querySelector(":scope > .barra-publicar") ? panel : null, SECOES_DE_TEXTOS);
+  atualizarBarrasDeLista();
+  irParaOConteudo();
+  const btn = document.querySelector(`.nav-btn[data-panel="${BOTAO_DA_TELA[name] || name}"]`);
   if (btn) {
     btn.classList.add("active");
     // Se a aba ativa estiver num grupo retraído, abre o grupo pra ela aparecer.
     const toggle = btn.closest(".sidebar-group")?.previousElementSibling;
     if (toggle?.getAttribute("aria-expanded") === "false") setSidebarGroup(toggle, true);
-    // Idem para um item de "Páginas" com subitens (ver renderSidebarPaginas).
-    const pai = btn.closest(".nav-subgrupo")?.previousElementSibling;
-    if (pai?.classList.contains("nav-pai")) pai.setAttribute("aria-expanded", "true");
   }
 }
 
-// Telas dos textos fixos (PAGE_SCHEMA). Os botões delas na barra lateral são
-// montados a partir do menu do site (ver renderSidebarPaginas).
+// Telas dos textos fixos (PAGE_SCHEMA). Início e Contato ficam em "Páginas"
+// na barra lateral (ver renderSidebarPaginas). As de Notícias, Podcast e
+// Estudos abrem pela própria lista ("Textos da página") e voltam para ela.
+const TELAS_DE_TEXTOS = [
+  { id: "home", titulo: "Início", chaves: ["home"] },
+  { id: "contato", titulo: "Contato", chaves: ["contato"] },
+  { id: "noticias", titulo: "Textos da página de notícias", chaves: ["artigos", "artigo"], lista: "articles", voltar: "Notícias" },
+  { id: "podcast", titulo: "Textos da página do podcast", chaves: ["podcast", "episodio"], lista: "episodes", voltar: "Podcast" },
+  { id: "estudos", titulo: "Textos da página de estudos", chaves: ["estudos", "estudo"], lista: "estudos", voltar: "Estudos" },
+];
+
+// Tela que não tem botão próprio na barra lateral → botão que fica aceso
+// enquanto ela está aberta.
+const BOTAO_DA_TELA = Object.fromEntries(
+  TELAS_DE_TEXTOS.filter((t) => t.lista).map((t) => [`page-${t.id}`, t.lista])
+);
+
 function setupPagePanels() {
   const panelsContainer = document.getElementById("page-panels");
   panelsContainer.innerHTML = "";
 
-  for (const page of PAGE_SCHEMA) {
+  for (const tela of TELAS_DE_TEXTOS) {
     const panel = el("div", "section-panel");
-    panel.id = `panel-page-${page.key}`;
+    panel.id = `panel-page-${tela.id}`;
+    if (tela.lista) {
+      const voltar = el("button", "item-voltar tela-voltar", `← ${tela.voltar}`);
+      voltar.type = "button";
+      voltar.addEventListener("click", () => showPanel(tela.lista));
+      panel.appendChild(voltar);
+    }
     const header = el("div", "panel-header");
-    header.appendChild(el("span", "panel-title", page.label));
+    header.appendChild(el("span", "panel-title", tela.titulo));
     panel.appendChild(header);
     const formContainer = el("div");
-    formContainer.id = `page-form-${page.key}`;
+    formContainer.id = `page-form-${tela.id}`;
     panel.appendChild(formContainer);
+    panel.appendChild(barraDePublicar(publicarTextos));
     panelsContainer.appendChild(panel);
+
+    // Na lista, uma linha leva a esta tela.
+    if (tela.lista) {
+      const lista = document.getElementById(`panel-${tela.lista}`);
+      const linha = el("button", "textos-da-pagina");
+      linha.type = "button";
+      linha.appendChild(el("span", "textos-da-pagina-nome", "Textos da página"));
+      linha.appendChild(el("span", "textos-da-pagina-dica", "título, introdução, descrição para buscadores e rótulos"));
+      linha.appendChild(el("span", "card-chevron", "›"));
+      linha.addEventListener("click", () => showPanel(`page-${tela.id}`));
+      lista.querySelector(".panel-header").after(linha);
+    }
   }
 }
 
@@ -839,10 +869,22 @@ async function enterApp() {
   setupPagePanels();
   setupNav();
   document.getElementById("logout-btn").addEventListener("click", () => {
+    if (!podeSairDaTela()) return;
     TOKEN = "";
     location.reload();
   });
-  document.getElementById("save-btn").addEventListener("click", saveAll);
+  // Fechar ou recarregar a aba com alterações não publicadas.
+  window.addEventListener("beforeunload", (e) => {
+    if (TOKEN && (telaTemAlteracoes() || dirty.size)) e.preventDefault();
+  });
+  // A barra da tela aberta acompanha o que é digitado.
+  document.getElementById("app-screen").addEventListener("input", atualizarBarrasDeTela);
+  document.getElementById("app-screen").addEventListener("change", atualizarBarrasDeTela);
+  document.getElementById("app-screen").addEventListener("click", atualizarBarrasDeTela);
+  // Telas de textos que já vêm no HTML.
+  for (const id of ["panel-menu", "panel-general"]) {
+    document.getElementById(id).appendChild(barraDePublicar(publicarTextos));
+  }
   vigiarVersaoDoPainel();
   document.getElementById("add-article-btn").addEventListener("click", addArticle);
   document.getElementById("add-episode-btn").addEventListener("click", addEpisode);
@@ -923,8 +965,211 @@ function toast(message, kind) {
 
 function markDirty(section) {
   dirty.add(section);
-  document.getElementById("save-btn").disabled = false;
-  setSaveStatus("alterações pendentes", "pending");
+  setSaveStatus("não publicado", "pending");
+  atualizarBarrasDeLista();
+}
+
+// ----------------------------------------------------------------------------
+// Publicação por tela
+// ----------------------------------------------------------------------------
+// Cada tela (um item, ou uma tela de textos do site) tem o próprio botão
+// "Publicar", que grava só aquela parte. Ao sair de uma tela com alterações
+// não publicadas, o painel pergunta se pode descartá-las; descartar volta a
+// seção para a última versão publicada (`publicado`).
+
+// Cópia de contentData como está publicado (no carregamento e a cada
+// publicação). Descartar restaura daqui.
+let publicado = {};
+
+// Seções gravadas pelas telas de textos do site.
+const SECOES_DE_TEXTOS = ["site", "siteEn", "paginas"];
+
+// Tela aberta agora: { root, secoes, base, novo }. `base` é a assinatura dos
+// campos quando a tela abriu; `novo` marca um item criado e ainda não
+// publicado.
+let telaAberta = null;
+
+// Retrato dos campos de uma tela, para saber se algo mudou desde que ela
+// abriu. Inclui os arquivos escolhidos e ainda não enviados (status
+// "pending" de buildFileUploadField).
+function assinatura(root) {
+  if (!root) return "";
+  const campos = [...root.querySelectorAll("input, textarea, select, [contenteditable]")].map((e) => {
+    if (e.isContentEditable) return e.innerHTML;
+    if (e.type === "checkbox") return e.checked;
+    if (e.type === "file") return "";
+    return e.value;
+  });
+  campos.push(root.querySelectorAll('[data-kind="pending"]').length);
+  return JSON.stringify(campos);
+}
+
+function abrirTela(root, secoes, novo = false) {
+  telaAberta = root ? { root, secoes, base: assinatura(root), novo } : null;
+  atualizarBarrasDeTela();
+}
+
+function telaTemAlteracoes() {
+  return !!telaAberta && (telaAberta.novo || assinatura(telaAberta.root) !== telaAberta.base);
+}
+
+// Antes de sair da tela aberta. Devolve false se a pessoa preferiu ficar.
+function podeSairDaTela() {
+  if (!telaAberta) return true;
+  const mudou = assinatura(telaAberta.root) !== telaAberta.base;
+  if (mudou && !confirm("Esta tela tem alterações que ainda não foram publicadas. Sair e descartar as alterações?")) return false;
+  if (mudou || telaAberta.novo) descartarSecoes(telaAberta.secoes);
+  else if (telaAberta.secoes === SECOES_DE_TEXTOS) {
+    // Digitou e desfez: o campo marcou a seção, mas nada mudou de fato.
+    for (const secao of SECOES_DE_TEXTOS) {
+      if (secao === "paginas" || JSON.stringify(contentData[secao]) === JSON.stringify(publicado[secao])) dirty.delete(secao);
+    }
+  }
+  telaAberta = null;
+  return true;
+}
+
+// Volta as seções para a última versão publicada e redesenha as telas delas.
+function descartarSecoes(secoes) {
+  for (const secao of secoes) {
+    if (secao in publicado) contentData[secao] = structuredClone(publicado[secao]);
+    dirty.delete(secao);
+  }
+  pendingUploads.length = 0;
+  pendingDeletions.length = 0;
+  redesenharSecoes(secoes);
+  setSaveStatus(dirty.size ? "não publicado" : "tudo publicado", dirty.size ? "pending" : "ok");
+  atualizarBarrasDeLista();
+}
+
+function redesenharSecoes(secoes) {
+  const s = new Set(secoes);
+  if (s.has("articles")) renderArticlesList();
+  if (s.has("episodes")) renderEpisodesList();
+  if (s.has("members")) renderMembersList();
+  if (s.has("categoriasEstudo")) renderCategoriasEstudoList();
+  if (s.has("estudos") || s.has("categoriasEstudo")) renderEstudosList();
+  if (SECOES_DE_TEXTOS.some((x) => s.has(x))) redesenharTextosDoSite();
+}
+
+function redesenharTextosDoSite() {
+  renderGeneralForm();
+  renderSiteSocialLinks();
+  renderSiteMenu();
+  renderPageForms();
+  renderHomeEventBanner();
+  carregarPaginasDeTexto(paginasMarkdownOriginais);
+  renderSidebarPaginas();
+}
+
+// Seção de um cartão de item, pelo id do cartão.
+function secaoDoCard(card) {
+  const prefixos = [
+    ["article-card-", "articles"],
+    ["episode-card-", "episodes"],
+    ["member-card-", "members"],
+    ["member-view-", "members"],
+    ["categoria-estudo-card-", "categoriasEstudo"],
+    ["estudo-card-", "estudos"],
+  ];
+  return prefixos.find(([p]) => card.id.startsWith(p))?.[1];
+}
+
+// "Publicar" de um item: `preparar` confirma os arquivos escolhidos e passa
+// os campos do cartão para contentData (o que o antigo "Salvar alterações"
+// fazia). Depois de publicar, redesenha a lista (a linha mostra o título
+// novo) e reabre o mesmo item.
+async function publicarItem(card, preparar) {
+  const secao = secaoDoCard(card);
+  preparar();
+  markDirty(secao);
+  const id = card.id;
+  const ok = await saveAll([secao]);
+  if (!ok) return;
+  redesenharSecoes([secao]);
+  const reaberto = document.getElementById(id);
+  if (reaberto) abrirItem(reaberto, { manterRolagem: true });
+}
+
+// "Publicar" de uma tela de textos do site.
+async function publicarTextos() {
+  const ok = await saveAll(SECOES_DE_TEXTOS);
+  if (!ok) return;
+  // A tela de uma página de texto é recriada depois de publicar.
+  const painel = document.getElementById(`panel-${painelAtual}`);
+  abrirTela(painel, SECOES_DE_TEXTOS);
+}
+
+// Barra "Publicar" no rodapé das telas de textos do site.
+function barraDePublicar(onPublicar) {
+  const barra = el("div", "barra-publicar");
+  barra.appendChild(el("span", "barra-estado"));
+  const btn = el("button", "btn btn-primary btn-small btn-publicar", "Publicar");
+  btn.type = "button";
+  btn.addEventListener("click", onPublicar);
+  barra.appendChild(btn);
+  return barra;
+}
+
+// Mostra "alterações não publicadas" na barra da tela aberta.
+let barraTimer = null;
+function atualizarBarrasDeTela() {
+  if (barraTimer) return;
+  barraTimer = requestAnimationFrame(() => {
+    barraTimer = null;
+    document.querySelectorAll(".barra-publicar:not(.barra-lista) .barra-estado, .card-actions .barra-estado").forEach((e) => (e.textContent = ""));
+    const mudou = !!telaAberta && telaTemAlteracoes();
+    if (telaAberta) {
+      let estado = telaAberta.root.querySelector(":scope > .barra-publicar .barra-estado, .card-actions .barra-estado");
+      const acoes = telaAberta.root.querySelector(".card-actions");
+      if (!estado && acoes) acoes.prepend((estado = el("span", "barra-estado")));
+      if (estado) estado.textContent = mudou ? "alterações não publicadas" : "";
+    }
+    // O topo acompanha a tela, mas não apaga "publicando…" nem um erro.
+    const topo = document.getElementById("save-status");
+    if (topo && /^(tudo publicado|não publicado|publicado ✓)$/.test(topo.textContent)) {
+      if (mudou || dirty.size) setSaveStatus("não publicado", "pending");
+      else if (topo.textContent === "não publicado") setSaveStatus("tudo publicado", "ok");
+    }
+  });
+}
+
+// Lista com mudança que não é de um item só (ordem, ou correção automática
+// do carregamento): uma barra no rodapé da lista oferece Publicar e
+// Desfazer.
+const LISTAS = {
+  articles: "panel-articles",
+  episodes: "panel-episodes",
+  members: "panel-members",
+  estudos: "panel-estudos",
+  categoriasEstudo: "panel-estudos",
+};
+
+function atualizarBarrasDeLista() {
+  for (const [secao, painelId] of Object.entries(LISTAS)) {
+    const painel = document.getElementById(painelId);
+    if (!painel) continue;
+    let barra = painel.querySelector(`.barra-lista[data-secao="${secao}"]`);
+    const aberto = telaAberta?.secoes.includes(secao);
+    const mostrar = dirty.has(secao) && !aberto;
+    if (!mostrar) {
+      barra?.remove();
+      continue;
+    }
+    if (barra) continue;
+    barra = barraDePublicar(async () => {
+      if (await saveAll([secao])) atualizarBarrasDeLista();
+    });
+    barra.classList.add("barra-lista");
+    barra.dataset.secao = secao;
+    barra.querySelector(".barra-estado").textContent =
+      secao === "categoriasEstudo" ? "As categorias têm alterações não publicadas (ordem ou correções)." : "A lista tem alterações não publicadas (ordem ou correções).";
+    const desfazer = el("button", "btn btn-secondary btn-small", "Desfazer");
+    desfazer.type = "button";
+    desfazer.addEventListener("click", () => descartarSecoes([secao]));
+    barra.insertBefore(desfazer, barra.querySelector(".btn-publicar"));
+    painel.appendChild(barra);
+  }
 }
 
 // Busca um arquivo de conteúdo que pode ainda não existir no repositório
@@ -1017,13 +1262,13 @@ async function loadContent() {
     renderSiteSocialLinks();
     renderSiteMenu();
     renderSidebarPaginas();
+    publicado = structuredClone(contentData);
+    atualizarBarrasDeLista();
     if (fixedArticles || fixedEpisodes || fixedEstudos || fixedCategoriasEstudo) {
-      document.getElementById("save-btn").disabled = false;
-      setSaveStatus("alterações pendentes", "pending");
-      toast('Encontrei alguma coisa desatualizada (identificador fora do padrão ou campo removido) e já corrigi — clique em "Salvar no GitHub" para confirmar.', "ok");
+      setSaveStatus("não publicado", "pending");
+      toast('Encontrei alguma coisa desatualizada (identificador fora do padrão ou campo removido) e já corrigi. Confira e clique em "Publicar" na barra da lista.', "ok");
     } else {
-      setSaveStatus("dados carregados ✓", "ok");
-      document.getElementById("save-btn").disabled = true;
+      setSaveStatus("tudo publicado", "ok");
     }
   } catch (err) {
     setSaveStatus("erro ao carregar ✗", "err");
@@ -1322,13 +1567,18 @@ function vigiarVersaoDoPainel() {
   });
 }
 
-async function saveAll() {
-  if (dirty.size === 0 && pendingUploads.length === 0 && pendingDeletions.length === 0) return;
+// Publica as seções `secoes` que tiverem alteração (todas, sem o
+// argumento), mais os envios de arquivo na fila. Devolve true se publicou
+// (ou se não havia nada a publicar) e false se algo deu errado ou foi
+// cancelado.
+async function saveAll(secoes) {
+  const alvo = new Set([...dirty].filter((s) => !secoes || secoes.includes(s)));
+  if (alvo.size === 0 && pendingUploads.length === 0 && pendingDeletions.length === 0) return true;
   if (await painelDesatualizado()) {
     await avisarSePainelDesatualizado();
     setSaveStatus("erro: painel desatualizado — recarregue a página", "err");
     toast("Nada foi enviado: o painel foi atualizado desde que esta página abriu. Recarregue (Ctrl+Shift+R) e refaça a alteração.", "error");
-    return;
+    return false;
   }
   // Sem isso, campos de "Rodapé e marca"/"Páginas" (data-site/data-site-en)
   // e as listas de tamanho livre (links de integrante, redes sociais do
@@ -1337,13 +1587,11 @@ async function saveAll() {
   // direto em "Salvar no GitHub" depois de só editar um desses campos
   // salvava a versão antiga, sem a edição.
   collectAll();
-  const saveBtn = document.getElementById("save-btn");
-  saveBtn.disabled = true;
-  setSaveStatus("salvando…", "pending");
+  setSaveStatus("publicando…", "pending");
   try {
     // Antes dos envios: um id de integrante repetido faria a foto de um
     // sobrescrever a do outro (o caminho da foto vem do id).
-    if (dirty.has("members")) {
+    if (alvo.has("members")) {
       const problemas = contentData.members
         .filter((m) => m._isNew)
         .flatMap((m) => {
@@ -1356,42 +1604,40 @@ async function saveAll() {
     const memberIds = contentData.members?.map((m) => m.id) || [];
     const duplicate = memberIds.find((id, i) => memberIds.indexOf(id) !== i);
     if (duplicate) throw new Error(`dois integrantes com o mesmo identificador ("${duplicate}")`);
-    if (dirty.has("members")) alinharFotosDeIntegrantesNovos();
+    if (alvo.has("members")) alinharFotosDeIntegrantesNovos();
     // Menu: item sem nome ou com link fora do formato faria o build falhar
     // (ver src/lib/menu.ts).
-    if (dirty.has("site")) {
+    if (alvo.has("site")) {
       const problemas = problemasDoMenu(contentData.site.menu || []);
       if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
     }
     // Episódios: data inválida faria o build do site falhar.
-    if (dirty.has("episodes")) {
+    if (alvo.has("episodes")) {
       const semData = contentData.episodes.filter((e) => !/^\d{4}-\d{2}-\d{2}$/.test(e.date || ""));
       if (semData.length) throw new Error(`corrija antes de salvar: data inválida no episódio ${semData.map((e) => e.title || e.id).join(", ")}`);
     }
     // Notícias: valida e calcula os arquivos antes de qualquer envio — um
     // título vazio ou uma data inválida faria o build do site falhar.
     let noticias = null;
-    if (dirty.has("articles")) {
+    if (alvo.has("articles")) {
       const problemas = problemasDasNoticias(contentData.articles);
       if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
       const arquivos = noticiasParaArquivos(contentData.articles);
       noticias = { arquivos, mudancas: mudancasDeArquivos(noticiasMarkdownOriginais, arquivos) };
       if (!confirmarApagarTraducoes(noticias.mudancas.apagar, arquivos)) {
-        setSaveStatus("alterações pendentes", "pending");
-        saveBtn.disabled = false;
-        return;
+        setSaveStatus("não publicado", "pending");
+        return false;
       }
     }
     // Páginas de texto: idem, um commit só com os .md que mudaram.
     let paginas = null;
-    if (dirty.has("paginas")) {
+    if (alvo.has("paginas")) {
       const { arquivos, problemas } = paginasParaArquivos();
       if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
       paginas = { arquivos, mudancas: mudancasDeArquivos(paginasMarkdownOriginais, arquivos) };
       if (paginas.mudancas.apagar.length && !confirm(`Apagar a versão em inglês de: ${paginas.mudancas.apagar.map(slugDoCaminho).join(", ")}? (o texto em inglês foi esvaziado)`)) {
-        setSaveStatus("alterações pendentes", "pending");
-        saveBtn.disabled = false;
-        return;
+        setSaveStatus("não publicado", "pending");
+        return false;
       }
     }
     for (const upload of pendingUploads) {
@@ -1408,14 +1654,14 @@ async function saveAll() {
     // addMember) pra liberar a edição do id enquanto o integrante ainda não
     // tinha sido salvo — nunca deve ir pro JSON do GitHub.
     let savedNewMembers = false;
-    if (dirty.has("members")) {
+    if (alvo.has("members")) {
       contentData.members.forEach((m) => {
         if (m._isNew) savedNewMembers = true;
         delete m._isNew;
         delete m._idManual;
       });
     }
-    for (const section of dirty) {
+    for (const section of alvo) {
       if (section === "articles") {
         await salvarNoticias(noticias);
         continue;
@@ -1435,17 +1681,21 @@ async function saveAll() {
       await putFile(PATHS[section], contentData[section], fresh.sha, `admin: atualiza ${section}`);
     }
     // A lista de integrantes de "Acessos" passa a ter os recém-salvos.
-    if (dirty.has("members") && accessCache) renderAccessList();
-    dirty.clear();
+    if (alvo.has("members") && accessCache) renderAccessList();
+    alvo.forEach((section) => {
+      dirty.delete(section);
+      publicado[section] = structuredClone(contentData[section]);
+    });
     // Redesenha os cards de integrante pra travar o id dos que acabaram de
     // ser salvos pela primeira vez (some o campo editável, aparece o travado).
     if (savedNewMembers) renderMembersList();
-    setSaveStatus("salvo ✓", "ok");
-    toast("Salvo no GitHub!", "ok");
+    setSaveStatus("publicado ✓", "ok");
+    toast("Publicado! O site atualiza em um ou dois minutos.", "ok");
+    return true;
   } catch (err) {
-    setSaveStatus("erro ao salvar ✗", "err");
+    setSaveStatus("erro ao publicar ✗", "err");
     toast(`Erro: ${err.message}`, "error");
-    saveBtn.disabled = false;
+    return false;
   }
 }
 
@@ -1700,7 +1950,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     pendingClear = false;
     const path = opts.buildPath(file);
     pending = { path, file, message: opts.buildMessage(path) };
-    status.textContent = `Selecionado: ${path} — clique em "Salvar alterações" para confirmar.`;
+    status.textContent = `Selecionado: ${path} — é enviado ao clicar em "Publicar".`;
     status.dataset.kind = "pending";
     if (previews.length) {
       const objectUrl = URL.createObjectURL(file);
@@ -1719,7 +1969,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
       pendingClear = !!currentValue;
       textInput.value = "";
       status.textContent = currentValue
-        ? `Marcado para remover — clique em "Salvar alterações" para confirmar.`
+        ? `Marcado para remover — é removido ao clicar em "Publicar".`
         : "";
       status.dataset.kind = currentValue ? "pending" : "";
       for (const img of previews) img.style.display = "none";
@@ -1734,7 +1984,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
         message: `admin: remove arquivo (${currentValue})`,
       });
       pendingClear = false;
-      status.textContent = `Removido — será excluído ao clicar em "Salvar no GitHub".`;
+      status.textContent = `Removido — será excluído ao clicar em "Publicar".`;
       status.dataset.kind = "ok";
       return;
     }
@@ -1750,7 +2000,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     }
     pendingUploads.push(pending);
     textInput.value = pending.path;
-    status.textContent = `Na fila — será enviado ao clicar em "Salvar no GitHub".`;
+    status.textContent = `Na fila — será enviado ao clicar em "Publicar".`;
     status.dataset.kind = "ok";
     pending = null;
     updateButtonStates();
@@ -1782,6 +2032,33 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
   };
 
   return wrap;
+}
+
+// Um só ouvinte de seleção para todos os editores (eles são recriados a
+// cada redesenho da lista): avisa o editor onde está a seleção, e esconde o
+// menu dos outros.
+let menusDeSelecaoLigados = false;
+function ligarMenusDeSelecao() {
+  if (menusDeSelecaoLigados) return;
+  menusDeSelecaoLigados = true;
+  document.addEventListener("selectionchange", () => {
+    if (document.activeElement?.closest?.(".menu-selecao")) return;
+    const n = window.getSelection()?.anchorNode;
+    const editor = (n?.nodeType === 1 ? n : n?.parentElement)?.closest?.(".rich-text-editor");
+    document.querySelectorAll(".menu-selecao:not([hidden])").forEach((m) => {
+      if (!editor || !m.parentElement.contains(editor)) m.hidden = true;
+    });
+    editor?.atualizarMenuDeSelecao?.();
+  });
+  // Clicar fora do campo fecha os menus, mesmo onde o clique não muda a
+  // seleção (cabeçalho, botões).
+  document.addEventListener("mousedown", (e) => {
+    document.querySelectorAll(".menu-editor:not([hidden])").forEach((m) => {
+      if (m.parentElement.contains(e.target)) return;
+      m.hidden = true;
+      if (m.classList.contains("menu-blocos")) m.aberto = false;
+    });
+  });
 }
 
 // Divide o parágrafo no cursor sempre do mesmo jeito ao apertar Enter no
@@ -1840,8 +2117,11 @@ function splitEditorParagraphAtCursor(editor) {
   // Garante que o lado "antes" do corte também seja um <p> — se já era
   // (caso normal), só reaproveita; se era texto solto (bug antigo), envolve
   // agora, corrigindo o espaçamento dali pra frente.
+  // Título, lista e outros blocos ficam como estão (só texto solto ou
+  // elementos de linha, como <b> ou <span>, ganham o <p>).
   let before = topNode;
-  if (!(before.nodeType === Node.ELEMENT_NODE && before.tagName === "P")) {
+  const ehBloco = before.nodeType === Node.ELEMENT_NODE && /^(P|H[1-6]|UL|OL|TABLE|BLOCKQUOTE|DIV|FIGURE)$/.test(before.tagName);
+  if (!ehBloco) {
     const wrapP = document.createElement("p");
     editor.insertBefore(wrapP, before);
     wrapP.appendChild(before);
@@ -1855,119 +2135,80 @@ function splitEditorParagraphAtCursor(editor) {
   placeCursor(newP);
 }
 
-// Campo de corpo com formatação: negrito, parágrafos (Enter/contenteditable)
-// e imagens inseridas no meio do texto. O conteúdo é salvo como HTML puro e
-// desenhado direto no site via innerHTML (ver renderArticleDetail em
-// src/main.ts) — mesmo modelo de confiança do resto do painel: só quem tem
-// acesso ao GitHub edita esse conteúdo.
+// Campo de corpo com formatação, editor próprio (sem biblioteca: abrir e
+// publicar sem mexer não pode alterar o texto guardado). Selecionar um
+// trecho mostra o menu com negrito, itálico, link e título; "/" numa linha
+// vazia (ou "+ Inserir") abre a lista de blocos; atalhos: Ctrl/⌘+B, I, K, e
+// "## " no começo da linha (nas páginas de texto também "- " e "1. ").
 //
-// Imagem inserida no corpo segue o mesmo fluxo de "pendente até confirmar,
-// enviado só no Salvar no GitHub" do buildFileUploadField: ao escolher um
-// arquivo, ele entra no editor com um src temporário (blob local, só para
-// pré-visualização) e o caminho definitivo guardado em data-final-src;
-// wrap.confirmBodyImages() (chamado pelo "Salvar alterações" do card) é que
-// de fato enfileira o arquivo em pendingUploads, e finalizeRichTextHtml()
-// troca o src temporário pelo definitivo na hora de gravar no JSON.
+// Notícias e verbetes guardam o corpo como HTML, desenhado direto no site
+// (mesmo modelo de confiança do resto do painel: só quem tem acesso ao
+// GitHub edita). Páginas de texto (opts.simples) passam por Markdown (ver
+// paginas-md.js), então não têm imagem.
+//
+// Imagem inserida no corpo segue o mesmo fluxo de "pendente até publicar"
+// do buildFileUploadField: ao escolher um arquivo, ele entra no editor com
+// um src temporário (blob local, só para pré-visualização) e o caminho
+// definitivo guardado em data-final-src; wrap.confirmBodyImages() (chamado
+// pelo "Publicar" da tela) é que de fato enfileira o arquivo em
+// pendingUploads, e finalizeRichTextHtml() troca o src temporário pelo
+// definitivo na hora de gravar.
 function buildRichTextField(labelText, value, dataset, opts) {
   const wrap = el("div", "field rich-text-field");
   wrap.appendChild(el("label", "", labelText));
 
-  const toolbar = el("div", "rich-text-toolbar");
+  // Formatos de cada modo. O corpo das notícias e dos verbetes é HTML e o
+  // site estiliza subtítulo (h3), negrito, itálico, link e imagem (ver
+  // .article-body em css/style.css). As páginas de texto viram Markdown
+  // (paginas-md.js) e aceitam também seção (h2) e listas, estilizadas em
+  // PaginaInstitucional.astro.
+  const simples = !!opts.simples;
+  const TITULO = simples ? "h2" : "h3";
+  const NOME_DO_TITULO = simples ? "Seção" : "Subtítulo";
 
-  const boldBtn = el("button", "rich-text-btn", "Negrito");
-  boldBtn.type = "button";
-  boldBtn.title = "Negrito";
-  boldBtn.addEventListener("mousedown", (e) => e.preventDefault());
-  boldBtn.addEventListener("click", () => document.execCommand("bold"));
-  toolbar.appendChild(boldBtn);
-
-  const italicBtn = el("button", "rich-text-btn rich-text-btn--italic", "Itálico");
-  italicBtn.type = "button";
-  italicBtn.title = "Itálico";
-  italicBtn.addEventListener("mousedown", (e) => e.preventDefault());
-  italicBtn.addEventListener("click", () => document.execCommand("italic"));
-  toolbar.appendChild(italicBtn);
-
-  // Subtítulo de verdade (H3) em vez de simular com negrito + tamanho de
-  // fonte + linha em branco antes — o espaçamento de um <h3> vem do CSS do
-  // site (.article-body h2, h3), sempre igual, sem depender de o autor
-  // acertar manualmente o "respiro" antes/depois.
-  const headingBtn = el("button", "rich-text-btn", "Subtítulo");
-  headingBtn.type = "button";
-  headingBtn.title = "Alternar o parágrafo atual para subtítulo";
-  headingBtn.addEventListener("mousedown", (e) => e.preventDefault());
-  headingBtn.addEventListener("click", () => {
-    const current = document.queryCommandValue("formatBlock");
-    document.execCommand("formatBlock", false, /^h3$/i.test(current) ? "p" : "h3");
-  });
-  toolbar.appendChild(headingBtn);
-
-  // Mesma quebra determinística do Enter (ver splitEditorParagraphAtCursor),
-  // só que por clique — útil se o cursor já estiver ali e for mais rápido
-  // clicar do que apertar Enter, ou em qualquer caso onde o atalho de
-  // teclado não for percebido.
-  const breakBtn = el("button", "rich-text-btn", "Pular linha");
-  breakBtn.type = "button";
-  breakBtn.title = "Novo parágrafo (mesmo espaçamento sempre, independente do que veio antes)";
-  breakBtn.addEventListener("mousedown", (e) => e.preventDefault());
-  breakBtn.addEventListener("click", () => {
-    splitEditorParagraphAtCursor(editor);
-    saveSelection();
-  });
-  toolbar.appendChild(breakBtn);
-
-  // Escala de tamanho legada do execCommand("fontSize") (1 a 7, padrão 3) —
-  // rotulada por nome em vez do número cru, pra ficar claro no menu.
-  const sizeSelect = document.createElement("select");
-  sizeSelect.className = "rich-text-select";
-  sizeSelect.title = "Tamanho da fonte";
-  [
-    { value: "", label: "Tamanho da fonte" },
-    { value: "2", label: "Pequeno" },
-    { value: "3", label: "Normal" },
-    { value: "4", label: "Médio" },
-    { value: "5", label: "Grande" },
-    { value: "6", label: "Muito grande" },
-  ].forEach(({ value, label }) => {
-    const opt = document.createElement("option");
-    opt.value = value;
-    opt.textContent = label;
-    sizeSelect.appendChild(opt);
-  });
-  if (!opts.simples) toolbar.appendChild(sizeSelect);
-
-  // Modo simples (páginas de texto, salvas em Markdown — ver paginas-md.js):
-  // sem tamanho de fonte nem imagem, com seção (H2), link e listas.
-  if (opts.simples) {
-    const botao = (texto, titulo, acao) => {
-      const b = el("button", "rich-text-btn", texto);
-      b.type = "button";
-      b.title = titulo;
-      b.addEventListener("mousedown", (e) => e.preventDefault());
-      b.addEventListener("click", acao);
-      toolbar.appendChild(b);
-    };
-    botao("Seção", "Alternar o parágrafo atual para título de seção", () => {
-      const current = document.queryCommandValue("formatBlock");
-      document.execCommand("formatBlock", false, /^h2$/i.test(current) ? "p" : "h2");
-    });
-    botao("Link", "Transformar o texto selecionado em link", () => {
-      const url = prompt("Endereço do link (https://… ou /pagina-do-site):");
-      if (url?.trim()) document.execCommand("createLink", false, url.trim());
-    });
-    botao("Lista", "Lista com marcadores", () => document.execCommand("insertUnorderedList"));
-    botao("Lista numerada", "Lista numerada", () => document.execCommand("insertOrderedList"));
-  }
-
-  const imageBtn = el("button", "rich-text-btn", "+ imagem");
-  imageBtn.type = "button";
-  imageBtn.title = "Inserir imagem no corpo";
   const imageInput = document.createElement("input");
   imageInput.type = "file";
   imageInput.accept = "image/*";
   imageInput.hidden = true;
+
+  const ITENS_DO_MENU = simples
+    ? [
+        { rotulo: "Texto", dica: "parágrafo comum", acao: () => virarBloco("p") },
+        { rotulo: "Seção", dica: "## + espaço", acao: () => virarBloco("h2") },
+        { rotulo: "Subseção", dica: "### + espaço", acao: () => virarBloco("h3") },
+        { rotulo: "Lista", dica: "- + espaço", acao: () => virarLista("ul") },
+        { rotulo: "Lista numerada", dica: "1. + espaço", acao: () => virarLista("ol") },
+      ]
+    : [
+        { rotulo: "Texto", dica: "parágrafo comum", acao: () => virarBloco("p") },
+        { rotulo: "Subtítulo", dica: "## + espaço", acao: () => virarBloco("h3") },
+        { rotulo: "Imagem", dica: "do computador", acao: () => imageInput.click() },
+      ];
+
+  // Barra fina em cima do texto, só com o que não depende de selecionar
+  // texto; negrito, itálico, link e título ficam no menu que aparece ao
+  // selecionar um trecho (ver "Menu da seleção" abaixo).
+  const toolbar = el("div", "rich-text-toolbar");
+  const inserirBtn = el("button", "rich-text-btn", "+ Inserir");
+  inserirBtn.type = "button";
+  inserirBtn.title = simples ? "Seção, subseção ou lista na linha do cursor" : "Subtítulo ou imagem na linha do cursor";
+  inserirBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  inserirBtn.addEventListener("click", () => {
+    if (menuDeBlocos.aberto) return fecharMenuDeBlocos();
+    garantirCursor();
+    abrirMenuDeBlocos({ ancora: inserirBtn });
+  });
+  toolbar.appendChild(inserirBtn);
+
+  const imageBtn = el("button", "rich-text-btn", "Imagem");
+  imageBtn.type = "button";
+  imageBtn.title = "Inserir imagem na posição do cursor";
   imageBtn.appendChild(imageInput);
-  if (!opts.simples) toolbar.appendChild(imageBtn);
+  if (!simples) toolbar.appendChild(imageBtn);
+
+  toolbar.appendChild(
+    el("span", "rich-text-dica", "Selecione um trecho para formatar · digite / numa linha vazia para inserir")
+  );
 
   const editor = document.createElement("div");
   editor.className = "input rich-text-editor";
@@ -1985,15 +2226,8 @@ function buildRichTextField(labelText, value, dataset, opts) {
   // sempre recalculado a partir do HTML finalizado em applyArticleField.
   if (opts.onInput) editor.addEventListener("input", () => opts.onInput(editor.innerHTML));
 
-  // Editor à esquerda, barra de botões à direita (ver .rich-text-layout no
-  // CSS) — a barra é sticky, então acompanha o scroll conforme o corpo é
-  // mais alto que a tela, ficando sempre alcançável mesmo editando perto do
-  // fim de um texto longo (sem isso, editar o final exigia rolar de volta
-  // pro topo do campo pra alcançar os botões).
-  const layout = el("div", "rich-text-layout");
-  layout.appendChild(editor);
-  layout.appendChild(toolbar);
-  wrap.appendChild(layout);
+  wrap.appendChild(toolbar);
+  wrap.appendChild(editor);
 
   // Clicar no botão de imagem tira o foco do editor (é um <button>), então
   // sem guardar a seleção de texto a imagem sempre cairia no fim do
@@ -2008,6 +2242,388 @@ function buildRichTextField(labelText, value, dataset, opts) {
   editor.addEventListener("keyup", saveSelection);
   editor.addEventListener("mouseup", saveSelection);
 
+  // ── Blocos: título, parágrafo, lista ──
+  const SEL = () => window.getSelection();
+  const elementoDoCursor = () => {
+    const n = SEL()?.anchorNode;
+    return n ? (n.nodeType === 1 ? n : n.parentElement) : null;
+  };
+  const naLista = () => !!elementoDoCursor()?.closest("li");
+  function blocoAtual() {
+    const sel = SEL();
+    if (!sel?.rangeCount || !editor.contains(sel.anchorNode) || sel.anchorNode === editor) return null;
+    let no = sel.anchorNode;
+    while (no.parentNode !== editor) no = no.parentNode;
+    return no;
+  }
+  function textoAntesDoCursor(bloco) {
+    const r = SEL().getRangeAt(0);
+    const antes = document.createRange();
+    antes.setStart(bloco, 0);
+    antes.setEnd(r.startContainer, r.startOffset);
+    return antes;
+  }
+  // Depois de apagar o "## " ou o "/…": linha vazia ganha um <br> (senão
+  // some) e o cursor volta para o começo dela, antes do <br> — com o cursor
+  // depois dele, o formatBlock divide a linha em duas.
+  function prepararLinha(bloco) {
+    if (bloco.nodeType !== 1 || bloco.textContent || bloco.querySelector("img")) return;
+    if (!bloco.querySelector("br")) bloco.appendChild(document.createElement("br"));
+    const r = document.createRange();
+    r.setStart(bloco, 0);
+    r.collapse(true);
+    SEL().removeAllRanges();
+    SEL().addRange(r);
+  }
+  function sairDaLista() {
+    const li = elementoDoCursor()?.closest("li");
+    if (li) document.execCommand(li.parentElement.tagName === "OL" ? "insertOrderedList" : "insertUnorderedList");
+  }
+  function virarBloco(tag) {
+    sairDaLista();
+    document.execCommand("formatBlock", false, tag);
+    // O formatBlock do Chrome às vezes deixa um <p></p> totalmente vazio
+    // (invisível) logo depois da linha: tira só esse, vizinho da linha.
+    const bloco = blocoAtual();
+    for (const vizinho of [bloco?.previousSibling, bloco?.nextSibling]) {
+      if (vizinho?.nodeType === 1 && /^(P|DIV)$/.test(vizinho.tagName) && !vizinho.textContent && !vizinho.querySelector("br, img")) vizinho.remove();
+    }
+  }
+  function virarLista(tag) {
+    const cmd = tag === "ol" ? "insertOrderedList" : "insertUnorderedList";
+    if (!document.queryCommandState(cmd)) document.execCommand(cmd);
+  }
+  function alternarTitulo() {
+    const atual = (document.queryCommandValue("formatBlock") || "").toLowerCase();
+    virarBloco(atual === TITULO ? "p" : TITULO);
+  }
+  // Cursor no editor: o que estava guardado, ou o fim do texto.
+  function garantirCursor() {
+    const sel = SEL();
+    if (sel?.rangeCount && editor.contains(sel.anchorNode)) return;
+    editor.focus();
+    if (savedRange) {
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+      return;
+    }
+    if (!editor.lastChild) editor.innerHTML = "<p><br></p>";
+    const r = document.createRange();
+    r.selectNodeContents(editor.lastChild);
+    r.collapse(false);
+    sel.removeAllRanges();
+    sel.addRange(r);
+  }
+  // Escrever "## " (e, nas páginas, "- " ou "1. ") no começo de uma linha.
+  const ATALHOS_DE_LINHA = simples
+    ? { "#": () => virarBloco("h2"), "##": () => virarBloco("h2"), "###": () => virarBloco("h3"), "-": () => virarLista("ul"), "*": () => virarLista("ul"), "1.": () => virarLista("ol") }
+    : { "##": () => virarBloco("h3"), "###": () => virarBloco("h3") };
+
+  // Posição de um retângulo da tela dentro do campo (os menus ficam em
+  // position:absolute no .rich-text-field).
+  function posicionar(menu, rect, { abaixo = false } = {}) {
+    const base = wrap.getBoundingClientRect();
+    menu.style.visibility = "hidden";
+    menu.hidden = false;
+    const largura = menu.offsetWidth;
+    const altura = menu.offsetHeight;
+    let esquerda = rect.left - base.left + (abaixo ? 0 : rect.width / 2 - largura / 2);
+    esquerda = Math.max(0, Math.min(esquerda, wrap.clientWidth - largura));
+    let topo = abaixo ? rect.bottom - base.top + 6 : rect.top - base.top - altura - 8;
+    if (!abaixo && rect.top - altura - 8 < 64) topo = rect.bottom - base.top + 8;
+    menu.style.left = `${esquerda}px`;
+    menu.style.top = `${topo}px`;
+    menu.style.visibility = "";
+  }
+  function retanguloDoCursor() {
+    const sel = SEL();
+    if (!sel?.rangeCount) return editor.getBoundingClientRect();
+    const r = sel.getRangeAt(0);
+    const rect = r.getClientRects()[0] || r.getBoundingClientRect();
+    if (rect && (rect.width || rect.height)) return rect;
+    const bloco = blocoAtual();
+    return (bloco?.nodeType === 1 ? bloco : editor).getBoundingClientRect();
+  }
+
+  // ── Menu "/" e "+ Inserir" ──
+  // Lista de blocos que dá para pôr na linha do cursor. Pelo "/", o que se
+  // digita depois da barra filtra a lista, e escolher apaga o "/…".
+  const menuDeBlocos = el("div", "menu-editor menu-blocos");
+  menuDeBlocos.hidden = true;
+  menuDeBlocos.setAttribute("role", "listbox");
+  menuDeBlocos.aberto = false;
+  let itensVisiveis = [];
+  let itemAtivo = 0;
+  let pelaBarra = false;
+  const semAcento = (t) => t.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  function desenharMenuDeBlocos(filtro = "") {
+    menuDeBlocos.innerHTML = "";
+    itensVisiveis = ITENS_DO_MENU.filter((it) => semAcento(it.rotulo).includes(semAcento(filtro)));
+    itemAtivo = Math.min(itemAtivo, Math.max(0, itensVisiveis.length - 1));
+    itensVisiveis.forEach((it, k) => {
+      const b = el("button", "menu-blocos-item");
+      b.type = "button";
+      b.setAttribute("role", "option");
+      if (k === itemAtivo) b.classList.add("ativo");
+      b.appendChild(el("span", "menu-blocos-rotulo", it.rotulo));
+      b.appendChild(el("span", "menu-blocos-dica", it.dica));
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", () => escolherBloco(it));
+      menuDeBlocos.appendChild(b);
+    });
+    return itensVisiveis.length;
+  }
+  function abrirMenuDeBlocos({ ancora = null, barra = false } = {}) {
+    pelaBarra = barra;
+    itemAtivo = 0;
+    desenharMenuDeBlocos();
+    menuDeBlocos.aberto = true;
+    if (ancora) posicionar(menuDeBlocos, ancora.getBoundingClientRect(), { abaixo: true });
+    else posicionar(menuDeBlocos, retanguloDoCursor(), { abaixo: true });
+  }
+  function fecharMenuDeBlocos() {
+    menuDeBlocos.hidden = true;
+    menuDeBlocos.aberto = false;
+    pelaBarra = false;
+  }
+  function escolherBloco(it) {
+    garantirCursor();
+    if (pelaBarra) {
+      // Apaga o "/" e o filtro digitado, deixando a linha vazia.
+      const bloco = blocoAtual();
+      if (bloco) {
+        textoAntesDoCursor(bloco).deleteContents();
+        prepararLinha(bloco);
+      }
+    }
+    fecharMenuDeBlocos();
+    saveSelection();
+    it.acao();
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    saveSelection();
+  }
+  wrap.appendChild(menuDeBlocos);
+
+  // ── Menu da seleção ──
+  // Aparece em cima do trecho selecionado: negrito, itálico, link e título.
+  // O link é digitado no próprio menu (sem janela do navegador).
+  const menuDeSelecao = el("div", "menu-editor menu-selecao");
+  menuDeSelecao.hidden = true;
+  const botoesDaSelecao = el("div", "menu-selecao-botoes");
+  const botaoDaSelecao = (texto, titulo, classe, acao) => {
+    const b = el("button", `menu-selecao-btn ${classe || ""}`, texto);
+    b.type = "button";
+    b.title = titulo;
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      acao();
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      atualizarMenuDeSelecao();
+    });
+    botoesDaSelecao.appendChild(b);
+    return b;
+  };
+  const atalho = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘" : "Ctrl+";
+  const negritoBtn = botaoDaSelecao("B", `Negrito (${atalho}B)`, "menu-selecao-btn--negrito", () => document.execCommand("bold"));
+  const italicoBtn = botaoDaSelecao("I", `Itálico (${atalho}I)`, "menu-selecao-btn--italico", () => document.execCommand("italic"));
+  const linkBtn = el("button", "menu-selecao-btn", "Link");
+  linkBtn.type = "button";
+  linkBtn.title = `Link (${atalho}K)`;
+  linkBtn.addEventListener("mousedown", (e) => e.preventDefault());
+  linkBtn.addEventListener("click", () => abrirCampoDeLink());
+  botoesDaSelecao.appendChild(linkBtn);
+  const tituloBtn = botaoDaSelecao(NOME_DO_TITULO, `Transformar a linha em ${NOME_DO_TITULO.toLowerCase()} (ou voltar a texto)`, "", alternarTitulo);
+
+  const formLink = el("form", "menu-selecao-link");
+  formLink.hidden = true;
+  const campoLink = document.createElement("input");
+  campoLink.type = "text";
+  campoLink.className = "menu-selecao-campo";
+  campoLink.placeholder = "https://… ou /pagina-do-site";
+  campoLink.setAttribute("aria-label", "Endereço do link");
+  const okLink = el("button", "menu-selecao-btn", "OK");
+  okLink.type = "submit";
+  const tirarLink = el("button", "menu-selecao-btn", "Tirar link");
+  tirarLink.type = "button";
+  formLink.append(campoLink, okLink, tirarLink);
+  menuDeSelecao.append(botoesDaSelecao, formLink);
+  wrap.appendChild(menuDeSelecao);
+
+  let rangeDoLink = null;
+  const linkNaSelecao = () => elementoDoCursor()?.closest("a");
+  function abrirCampoDeLink() {
+    const sel = SEL();
+    if (!sel?.rangeCount || !editor.contains(sel.anchorNode)) return;
+    const a = linkNaSelecao();
+    if (sel.isCollapsed) {
+      if (!a) {
+        toast("Selecione o trecho que vai virar link.", "error");
+        return;
+      }
+      const r = document.createRange();
+      r.selectNodeContents(a);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+    rangeDoLink = sel.getRangeAt(0).cloneRange();
+    botoesDaSelecao.hidden = true;
+    formLink.hidden = false;
+    tirarLink.hidden = !a;
+    campoLink.value = a?.getAttribute("href") || "";
+    posicionar(menuDeSelecao, rangeDoLink.getBoundingClientRect());
+    campoLink.focus();
+    campoLink.select();
+  }
+  function voltarParaASelecao() {
+    editor.focus();
+    if (rangeDoLink) {
+      const sel = SEL();
+      sel.removeAllRanges();
+      sel.addRange(rangeDoLink);
+    }
+    rangeDoLink = null;
+    formLink.hidden = true;
+    botoesDaSelecao.hidden = false;
+  }
+  formLink.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const url = campoLink.value.trim();
+    voltarParaASelecao();
+    if (url) document.execCommand("createLink", false, url);
+    else if (linkNaSelecao()) document.execCommand("unlink");
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    atualizarMenuDeSelecao();
+  });
+  tirarLink.addEventListener("click", () => {
+    voltarParaASelecao();
+    const a = linkNaSelecao();
+    if (a) {
+      const r = document.createRange();
+      r.selectNodeContents(a);
+      SEL().removeAllRanges();
+      SEL().addRange(r);
+      document.execCommand("unlink");
+    }
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    atualizarMenuDeSelecao();
+  });
+  campoLink.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    voltarParaASelecao();
+    atualizarMenuDeSelecao();
+  });
+
+  function atualizarMenuDeSelecao() {
+    if (!formLink.hidden && menuDeSelecao.contains(document.activeElement)) return;
+    const sel = SEL();
+    const ativo = sel?.rangeCount && !sel.isCollapsed && editor.contains(sel.anchorNode) && editor.contains(sel.focusNode) && sel.toString().trim();
+    if (!ativo) {
+      menuDeSelecao.hidden = true;
+      formLink.hidden = true;
+      botoesDaSelecao.hidden = false;
+      return;
+    }
+    formLink.hidden = true;
+    botoesDaSelecao.hidden = false;
+    negritoBtn.classList.toggle("ativo", document.queryCommandState("bold"));
+    italicoBtn.classList.toggle("ativo", document.queryCommandState("italic"));
+    linkBtn.classList.toggle("ativo", !!linkNaSelecao());
+    tituloBtn.classList.toggle("ativo", (document.queryCommandValue("formatBlock") || "").toLowerCase() === TITULO);
+    const rect = sel.getRangeAt(0).getBoundingClientRect();
+    // No celular, o menu do próprio sistema aparece em cima da seleção.
+    posicionar(menuDeSelecao, rect, { abaixo: matchMedia("(pointer: coarse)").matches });
+  }
+  editor.atualizarMenuDeSelecao = atualizarMenuDeSelecao;
+  ligarMenusDeSelecao();
+
+  editor.addEventListener("blur", () => {
+    setTimeout(() => {
+      if (!wrap.contains(document.activeElement)) fecharMenuDeBlocos();
+    }, 0);
+  });
+
+  // ── Teclado ──
+  editor.addEventListener("keydown", (e) => {
+    if (menuDeBlocos.aberto) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        const n = itensVisiveis.length;
+        if (n) itemAtivo = (itemAtivo + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+        desenharMenuDeBlocos(pelaBarra ? (blocoAtual()?.textContent || "").slice(1) : "");
+        return;
+      }
+      if ((e.key === "Enter" || e.key === "Tab") && itensVisiveis.length) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        escolherBloco(itensVisiveis[itemAtivo]);
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        fecharMenuDeBlocos();
+        return;
+      }
+    }
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+      const tecla = e.key.toLowerCase();
+      if (tecla === "b" || tecla === "i") {
+        e.preventDefault();
+        document.execCommand(tecla === "b" ? "bold" : "italic");
+        editor.dispatchEvent(new Event("input", { bubbles: true }));
+        atualizarMenuDeSelecao();
+        return;
+      }
+      if (tecla === "k") {
+        e.preventDefault();
+        abrirCampoDeLink();
+        return;
+      }
+      // Sublinhado não existe no site (o Markdown não tem, e o corpo das
+      // notícias segue o mesmo conjunto de formatos).
+      if (tecla === "u") {
+        e.preventDefault();
+        return;
+      }
+    }
+    const sel = SEL();
+    if (!sel?.rangeCount || !sel.isCollapsed) return;
+    if (e.key === " " && !naLista()) {
+      const bloco = blocoAtual();
+      if (!bloco) return;
+      const antes = textoAntesDoCursor(bloco);
+      const aplicar = ATALHOS_DE_LINHA[antes.toString()];
+      if (!aplicar) return;
+      e.preventDefault();
+      antes.deleteContents();
+      prepararLinha(bloco);
+      aplicar();
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      return;
+    }
+    // Backspace no começo de um título: volta a ser texto comum.
+    if (e.key === "Backspace") {
+      const bloco = blocoAtual();
+      if (bloco?.nodeType === 1 && /^H[1-6]$/.test(bloco.tagName) && textoAntesDoCursor(bloco).toString() === "") {
+        e.preventDefault();
+        document.execCommand("formatBlock", false, "p");
+        editor.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+  });
+
+  editor.addEventListener("input", (e) => {
+    if (e.inputType === "insertText" && e.data === "/" && !menuDeBlocos.aberto && !naLista()) {
+      const bloco = blocoAtual();
+      if (bloco && bloco.textContent === "/") abrirMenuDeBlocos({ barra: true });
+      return;
+    }
+    if (menuDeBlocos.aberto && pelaBarra) {
+      const texto = blocoAtual()?.textContent || "";
+      if (!texto.startsWith("/") || !desenharMenuDeBlocos(texto.slice(1))) fecharMenuDeBlocos();
+    }
+  });
+
   // Enter (sem Shift) sempre quebra o parágrafo do mesmo jeito, em vez de
   // deixar o comportamento nativo do contenteditable decidir (ver
   // splitEditorParagraphAtCursor acima). Shift+Enter continua nativo
@@ -2018,24 +2634,6 @@ function buildRichTextField(labelText, value, dataset, opts) {
     if (opts.simples && window.getSelection()?.anchorNode?.parentElement?.closest("li, td, th")) return;
     e.preventDefault();
     splitEditorParagraphAtCursor(editor);
-    saveSelection();
-  });
-
-  // Abrir o <select> também tira o foco do editor — guarda a seleção antes
-  // de abrir (mousedown) e restaura na hora de aplicar (change), mesma
-  // lógica do botão de imagem.
-  sizeSelect.addEventListener("mousedown", saveSelection);
-  sizeSelect.addEventListener("change", () => {
-    const value = sizeSelect.value;
-    sizeSelect.value = "";
-    if (!value) return;
-    editor.focus();
-    const sel = window.getSelection();
-    if (savedRange) {
-      sel.removeAllRanges();
-      sel.addRange(savedRange);
-    }
-    document.execCommand("fontSize", false, value);
     saveSelection();
   });
 
@@ -2163,52 +2761,110 @@ function buildRichTextField(labelText, value, dataset, opts) {
   return wrap;
 }
 
-// Botão "Salvar alterações" de um card: é o único gatilho que sincroniza
-// os campos daquele bloco pra dentro de contentData e marca a seção como
-// suja — digitar/marcar checkbox/escolher arquivo, sozinhos, não fazem
-// nada até esse clique (ver collectArticleCardFields/collectEpisodeCardFields
-// e confirmFileUpload em buildFileUploadField).
+// Botão "Publicar" da tela de um item. `onSave` confirma os arquivos
+// escolhidos e passa os campos do cartão para contentData; publicarItem
+// grava só a seção do item.
 function buildSaveCardButton(onSave) {
-  const btn = el("button", "btn btn-primary btn-small", "Salvar alterações");
+  const btn = el("button", "btn btn-primary btn-small btn-publicar", "Publicar");
   btn.type = "button";
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
-    onSave();
+    publicarItem(btn.closest(".card"), onSave);
   });
   return btn;
 }
 
-// Abre/fecha o acordeão de um card (artigo/episódio/integrante) via
-// max-height + overflow:hidden (CSS, ver .card-body). Só que overflow:hidden
-// num ancestral quebra `position: sticky` (a barra de botões do corpo da
-// notícia, ver .rich-text-toolbar) — o sticky passa a calcular a posição em
-// relação a essa caixa, que nunca rola de verdade, em vez da página, e
-// nunca gruda. Por isso libera o overflow assim que a abertura termina de
-// transicionar, e trava de novo antes de fechar (senão o conteúdo vaza
-// durante a transição de encolhimento).
-// siblingsContainer (opcional): lista onde o card vive — passe pra manter só
-// 1 card aberto por vez nela (fecha os outros ao abrir este). Sem isso,
-// comportamento de sempre: cada card abre/fecha independente dos outros
-// (é o caso de Integrantes, que não usa siblingsContainer).
-function wireCardAccordion(card, header, body, siblingsContainer) {
+// Tela de um item (notícia, episódio, verbete, categoria, integrante). Na
+// lista, o item é só uma linha (o .card-header); clicar nela abre a tela do
+// item: a seção ganha .em-detalhe e o CSS esconde o resto da lista. "←
+// voltar" (ou outra tela na barra lateral) fecha. `voltarPara` é o nome da
+// lista, usado no botão de voltar.
+function wireCardAccordion(card, header, body, _container, voltarPara) {
+  const voltar = el("button", "item-voltar", `← ${voltarPara || "Voltar para a lista"}`);
+  voltar.type = "button";
+  voltar.addEventListener("click", () => {
+    // Pega o painel antes: descartar redesenha a lista e tira este card da página.
+    const panel = card.closest(".section-panel");
+    if (podeSairDaTela()) fecharItem(panel);
+  });
+  card.prepend(voltar);
   header.addEventListener("click", () => {
-    const opening = !card.classList.contains("open");
-    if (opening && siblingsContainer) {
-      siblingsContainer.querySelectorAll(":scope > .card.open").forEach((openCard) => {
-        if (openCard === card) return;
-        openCard.classList.remove("open");
-        const openBody = openCard.querySelector(".card-body");
-        if (openBody) openBody.style.overflow = "";
-      });
-    }
-    if (!opening) body.style.overflow = "";
-    card.classList.toggle("open");
+    if (card.classList.contains("open") || !listaSemPendencias(secaoDoCard(card))) return;
+    if (podeSairDaTela()) abrirItem(card);
   });
-  body.addEventListener("transitionend", (e) => {
-    if (e.propertyName === "max-height" && card.classList.contains("open")) {
-      body.style.overflow = "visible";
-    }
-  });
+}
+
+// Cards de item abertos guardam a posição da lista, para voltar ao mesmo
+// ponto ao fechar.
+const posicaoDaLista = new WeakMap();
+
+// `novo`: item criado agora e ainda não publicado (sair sem publicar o
+// descarta). `manterRolagem`: reabertura depois de publicar.
+function abrirItem(card, { novo = false, manterRolagem = false } = {}) {
+  const panel = card.closest(".section-panel");
+  if (!panel) return;
+  if (!panel.classList.contains("em-detalhe")) posicaoDaLista.set(panel, window.scrollY);
+  panel.querySelectorAll(".card.open").forEach((c) => c !== card && c.classList.remove("open"));
+  card.classList.add("open");
+  panel.classList.add("em-detalhe");
+  abrirTela(card, [secaoDoCard(card)], novo);
+  atualizarBarrasDeLista();
+  if (!manterRolagem) irParaOConteudo();
+}
+
+// Rola até o começo da área de conteúdo (no celular a barra lateral fica em
+// cima dela; no computador isso é o topo da página).
+function irParaOConteudo() {
+  const conteudo = document.querySelector(".adm-content");
+  const y = conteudo.getBoundingClientRect().top + window.scrollY - 56;
+  window.scrollTo(0, Math.max(0, y));
+}
+
+function fecharItem(panel) {
+  if (!panel?.classList.contains("em-detalhe")) return;
+  panel.querySelectorAll(".card.open").forEach((c) => c.classList.remove("open"));
+  panel.classList.remove("em-detalhe");
+  if (telaAberta && panel.contains(telaAberta.root)) telaAberta = null;
+  atualizarBarrasDeLista();
+  window.scrollTo(0, posicaoDaLista.get(panel) || 0);
+}
+
+// Abas "Português | English" de uma tela de item: `pt` e `en` são listas de
+// campos já montados. `pares` lista os campos com tradução, como
+// [chavePt, chaveEn] (data-key): a aba English mostra quantos têm texto em
+// português e estão vazios em inglês. `dica` aparece no topo da aba English.
+function blocoDeIdiomas({ pt, en, pares = [], dica }) {
+  const wrap = el("div", "field full bloco-idiomas");
+  const blocoPt = el("div", "fields-grid campo-pt");
+  pt.forEach((f) => blocoPt.appendChild(f));
+  const blocoEn = el("div", "fields-grid campo-en");
+  if (dica) blocoEn.appendChild(el("p", "field-hint full", dica));
+  en.forEach((f) => blocoEn.appendChild(f));
+  wrap.appendChild(blocoPt);
+  wrap.appendChild(blocoEn);
+  const valor = (bloco, chave) => {
+    const campo = bloco.querySelector(`[data-key="${chave}"]`);
+    if (!campo) return "";
+    return (campo.isContentEditable ? campo.textContent : campo.value || "").trim();
+  };
+  abasDeIdioma(wrap, () => pares.filter(([a, b]) => valor(blocoPt, a) && !valor(blocoEn, b)).length);
+  return wrap;
+}
+
+// Com a ordem da lista alterada e não publicada, abrir ou criar um item
+// misturaria as duas coisas (descartar o item desfaria também a ordem).
+function listaSemPendencias(secao) {
+  if (!dirty.has(secao)) return true;
+  toast('Antes, publique ou desfaça as alterações da lista (barra no rodapé).', "error");
+  return false;
+}
+
+// Selo "falta traduzir" das linhas da lista.
+function seloFaltaTraduzir(falta) {
+  if (!falta) return document.createTextNode("");
+  const selo = el("span", "selo-traduzir", "falta traduzir");
+  selo.title = "A versão em inglês ainda não foi preenchida";
+  return selo;
 }
 
 function buildReorderButtons(idx, total, onUp, onDown) {
@@ -2463,24 +3119,35 @@ function collectVerbeteFontes() {
   });
 }
 
-// Seção colapsável "Versão em português" de uma notícia — categoria, título,
-// subtítulo, autor, data/hora, id e referências ficam fora, direto no card
-// (ver buildArticleCard) por não serem específicos de um corpo/tradução em
-// particular. Existe pra poder fechar sozinha quando "Versão em inglês" abre
-// (mutuamente exclusivas — ver buildArticleCard), já que os dois corpos
-// (PT/EN) abertos ao mesmo tempo deixavam o card bem extenso.
+// Campos da aba "Português" da notícia (ver buildArticleCard): categoria,
+// título, subtítulo, corpo e imagens. Autor, data, destaque, id e
+// referências ficam fora das abas, por valerem para os dois idiomas.
 function buildArticlePortugueseSection(article, i) {
-  const wrap = el("div", "field full article-pt-section");
+  const campos = [];
+  const panel = { appendChild: (f) => campos.push(f) };
 
-  const summary = el("button", "article-lang-summary");
-  summary.type = "button";
-  const chevron = el("span", "article-lang-chevron", "▸");
-  summary.appendChild(chevron);
-  summary.appendChild(el("span", "", "Versão em português"));
-  wrap.appendChild(summary);
+  panel.appendChild(buildArticleCategoryField(article, i));
+  const titulo = buildTextarea("Título", article.title, { article: i, key: "title" }, false, 2);
+  titulo.classList.add("full");
+  panel.appendChild(titulo);
+  const subtitulo = buildTextarea("Subtítulo (opcional)", article.subtitle, { article: i, key: "subtitle" }, false, 2);
+  subtitulo.classList.add("full");
+  panel.appendChild(subtitulo);
 
-  const panel = el("div", "article-lang-panel fields-grid");
-  wrap.appendChild(panel);
+  let readingTimeInput = null;
+  const bodyField = buildRichTextField(
+    "Corpo",
+    articleBodyToHtml(article.body),
+    { article: i, key: "body" },
+    {
+      id: article.id,
+      folder: "images/noticias",
+      buildImageMessage: (path) => `admin: envia imagem do corpo da notícia "${article.title || article.id}" (${path})`,
+      onInput: (html) => { if (readingTimeInput) readingTimeInput.value = computeReadingTime(html); },
+    }
+  );
+  bodyField.classList.add("full");
+  panel.appendChild(bodyField);
 
   const imageField = buildFileUploadField(
     "Imagem de capa (opcional)",
@@ -2527,7 +3194,7 @@ function buildArticlePortugueseSection(article, i) {
   const readingTimeField = el("div", "field");
   readingTimeField.appendChild(el("label", "", "Tempo de leitura"));
   readingTimeField.appendChild(el("span", "field-hint", "Calculado automaticamente a partir da quantidade de caracteres do corpo."));
-  const readingTimeInput = document.createElement("input");
+  readingTimeInput = document.createElement("input");
   readingTimeInput.className = "input";
   readingTimeInput.type = "text";
   readingTimeInput.value = computeReadingTime(article.body);
@@ -2535,87 +3202,24 @@ function buildArticlePortugueseSection(article, i) {
   readingTimeField.appendChild(readingTimeInput);
   panel.appendChild(readingTimeField);
 
-  panel.appendChild(
-    buildCheckboxField(
-      "Destacar na Home",
-      article.featured,
-      { article: i, key: "featured" },
-      () => enforceFeaturedLimit("articles")
-    )
-  );
 
-  const bodyField = buildRichTextField(
-    "Corpo",
-    articleBodyToHtml(article.body),
-    { article: i, key: "body" },
-    {
-      id: article.id,
-      folder: "images/noticias",
-      buildImageMessage: (path) => `admin: envia imagem do corpo da notícia "${article.title || article.id}" (${path})`,
-      onInput: (html) => { readingTimeInput.value = computeReadingTime(html); },
-    }
-  );
-  bodyField.classList.add("full");
-  panel.appendChild(bodyField);
-
-  wrap.summary = summary;
-  wrap.panel = panel;
-  wrap.setOpen = function setOpen(isOpen) {
-    panel.hidden = !isOpen;
-    summary.classList.toggle("open", isOpen);
-  };
-  wrap.imageField = imageField;
-  wrap.imageVerticalField = imageVerticalField;
-  wrap.bodyField = bodyField;
-
-  return wrap;
+  return { campos, imageField, imageVerticalField, bodyField };
 }
 
-// Seção colapsável "Versão em inglês" de uma notícia — todos os campos são
-// opcionais (categoryEn/titleEn/subtitleEn/imageCaptionEn/bodyEn/
-// readingTimeEn no JSON; ver localize() em src/main.ts pra como o site usa
-// isso, caindo pro campo em português quando algum não foi preenchido).
-// Fecha por padrão (mutuamente exclusiva com "Versão em português" — ver
-// buildArticleCard, que decide o estado inicial das duas).
-// Seção recolhível "Versão em inglês (opcional)" de episódio, verbete e
-// categoria — mesmo visual da notícia (buildArticleEnglishSection). Começa
-// fechada. Campos em branco = o item fica só em português no site.
-function buildEnglishSection(hint, fields) {
-  const wrap = el("div", "field full article-en-section");
-  const summary = el("button", "article-lang-summary");
-  summary.type = "button";
-  summary.appendChild(el("span", "article-lang-chevron", "▸"));
-  summary.appendChild(el("span", "", "Versão em inglês (opcional)"));
-  wrap.appendChild(summary);
-  const panel = el("div", "article-lang-panel fields-grid");
-  panel.appendChild(el("p", "field-hint full", hint));
-  fields.forEach((field) => panel.appendChild(field));
-  panel.hidden = true;
-  summary.addEventListener("click", () => {
-    const opening = panel.hidden;
-    panel.hidden = !opening;
-    summary.classList.toggle("open", opening);
-  });
-  wrap.appendChild(panel);
-  return wrap;
-}
-
+// Campos da aba "English" da notícia. Todos opcionais: o que ficar vazio
+// usa o texto em português no site (ver localize() no site).
 function buildArticleEnglishSection(article, i) {
-  const wrap = el("div", "field full article-en-section");
-
-  const summary = el("button", "article-lang-summary");
-  summary.type = "button";
-  const chevron = el("span", "article-lang-chevron", "▸");
-  summary.appendChild(chevron);
-  summary.appendChild(el("span", "", "Versão em inglês (opcional)"));
-  wrap.appendChild(summary);
-
-  const panel = el("div", "article-lang-panel fields-grid");
+  const campos = [];
+  const panel = { appendChild: (f) => campos.push(f) };
 
   panel.appendChild(buildInput("Categoria (EN)", "text", article.categoryEn, { article: i, key: "categoryEn" }, "Space Agriculture"));
-  panel.appendChild(buildTextarea("Título (EN)", article.titleEn, { article: i, key: "titleEn" }, false, 2));
-  panel.appendChild(buildTextarea("Subtítulo (EN)", article.subtitleEn, { article: i, key: "subtitleEn" }, false, 2));
-  panel.appendChild(buildTextarea("Legenda da imagem de capa (EN)", article.imageCaptionEn, { article: i, key: "imageCaptionEn" }, false, 3));
+  const tituloEn = buildTextarea("Título (EN)", article.titleEn, { article: i, key: "titleEn" }, false, 2);
+  tituloEn.classList.add("full");
+  panel.appendChild(tituloEn);
+  const subtituloEn = buildTextarea("Subtítulo (EN)", article.subtitleEn, { article: i, key: "subtitleEn" }, false, 2);
+  subtituloEn.classList.add("full");
+  panel.appendChild(subtituloEn);
+  const legendaEn = buildTextarea("Legenda da imagem de capa (EN)", article.imageCaptionEn, { article: i, key: "imageCaptionEn" }, false, 3);
 
   const readingTimeEnField = el("div", "field");
   readingTimeEnField.appendChild(el("label", "", "Tempo de leitura (EN)"));
@@ -2626,7 +3230,6 @@ function buildArticleEnglishSection(article, i) {
   readingTimeEnInput.value = article.bodyEn ? computeReadingTime(article.bodyEn) : "";
   readingTimeEnInput.disabled = true;
   readingTimeEnField.appendChild(readingTimeEnInput);
-  panel.appendChild(readingTimeEnField);
 
   // opts.id com sufixo "-en" só pra dar um prefixo de arquivo diferente às
   // imagens deste corpo (ver nextImageNumber/insertPendingImage em
@@ -2671,18 +3274,11 @@ function buildArticleEnglishSection(article, i) {
   panel.appendChild(copyBodyWarning);
 
   panel.appendChild(bodyEnField);
+  legendaEn.classList.add("full");
+  panel.appendChild(legendaEn);
+  panel.appendChild(readingTimeEnField);
 
-  wrap.appendChild(panel);
-
-  wrap.summary = summary;
-  wrap.panel = panel;
-  wrap.setOpen = function setOpen(isOpen) {
-    panel.hidden = !isOpen;
-    summary.classList.toggle("open", isOpen);
-  };
-  wrap.confirmBodyImages = bodyEnField.confirmBodyImages;
-
-  return wrap;
+  return { campos, confirmBodyImages: bodyEnField.confirmBodyImages };
 }
 
 // ----------------------------------------------------------------------------
@@ -2715,23 +3311,28 @@ function buildArticleCard(article, i, total, container) {
   left.appendChild(buildReorderButtons(i, total, () => moveArticle(i, i - 1), () => moveArticle(i, i + 1)));
   left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
   left.appendChild(el("span", "card-name", article.title || "(sem título)"));
-  left.appendChild(el("span", "card-meta", `${article.category || ""} · ${article.date || ""}`));
+  left.appendChild(el("span", "card-meta", [article.category, article.date, article.author].filter(Boolean).join(" · ")));
+  left.appendChild(seloFaltaTraduzir(article.title && !article.titleEn));
   header.appendChild(left);
-  header.appendChild(el("span", "card-chevron", "▼"));
+  header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
 
   const body = el("div", "card-body");
-  wireCardAccordion(card, header, body, container);
+  wireCardAccordion(card, header, body, container, "Notícias");
   const grid = el("div", "fields-grid");
 
-  grid.appendChild(buildReadOnlyField("Identificador (id)", article.id));
+  const ptSection = buildArticlePortugueseSection(article, i);
+  const englishSection = buildArticleEnglishSection(article, i);
+  grid.appendChild(
+    blocoDeIdiomas({
+      pt: ptSection.campos,
+      en: englishSection.campos,
+      pares: [["title", "titleEn"], ["subtitle", "subtitleEn"], ["body", "bodyEn"], ["imageCaption", "imageCaptionEn"]],
+      dica: "Tudo opcional. O que ficar vazio aparece em português no site em inglês.",
+    })
+  );
 
-  // Categoria/título/subtítulo/autor/data/hora não são específicos de um
-  // corpo/tradução em particular, então ficam sempre visíveis, antes do
-  // toggle PT/EN.
-  grid.appendChild(buildArticleCategoryField(article, i));
-  grid.appendChild(buildTextarea("Título", article.title, { article: i, key: "title" }, false, 2));
-  grid.appendChild(buildTextarea("Subtítulo (opcional)", article.subtitle, { article: i, key: "subtitle" }, false, 2));
+  grid.appendChild(el("h3", "section-heading full", "Autor, data e destaque"));
 
   const authorField = buildInput("Autor (opcional)", "text", article.author, { article: i, key: "author" }, "Pedro");
   const authorInput = authorField.querySelector("input");
@@ -2757,29 +3358,15 @@ function buildArticleCard(article, i, total, container) {
 
   grid.appendChild(buildInput("Data", "date", article.date, { article: i, key: "date" }));
   grid.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no rss.xml)", "time", article.time, { article: i, key: "time" }));
-
-  const ptSection = buildArticlePortugueseSection(article, i);
-  const englishSection = buildArticleEnglishSection(article, i);
-
-  // Só 1 dos dois corpos (PT/EN) fica aberto de cada vez — abrir um sempre
-  // fecha o outro — pra notícia com tradução não ficar com o dobro do
-  // conteúdo visível ao mesmo tempo. Começam as duas fechadas: abrir a
-  // notícia no painel não deve já despejar um corpo inteiro na tela.
-  ptSection.setOpen(false);
-  englishSection.setOpen(false);
-  ptSection.summary.addEventListener("click", () => {
-    const opening = ptSection.panel.hidden;
-    ptSection.setOpen(opening);
-    if (opening) englishSection.setOpen(false);
-  });
-  englishSection.summary.addEventListener("click", () => {
-    const opening = englishSection.panel.hidden;
-    englishSection.setOpen(opening);
-    if (opening) ptSection.setOpen(false);
-  });
-
-  grid.appendChild(ptSection);
-  grid.appendChild(englishSection);
+  grid.appendChild(
+    buildCheckboxField(
+      "Destacar na Home",
+      article.featured,
+      { article: i, key: "featured" },
+      () => enforceFeaturedLimit("articles")
+    )
+  );
+  grid.appendChild(buildReadOnlyField("Identificador (id)", article.id));
 
   // Referências não são traduzidas (mesmo texto nas duas versões) — aparecem
   // só depois das duas seções de idioma, não competindo por espaço com elas.
@@ -2805,7 +3392,6 @@ function buildArticleCard(article, i, total, container) {
     englishSection.confirmBodyImages();
     collectArticleCardFields(i);
     markDirty("articles");
-    toast('Alterações da notícia prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover notícia");
@@ -2826,20 +3412,22 @@ function moveArticle(from, to) {
   contentData.articles.splice(to, 0, item);
   renderArticlesList();
   markDirty("articles");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeArticle(i) {
   const article = contentData.articles[i];
-  if (!confirm(`Remover a notícia "${article.title || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  if (!confirm(`Remover a notícia "${article.title || "(sem título)"}"? A remoção é publicada agora.`)) return;
+  fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.articles.splice(i, 1);
   renderArticlesList();
   markDirty("articles");
-  toast('Notícia removida — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["articles"]).then(atualizarBarrasDeLista);
 }
 
 function addArticle() {
+  if (!listaSemPendencias("articles")) return;
   collectAll();
   const id = `noticia-${nextIdNumber(contentData.articles, "noticia")}`;
   // Insere no início: a home e a lista pública mostram as notícias na ordem
@@ -2857,7 +3445,7 @@ function addArticle() {
   renderArticlesList();
   markDirty("articles");
   const card = document.getElementById("article-card-0");
-  if (card) card.classList.add("open");
+  if (card) abrirItem(card, { novo: true });
 }
 
 // ----------------------------------------------------------------------------
@@ -2890,35 +3478,52 @@ function buildEpisodeCard(episode, i, total, container) {
   left.appendChild(buildReorderButtons(i, total, () => moveEpisode(i, i - 1), () => moveEpisode(i, i + 1)));
   left.appendChild(el("span", "card-num", String(episode.number ?? i + 1).padStart(2, "0")));
   left.appendChild(el("span", "card-name", episode.title || "(sem título)"));
-  left.appendChild(el("span", "card-meta", `${episode.date || ""} · ${episode.duration || ""}`));
+  left.appendChild(el("span", "card-meta", [episode.date, episode.duration].filter(Boolean).join(" · ")));
+  left.appendChild(seloFaltaTraduzir(episode.title && !episode.titleEn));
   header.appendChild(left);
-  header.appendChild(el("span", "card-chevron", "▼"));
+  header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
 
   const body = el("div", "card-body");
-  wireCardAccordion(card, header, body, container);
+  wireCardAccordion(card, header, body, container, "Podcast");
   const grid = el("div", "fields-grid");
 
-  grid.appendChild(buildReadOnlyField("Identificador (id)", episode.id));
-  grid.appendChild(buildSpinnerNumberField("Número", episode.number, { episode: i, key: "number" }));
-  grid.appendChild(buildInput("Título", "text", episode.title, { episode: i, key: "title" }));
-  grid.appendChild(buildInput("Duração", "text", episode.duration, { episode: i, key: "duration" }, "38:00 ou —"));
-
+  const title = buildInput("Título", "text", episode.title, { episode: i, key: "title" });
+  title.classList.add("full");
   const description = buildTextarea("Descrição curta", episode.description, { episode: i, key: "description" });
   description.classList.add("full");
-  grid.appendChild(description);
+  const transcript = buildTextarea(
+    "Transcrição (opcional) — um parágrafo por linha",
+    (episode.transcript || []).join("\n"),
+    { episode: i, key: "transcript" },
+    true
+  );
+  transcript.classList.add("full");
+  transcript.querySelector("textarea").rows = 8;
 
-  grid.appendChild(buildInput("Data", "date", episode.date, { episode: i, key: "date" }));
-  grid.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no podcast.xml)", "time", episode.time, { episode: i, key: "time" }));
+  const titleEn = buildInput("Título (EN)", "text", episode.titleEn, { episode: i, key: "titleEn" });
+  titleEn.classList.add("full");
+  const descriptionEn = buildTextarea("Descrição curta (EN)", episode.descriptionEn, { episode: i, key: "descriptionEn" });
+  descriptionEn.classList.add("full");
+  const transcriptEn = buildTextarea(
+    "Transcrição (EN, opcional) — um parágrafo por linha",
+    (episode.transcriptEn || []).join("\n"),
+    { episode: i, key: "transcriptEn" },
+    true
+  );
+  transcriptEn.classList.add("full");
+  transcriptEn.querySelector("textarea").rows = 8;
 
   grid.appendChild(
-    buildCheckboxField(
-      "Destacar na Home",
-      episode.featured,
-      { episode: i, key: "featured" },
-      () => enforceFeaturedLimit("episodes")
-    )
+    blocoDeIdiomas({
+      pt: [title, description, transcript],
+      en: [titleEn, descriptionEn, transcriptEn],
+      pares: [["title", "titleEn"], ["description", "descriptionEn"], ["transcript", "transcriptEn"]],
+      dica: "O episódio ganha página em inglês (/en/episodios/…) quando o título (EN) estiver preenchido. O áudio é o mesmo, em português.",
+    })
   );
+
+  grid.appendChild(el("h3", "section-heading full", "Áudio, data e destaque"));
 
   const audioField = buildFileUploadField(
     "Áudio do episódio",
@@ -2934,6 +3539,21 @@ function buildEpisodeCard(episode, i, total, container) {
   );
   audioField.classList.add("full");
   grid.appendChild(audioField);
+
+  grid.appendChild(buildSpinnerNumberField("Número", episode.number, { episode: i, key: "number" }));
+  grid.appendChild(buildInput("Duração", "text", episode.duration, { episode: i, key: "duration" }, "38:00 ou —"));
+  grid.appendChild(buildInput("Data", "date", episode.date, { episode: i, key: "date" }));
+  grid.appendChild(buildInput("Hora (opcional, horário de Brasília — usado no podcast.xml)", "time", episode.time, { episode: i, key: "time" }));
+
+  grid.appendChild(
+    buildCheckboxField(
+      "Destacar na Home",
+      episode.featured,
+      { episode: i, key: "featured" },
+      () => enforceFeaturedLimit("episodes")
+    )
+  );
+  grid.appendChild(buildReadOnlyField("Identificador (id)", episode.id));
 
   const imageField = buildFileUploadField(
     "Imagem do episódio (opcional)",
@@ -2951,35 +3571,6 @@ function buildEpisodeCard(episode, i, total, container) {
   imageField.classList.add("full");
   grid.appendChild(imageField);
 
-  const transcript = buildTextarea(
-    "Transcrição (opcional) — um parágrafo por linha",
-    (episode.transcript || []).join("\n"),
-    { episode: i, key: "transcript" },
-    true
-  );
-  transcript.classList.add("full");
-  transcript.querySelector("textarea").rows = 8;
-  grid.appendChild(transcript);
-
-  const titleEn = buildInput("Título (EN)", "text", episode.titleEn, { episode: i, key: "titleEn" });
-  titleEn.classList.add("full");
-  const descriptionEn = buildTextarea("Descrição curta (EN)", episode.descriptionEn, { episode: i, key: "descriptionEn" });
-  descriptionEn.classList.add("full");
-  const transcriptEn = buildTextarea(
-    "Transcrição (EN, opcional) — um parágrafo por linha",
-    (episode.transcriptEn || []).join("\n"),
-    { episode: i, key: "transcriptEn" },
-    true
-  );
-  transcriptEn.classList.add("full");
-  transcriptEn.querySelector("textarea").rows = 8;
-  grid.appendChild(
-    buildEnglishSection(
-      "O episódio ganha página em inglês (/en/episodios/…) quando o título (EN) estiver preenchido. O áudio é o mesmo, em português.",
-      [titleEn, descriptionEn, transcriptEn]
-    )
-  );
-
   body.appendChild(grid);
 
   const actions = el("div", "card-actions");
@@ -2988,7 +3579,6 @@ function buildEpisodeCard(episode, i, total, container) {
     imageField.confirmFileUpload();
     collectEpisodeCardFields(i);
     markDirty("episodes");
-    toast('Alterações do episódio prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover episódio");
@@ -3009,20 +3599,22 @@ function moveEpisode(from, to) {
   contentData.episodes.splice(to, 0, item);
   renderEpisodesList();
   markDirty("episodes");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeEpisode(i) {
   const episode = contentData.episodes[i];
-  if (!confirm(`Remover o episódio "${episode.title || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  if (!confirm(`Remover o episódio "${episode.title || "(sem título)"}"? A remoção é publicada agora.`)) return;
+  fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.episodes.splice(i, 1);
   renderEpisodesList();
   markDirty("episodes");
-  toast('Episódio removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["episodes"]).then(atualizarBarrasDeLista);
 }
 
 function addEpisode() {
+  if (!listaSemPendencias("episodes")) return;
   collectAll();
   const nextNumber = nextIdNumber(contentData.episodes, "ep");
   const id = `ep-${nextNumber}`;
@@ -3042,7 +3634,7 @@ function addEpisode() {
   renderEpisodesList();
   markDirty("episodes");
   const card = document.getElementById("episode-card-0");
-  if (card) card.classList.add("open");
+  if (card) abrirItem(card, { novo: true });
 }
 
 // ----------------------------------------------------------------------------
@@ -3085,11 +3677,11 @@ function buildMemberReadOnlyCard(member, i) {
   left.appendChild(el("span", "card-name", member.name || "(sem nome)"));
   header.appendChild(left);
   header.appendChild(el("span", "card-meta", "só leitura"));
-  header.appendChild(el("span", "card-chevron", "▼"));
+  header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
 
   const body = el("div", "card-body");
-  wireCardAccordion(card, header, body);
+  wireCardAccordion(card, header, body, null, "Integrantes");
   const grid = el("div", "fields-grid");
   grid.appendChild(buildReadOnlyField("Identificador (id)", member.id));
   grid.appendChild(buildReadOnlyField("Nome", member.name));
@@ -3254,12 +3846,13 @@ function buildMemberCard(member, i, total) {
   }
   left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
   left.appendChild(el("span", "card-name", member.name || "(sem nome)"));
+  left.appendChild(seloFaltaTraduzir(member.description && !member.descriptionEn));
   header.appendChild(left);
-  header.appendChild(el("span", "card-chevron", "▼"));
+  header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
 
   const body = el("div", "card-body");
-  wireCardAccordion(card, header, body);
+  wireCardAccordion(card, header, body, null, "Integrantes");
   const grid = el("div", "fields-grid");
 
   // Só editável enquanto o integrante ainda não foi salvo no GitHub (ver
@@ -3291,13 +3884,18 @@ function buildMemberCard(member, i, total) {
   }
   grid.appendChild(nameField);
 
-  const descriptionGroup = el("div", "field-group full");
   const description = buildTextarea("Descrição", member.description, { member: i, key: "description" });
-  descriptionGroup.appendChild(description);
+  description.classList.add("full");
   const descriptionEn = buildTextarea("Descrição (EN)", member.descriptionEn, { member: i, key: "descriptionEn" });
-  descriptionEn.classList.add("field--en");
-  descriptionGroup.appendChild(descriptionEn);
-  grid.appendChild(descriptionGroup);
+  descriptionEn.classList.add("full");
+  grid.appendChild(
+    blocoDeIdiomas({
+      pt: [description],
+      en: [descriptionEn],
+      pares: [["description", "descriptionEn"]],
+      dica: "Aparece no Sobre em inglês. Sem a descrição (EN), mostra a descrição em português.",
+    })
+  );
 
   const photoField = buildFileUploadField(
     "Foto",
@@ -3333,7 +3931,6 @@ function buildMemberCard(member, i, total) {
     photoField.confirmFileUpload();
     collectMemberCardFields(i);
     markDirty("members");
-    toast('Alterações do integrante prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover integrante");
@@ -3355,7 +3952,7 @@ function moveMember(from, to) {
   contentData.members.splice(to, 0, item);
   renderMembersList();
   markDirty("members");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeMember(i) {
@@ -3363,15 +3960,17 @@ function removeMember(i) {
   if (!canEditMember(member)) return;
   const linked = (accessCache?.content?.tokens || []).filter((t) => member.id && t.integrante === member.id);
   const aviso = linked.length ? ` O acesso "${linked.map((t) => t.label).join('", "')}" vai ficar sem integrante (dá para ligar outro em "Acessos").` : "";
-  if (!confirm(`Remover o integrante "${member.name || "(sem nome)"}"? Só é definitivo ao clicar em "Salvar no GitHub".${aviso}`)) return;
+  if (!confirm(`Remover o integrante "${member.name || "(sem nome)"}"? A remoção é publicada agora.${aviso}`)) return;
+  fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.members.splice(i, 1);
   renderMembersList();
   markDirty("members");
-  toast('Integrante removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["members"]).then(atualizarBarrasDeLista);
 }
 
 function addMember() {
+  if (!listaSemPendencias("members")) return;
   collectAll();
   // O id nasce vazio e acompanha o nome digitado (ver buildMemberCard).
   const id = "";
@@ -3385,7 +3984,7 @@ function addMember() {
   renderMembersList();
   markDirty("members");
   const card = document.getElementById("member-card-0");
-  if (card) card.classList.add("open");
+  if (card) abrirItem(card, { novo: true });
 }
 
 // A foto de um integrante novo pode ter sido escolhida antes de o nome estar
@@ -3451,37 +4050,38 @@ function buildCategoriaEstudoCard(categoria, i, total) {
   left.appendChild(buildReorderButtons(i, total, () => moveCategoriaEstudo(i, i - 1), () => moveCategoriaEstudo(i, i + 1)));
   left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
   left.appendChild(el("span", "card-name", categoria.nome || "(sem nome)"));
+  left.appendChild(seloFaltaTraduzir(categoria.nome && !categoria.nomeEn));
   header.appendChild(left);
-  header.appendChild(el("span", "card-chevron", "▼"));
+  header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
 
   const body = el("div", "card-body");
-  wireCardAccordion(card, header, body);
+  wireCardAccordion(card, header, body, null, "Estudos");
   const grid = el("div", "fields-grid");
-
-  grid.appendChild(buildReadOnlyField("Identificador (id)", categoria.id));
 
   const slugField = buildInput("Slug (usado na URL)", "text", categoria.slug, { categoriaEstudo: i, key: "slug" }, "geologia-e-solo-espacial");
   const nomeField = buildInput("Nome", "text", categoria.nome, { categoriaEstudo: i, key: "nome" });
+  nomeField.classList.add("full");
   nomeField.querySelector("input").addEventListener("blur", (e) => {
     const slugInput = slugField.querySelector("input");
     if (!slugInput.value.trim()) slugInput.value = slugify(e.target.value);
   });
-  grid.appendChild(nomeField);
-  grid.appendChild(slugField);
-
   const descricao = buildTextarea("Descrição (opcional)", categoria.descricao, { categoriaEstudo: i, key: "descricao" }, false, 2);
   descricao.classList.add("full");
-  grid.appendChild(descricao);
-
+  const nomeEn = buildInput("Nome (EN)", "text", categoria.nomeEn, { categoriaEstudo: i, key: "nomeEn" });
+  nomeEn.classList.add("full");
   const descricaoEn = buildTextarea("Descrição (EN)", categoria.descricaoEn, { categoriaEstudo: i, key: "descricaoEn" }, false, 2);
   descricaoEn.classList.add("full");
   grid.appendChild(
-    buildEnglishSection("Sem o nome (EN), o site em inglês mostra o nome em português. O slug da URL é o mesmo nos dois idiomas.", [
-      buildInput("Nome (EN)", "text", categoria.nomeEn, { categoriaEstudo: i, key: "nomeEn" }),
-      descricaoEn,
-    ])
+    blocoDeIdiomas({
+      pt: [nomeField, descricao],
+      en: [nomeEn, descricaoEn],
+      pares: [["nome", "nomeEn"], ["descricao", "descricaoEn"]],
+      dica: "Sem o nome (EN), o site em inglês mostra o nome em português. O slug da URL é o mesmo nos dois idiomas.",
+    })
   );
+  grid.appendChild(slugField);
+  grid.appendChild(buildReadOnlyField("Identificador (id)", categoria.id));
 
   body.appendChild(grid);
 
@@ -3489,7 +4089,6 @@ function buildCategoriaEstudoCard(categoria, i, total) {
   const saveBtn = buildSaveCardButton(() => {
     collectCategoriaEstudoCardFields(i);
     markDirty("categoriasEstudo");
-    toast('Alterações da categoria prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover categoria");
@@ -3509,7 +4108,7 @@ function moveCategoriaEstudo(from, to) {
   contentData.categoriasEstudo.splice(to, 0, item);
   renderCategoriasEstudoList();
   markDirty("categoriasEstudo");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeCategoriaEstudo(i) {
@@ -3520,14 +4119,16 @@ function removeCategoriaEstudo(i) {
     toast(`Não é possível remover "${categoria.nome || categoria.id}": ainda há verbetes cadastrados nessa categoria.`, "error");
     return;
   }
-  if (!confirm(`Remover a categoria "${categoria.nome || "(sem nome)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  if (!confirm(`Remover a categoria "${categoria.nome || "(sem nome)"}"? A remoção é publicada agora.`)) return;
+  fecharItem(document.querySelector(".section-panel.em-detalhe"));
   contentData.categoriasEstudo.splice(i, 1);
   renderCategoriasEstudoList();
   markDirty("categoriasEstudo");
-  toast('Categoria removida — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["categoriasEstudo"]).then(atualizarBarrasDeLista);
 }
 
 function addCategoriaEstudo() {
+  if (!listaSemPendencias("categoriasEstudo")) return;
   collectAll();
   const id = `categoria-${nextIdNumber(contentData.categoriasEstudo, "categoria")}`;
   // Ao fim da lista (não no início, diferente de notícia/episódio): categoria
@@ -3537,7 +4138,7 @@ function addCategoriaEstudo() {
   renderCategoriasEstudoList();
   markDirty("categoriasEstudo");
   const card = document.getElementById(`categoria-estudo-card-${contentData.categoriasEstudo.length - 1}`);
-  if (card) card.classList.add("open");
+  if (card) abrirItem(card, { novo: true });
 }
 
 // ----------------------------------------------------------------------------
@@ -3571,25 +4172,22 @@ function buildEstudoCard(verbete, i, total, container) {
   left.appendChild(el("span", "card-num", String(i + 1).padStart(2, "0")));
   left.appendChild(el("span", "card-name", verbete.titulo || "(sem título)"));
   left.appendChild(el("span", "card-meta", `${categoria ? categoria.nome : "sem categoria"} · ${verbete.publicado ? "publicado" : "rascunho"}`));
+  left.appendChild(seloFaltaTraduzir(verbete.titulo && !verbete.tituloEn));
   header.appendChild(left);
-  header.appendChild(el("span", "card-chevron", "▼"));
+  header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
 
   const body = el("div", "card-body");
-  wireCardAccordion(card, header, body, container);
+  wireCardAccordion(card, header, body, container, "Estudos");
   const grid = el("div", "fields-grid");
-
-  grid.appendChild(buildReadOnlyField("Identificador (id)", verbete.id));
-  grid.appendChild(buildVerbeteCategoriaField(verbete, i));
 
   const slugField = buildInput("Slug (usado na URL)", "text", verbete.slug, { verbete: i, key: "slug" }, "regolito-simulado");
   const tituloField = buildTextarea("Título", verbete.titulo, { verbete: i, key: "titulo" }, false, 2);
+  tituloField.classList.add("full");
   tituloField.querySelector("textarea").addEventListener("blur", (e) => {
     const slugInput = slugField.querySelector("input");
     if (!slugInput.value.trim()) slugInput.value = slugify(e.target.value);
   });
-  grid.appendChild(tituloField);
-  grid.appendChild(slugField);
 
   const definicaoCurta = buildTextarea(
     "Definição curta (1-2 frases — aparece nos cards e no topo do verbete)",
@@ -3599,23 +4197,6 @@ function buildEstudoCard(verbete, i, total, container) {
     2
   );
   definicaoCurta.classList.add("full");
-  grid.appendChild(definicaoCurta);
-
-  const imagemCapaField = buildFileUploadField(
-    "Imagem de capa (opcional)",
-    verbete.imagemCapa,
-    { verbete: i, key: "imagemCapa" },
-    {
-      accept: "image/*",
-      buttonText: "Enviar imagem",
-      preview: true,
-      allowClear: true,
-      buildPath: (file) => `images/estudos/${verbete.id}-capa.${fileExtension(file.name, "jpg")}`,
-      buildMessage: (path) => `admin: envia imagem de capa do verbete "${verbete.titulo || verbete.id}" (${path})`,
-    }
-  );
-  imagemCapaField.classList.add("full");
-  grid.appendChild(imagemCapaField);
 
   const conteudoField = buildRichTextField(
     "Conteúdo (contexto, como funciona, por que importa para a astrobotânica)",
@@ -3628,20 +4209,6 @@ function buildEstudoCard(verbete, i, total, container) {
     }
   );
   conteudoField.classList.add("full");
-  grid.appendChild(conteudoField);
-
-  grid.appendChild(buildTermosRelacionadosField(verbete, i));
-
-  const fontesField = el("div", "field full");
-  fontesField.appendChild(el("label", "", "Fontes e leitura complementar (opcional)"));
-  const fontesList = el("div", "article-references-list");
-  (verbete.fontes || []).forEach((fonte) => fontesList.appendChild(buildArticleReferenceRow(fonte)));
-  fontesField.appendChild(fontesList);
-  const addFonteBtn = el("button", "btn btn-secondary btn-small", "+ adicionar fonte");
-  addFonteBtn.type = "button";
-  addFonteBtn.addEventListener("click", () => fontesList.appendChild(buildArticleReferenceRow()));
-  fontesField.appendChild(addFonteBtn);
-  grid.appendChild(fontesField);
 
   const tituloEn = buildInput("Título (EN)", "text", verbete.tituloEn, { verbete: i, key: "tituloEn" });
   tituloEn.classList.add("full");
@@ -3670,14 +4237,51 @@ function buildEstudoCard(verbete, i, total, container) {
     if (currentEn && !confirm("Isso substitui o conteúdo em inglês atual pelo conteúdo em português (mesmas imagens). Continuar?")) return;
     conteudoEnField.setValue(contentData.estudos[i].conteudo || "");
   });
+
   grid.appendChild(
-    buildEnglishSection(
-      "O verbete publicado ganha página em inglês (/en/estudos/…) quando o título (EN) estiver preenchido.",
-      [tituloEn, definicaoCurtaEn, copyConteudoBtn, conteudoEnField]
-    )
+    blocoDeIdiomas({
+      pt: [tituloField, definicaoCurta, conteudoField],
+      en: [tituloEn, definicaoCurtaEn, copyConteudoBtn, conteudoEnField],
+      pares: [["titulo", "tituloEn"], ["definicaoCurta", "definicaoCurtaEn"], ["conteudo", "conteudoEn"]],
+      dica: "O verbete publicado ganha página em inglês (/en/estudos/…) quando o título (EN) estiver preenchido.",
+    })
   );
 
+  grid.appendChild(el("h3", "section-heading full", "Categoria, fontes e publicação"));
+  grid.appendChild(buildVerbeteCategoriaField(verbete, i));
+  grid.appendChild(slugField);
+
+  const imagemCapaField = buildFileUploadField(
+    "Imagem de capa (opcional)",
+    verbete.imagemCapa,
+    { verbete: i, key: "imagemCapa" },
+    {
+      accept: "image/*",
+      buttonText: "Enviar imagem",
+      preview: true,
+      allowClear: true,
+      buildPath: (file) => `images/estudos/${verbete.id}-capa.${fileExtension(file.name, "jpg")}`,
+      buildMessage: (path) => `admin: envia imagem de capa do verbete "${verbete.titulo || verbete.id}" (${path})`,
+    }
+  );
+  imagemCapaField.classList.add("full");
+  grid.appendChild(imagemCapaField);
+
+  grid.appendChild(buildTermosRelacionadosField(verbete, i));
+
+  const fontesField = el("div", "field full");
+  fontesField.appendChild(el("label", "", "Fontes e leitura complementar (opcional)"));
+  const fontesList = el("div", "article-references-list");
+  (verbete.fontes || []).forEach((fonte) => fontesList.appendChild(buildArticleReferenceRow(fonte)));
+  fontesField.appendChild(fontesList);
+  const addFonteBtn = el("button", "btn btn-secondary btn-small", "+ adicionar fonte");
+  addFonteBtn.type = "button";
+  addFonteBtn.addEventListener("click", () => fontesList.appendChild(buildArticleReferenceRow()));
+  fontesField.appendChild(addFonteBtn);
+  grid.appendChild(fontesField);
+
   grid.appendChild(buildCheckboxField("Publicado", verbete.publicado, { verbete: i, key: "publicado" }));
+  grid.appendChild(buildReadOnlyField("Identificador (id)", verbete.id));
 
   body.appendChild(grid);
 
@@ -3688,11 +4292,10 @@ function buildEstudoCard(verbete, i, total, container) {
     conteudoEnField.confirmBodyImages();
     collectEstudoCardFields(i);
     // dataAtualizacao não tem campo próprio no formulário — é sempre a data
-    // deste "Salvar alterações", igual a como readingTime é recalculado a
-    // cada confirmação de card de notícia.
+    // desta publicação, igual a como readingTime é recalculado a cada
+    // publicação de notícia.
     contentData.estudos[i].dataAtualizacao = new Date().toISOString().slice(0, 10);
     markDirty("estudos");
-    toast('Alterações do verbete prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover verbete");
@@ -3712,20 +4315,22 @@ function moveEstudo(from, to) {
   contentData.estudos.splice(to, 0, item);
   renderEstudosList();
   markDirty("estudos");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeEstudo(i) {
   const verbete = contentData.estudos[i];
-  if (!confirm(`Remover o verbete "${verbete.titulo || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  if (!confirm(`Remover o verbete "${verbete.titulo || "(sem título)"}"? A remoção é publicada agora.`)) return;
+  fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.estudos.splice(i, 1);
   renderEstudosList();
   markDirty("estudos");
-  toast('Verbete removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["estudos"]).then(atualizarBarrasDeLista);
 }
 
 function addEstudo() {
+  if (!listaSemPendencias("estudos")) return;
   collectAll();
   const id = `verbete-${nextIdNumber(contentData.estudos, "verbete")}`;
   contentData.estudos.unshift({
@@ -3741,7 +4346,7 @@ function addEstudo() {
   renderEstudosList();
   markDirty("estudos");
   const card = document.getElementById("estudo-card-0");
-  if (card) card.classList.add("open");
+  if (card) abrirItem(card, { novo: true });
 }
 
 // ----------------------------------------------------------------------------
@@ -3838,8 +4443,11 @@ function renderGeneralForm() {
     container.appendChild(grid);
   }
   abasDeIdioma(container);
-  container.addEventListener("input", handleSiteFieldChange);
-  container.addEventListener("change", handleSiteFieldChange);
+  if (!container.dataset.ligado) {
+    container.dataset.ligado = "1";
+    container.addEventListener("input", handleSiteFieldChange);
+    container.addEventListener("change", handleSiteFieldChange);
+  }
 }
 
 // Redes sociais do rodapé: mesma lógica de tamanho livre dos links de
@@ -3896,6 +4504,8 @@ function renderSiteSocialLinks() {
   if (!list || !addBtn) return;
   list.innerHTML = "";
   (contentData.site.socialLinks || []).forEach((link) => list.appendChild(buildSiteSocialLinkRow(link)));
+  if (list.dataset.ligado) return;
+  list.dataset.ligado = "1";
   list.addEventListener("input", () => markDirty("site"));
   addBtn.addEventListener("click", () => {
     list.appendChild(buildSiteSocialLinkRow());
@@ -4013,6 +4623,8 @@ function renderSiteMenu() {
   list.innerHTML = "";
   (contentData.site.menu || menuPadrao()).forEach((item) => list.appendChild(buildSiteMenuRow(item)));
   atualizarBotoesDoMenu();
+  if (list.dataset.ligado) return;
+  list.dataset.ligado = "1";
   list.addEventListener("input", menuMudou);
   list.addEventListener("change", menuMudou);
   addBtn.addEventListener("click", () => {
@@ -4045,16 +4657,16 @@ function menuAtual() {
 // Páginas: barra lateral montada a partir do menu do site
 // ----------------------------------------------------------------------------
 
-// Seções do site com telas próprias (textos fixos de PAGE_SCHEMA e/ou o texto
-// em src/content/paginas). Qualquer outro link "/slug" do menu é uma página
-// de texto (src/content/paginas/<lang>/<slug>.md), criada ao salvar.
+// Links do menu que têm tela própria de textos. Notícias, Podcast e Estudos
+// não aparecem em "Páginas": os textos delas ficam na própria lista, em
+// Conteúdo (ver TELAS_DE_TEXTOS). Qualquer outro link "/slug" do menu é uma
+// página de texto (src/content/paginas/<lang>/<slug>.md), criada ao salvar.
 const SECOES_DAS_PAGINAS = {
-  "/": { nome: "Início", telas: [["page-home", "Início"]] },
-  "/noticias": { nome: "Notícias", telas: [["page-artigos", "Lista"], ["page-artigo", "Página da notícia"]] },
-  "/podcast": { nome: "Podcast", telas: [["page-podcast", "Lista"], ["page-episodio", "Página do episódio"]] },
-  "/estudos": { nome: "Estudos", telas: [["page-estudos", "Lista"], ["page-estudo", "Página do verbete"]] },
-  "/contato": { nome: "Contato", telas: [["page-contato", "Contato"]] },
-  "/sobre": { nome: "Sobre", telas: [["pagina-sobre", "Texto da página"], ["page-sobre", "Seção \"Integrantes\""]] },
+  "/": { nome: "Início", painel: "page-home" },
+  "/noticias": { nome: "Notícias", painel: null },
+  "/podcast": { nome: "Podcast", painel: null },
+  "/estudos": { nome: "Estudos", painel: null },
+  "/contato": { nome: "Contato", painel: "page-contato" },
 };
 const RE_SLUG_PAGINA = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -4068,49 +4680,30 @@ function chaveDoLink(link) {
   return RE_SLUG_PAGINA.test(slug) ? caminho : null;
 }
 
-function telasDaChave(chave) {
-  return SECOES_DAS_PAGINAS[chave]?.telas || [[`pagina-${chave.slice(1)}`, "Texto da página"]];
+function painelDaChave(chave) {
+  if (chave in SECOES_DAS_PAGINAS) return SECOES_DAS_PAGINAS[chave].painel;
+  return `pagina-${chave.slice(1)}`;
 }
 
-function botaoDeTela(painel, texto) {
-  const b = el("button", "nav-btn", texto);
+// Um botão por página, numa lista simples.
+function itemDaBarraDePaginas(nome, chave, oculto) {
+  const painel = painelDaChave(chave);
+  if (!painel) return [];
+  if (painel.startsWith("pagina-")) garantirPainelDePagina(painel.slice("pagina-".length), nome);
+  const b = el("button", "nav-btn", nome);
   b.type = "button";
   b.dataset.panel = painel;
-  return b;
-}
-
-// Um item: botão direto (uma tela) ou pai com seta e subitens (várias).
-function itemDaBarraDePaginas(nome, chave, oculto) {
-  const telas = telasDaChave(chave);
-  for (const [painel] of telas) {
-    if (painel.startsWith("pagina-")) garantirPainelDePagina(painel.slice("pagina-".length), nome);
-  }
-  const marca = () => {
+  if (oculto) {
     const tag = el("span", "nav-tag", "oculto no menu");
     tag.title = "Desmarcado em Site → Menu: a página continua no ar, só não aparece no menu";
-    return tag;
-  };
-  if (telas.length === 1) {
-    const b = botaoDeTela(telas[0][0], nome);
-    if (oculto) b.appendChild(marca());
-    return [b];
+    b.appendChild(tag);
   }
-  const pai = el("button", "nav-btn nav-pai", nome);
-  pai.type = "button";
-  pai.setAttribute("aria-expanded", "false");
-  if (oculto) pai.appendChild(marca());
-  const grupo = el("div", "nav-subgrupo");
-  for (const [painel, texto] of telas) grupo.appendChild(botaoDeTela(painel, texto));
-  return [pai, grupo];
+  return [b];
 }
 
 function renderSidebarPaginas() {
   const container = document.getElementById("sidebar-pages");
   if (!container || !contentData.site) return;
-  // Mantém abertos os itens que estavam abertos.
-  const abertos = new Set(
-    Array.from(container.querySelectorAll('.nav-pai[aria-expanded="true"]')).map((b) => b.firstChild.textContent)
-  );
   container.innerHTML = "";
   const usadas = new Set();
   const adicionar = (nome, chave, oculto) => {
@@ -4127,21 +4720,22 @@ function renderSidebarPaginas() {
   }
   // O que tem tela mas não está no menu (ex.: Expediente, que fica no rodapé).
   const fora = [
-    ...Object.entries(SECOES_DAS_PAGINAS).map(([chave, s]) => [chave, s.nome]),
+    ...Object.entries(SECOES_DAS_PAGINAS)
+      .filter(([, s]) => s.painel)
+      .map(([chave, s]) => [chave, s.nome]),
     ...[...paginasDeTexto.keys()].map((slug) => [`/${slug}`, paginasDeTexto.get(slug).pt?.campos.title || slug]),
   ].filter(([chave]) => !usadas.has(chave));
   if (fora.length) {
-    const rotulo = el("div", "nav-rotulo", "Fora do menu");
-    container.appendChild(rotulo);
+    container.appendChild(el("div", "nav-rotulo", "Fora do menu"));
     fora.sort((a, b) => a[1].localeCompare(b[1], "pt")).forEach(([chave, nome]) => adicionar(nome, chave, false));
   }
 
-  container.querySelectorAll(".nav-pai").forEach((b) => {
-    if (abertos.has(b.firstChild.textContent)) b.setAttribute("aria-expanded", "true");
-  });
+  // A tela de uma página de texto é recriada depois de salvar (ver
+  // carregarPaginasDeTexto): se era a tela aberta, continua aberta.
   if (painelAtual) {
     const ativo = container.querySelector(`.nav-btn[data-panel="${painelAtual}"]`);
-    if (ativo) showPanel(painelAtual);
+    if (ativo) ativo.classList.add("active");
+    document.getElementById(`panel-${painelAtual}`)?.classList.add("active");
   }
 }
 
@@ -4180,7 +4774,7 @@ function garantirPainelDePagina(slug, nome) {
 
   const dica = el("p", "admin-hint");
   if (!pagina.pt) {
-    dica.textContent = `Esta página ainda não existe no site. Escreva o título e o texto e clique em "Salvar no GitHub" para criá-la em /${slug}.`;
+    dica.textContent = `Esta página ainda não existe no site. Escreva o título e o texto e clique em "Publicar" para criá-la em /${slug}.`;
   } else {
     dica.textContent = `Texto da página /${slug}${slug === "sobre" ? ". A lista de integrantes aparece logo abaixo do texto e é editada em Conteúdo → Integrantes" : ""}.`;
   }
@@ -4217,9 +4811,28 @@ function garantirPainelDePagina(slug, nome) {
   });
   form.addEventListener("change", () => markDirty("paginas"));
   panel.appendChild(form);
+  panel.appendChild(barraDePublicar(publicarTextos));
+  // Textos fixos do site que aparecem nesta página (ex.: o título da seção
+  // "Integrantes" do Sobre), na mesma tela e nas mesmas abas.
+  const extras = PAGE_SCHEMA.find((p) => p.key === slug);
+  if (extras) {
+    const bloco = el("div", "textos-extras");
+    bloco.appendChild(el("h3", "section-heading", extras.label));
+    const grid = el("div", "fields-grid");
+    extras.fields.forEach((f) => grid.appendChild(buildSiteField(f)));
+    bloco.appendChild(grid);
+    bloco.addEventListener("input", handleSiteFieldChange);
+    bloco.addEventListener("change", handleSiteFieldChange);
+    form.appendChild(bloco);
+  }
   abasDeIdioma(form, () => {
     const vazio = (lang) => !form.querySelector(`.campo-${lang} [data-campo="corpo"]`).textContent.trim();
-    return !vazio("pt") && vazio("en") ? 1 : 0;
+    let n = !vazio("pt") && vazio("en") ? 1 : 0;
+    form.querySelectorAll("[data-site-en]").forEach((en) => {
+      const pt = form.querySelector(`[data-site="${en.dataset.siteEn}"]`);
+      if (pt?.value.trim() && !en.value.trim()) n++;
+    });
+    return n;
   });
   document.getElementById("page-panels").appendChild(panel);
 }
@@ -4289,17 +4902,23 @@ async function salvarPaginas({ arquivos, mudancas }) {
 }
 
 function renderPageForms() {
-  for (const page of PAGE_SCHEMA) {
-    const container = document.getElementById(`page-form-${page.key}`);
+  const porChave = Object.fromEntries(PAGE_SCHEMA.map((p) => [p.key, p]));
+  for (const tela of TELAS_DE_TEXTOS) {
+    const container = document.getElementById(`page-form-${tela.id}`);
     container.innerHTML = "";
-    const grid = el("div", "fields-grid");
-    for (const fieldDef of page.fields) {
-      grid.appendChild(buildSiteField(fieldDef));
+    for (const chave of tela.chaves) {
+      const page = porChave[chave];
+      if (tela.chaves.length > 1) container.appendChild(el("h3", "section-heading", page.label));
+      const grid = el("div", "fields-grid");
+      for (const fieldDef of page.fields) grid.appendChild(buildSiteField(fieldDef));
+      container.appendChild(grid);
     }
-    container.appendChild(grid);
     abasDeIdioma(container);
-    container.addEventListener("input", handleSiteFieldChange);
-    container.addEventListener("change", handleSiteFieldChange);
+    if (!container.dataset.ligado) {
+      container.dataset.ligado = "1";
+      container.addEventListener("input", handleSiteFieldChange);
+      container.addEventListener("change", handleSiteFieldChange);
+    }
   }
 }
 
@@ -4342,9 +4961,7 @@ function renderHomeEventBanner() {
   );
   container.appendChild(linkField);
 
-  container.addEventListener("input", handleSiteFieldChange);
-  container.addEventListener("change", handleSiteFieldChange);
-
+  // Os ouvintes de input/change do container já vêm de renderPageForms.
   homeEventBannerField = bannerField;
 }
 

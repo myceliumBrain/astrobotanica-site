@@ -285,24 +285,8 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 .nav-btn.active { color: var(--adm-accent); background: var(--adm-surface); border-left-color: var(--adm-accent); }
 .nav-btn .nav-count { color: var(--adm-muted); font-size: 0.72rem; }
 
-/* Páginas: item do menu com subitens (seta abre e fecha, ver
-   renderSidebarPaginas), selo "oculto no menu" e o rótulo "Fora do menu". */
-.nav-pai { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
-.nav-pai::after {
-  content: "";
-  width: 0.4rem;
-  height: 0.4rem;
-  margin-left: auto;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: translateY(-25%) rotate(45deg);
-  transition: transform 0.15s;
-  flex: none;
-  opacity: 0.7;
-}
-.nav-pai[aria-expanded="false"]::after { transform: rotate(-45deg); }
-.nav-pai[aria-expanded="false"] + .nav-subgrupo { display: none; }
-.nav-subgrupo .nav-btn { padding-left: 2.75rem; font-size: 0.74rem; }
+/* Páginas: selo "oculto no menu" e o rótulo "Fora do menu" (ver
+   renderSidebarPaginas). */
 .nav-tag {
   margin-left: 0.5rem;
   color: var(--adm-muted);
@@ -310,7 +294,6 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
-.nav-pai .nav-tag { margin-left: 0; }
 .nav-tag { white-space: nowrap; }
 .nav-rotulo {
   font-family: var(--adm-mono);
@@ -341,65 +324,147 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 .panel-count { font-family: var(--adm-mono); font-size: 0.72rem; color: var(--adm-muted); }
 .panel-header-counts { display: flex; gap: 0.9rem; align-items: baseline; }
 
-/* ── CARDS (itens de lista com acordeão) ── */
-/* Sem overflow:hidden aqui de propósito: qualquer ancestral com overflow
-   diferente de visible quebra `position: sticky` dos descendentes (o
-   elemento passa a grudar relativo a essa caixa, que nunca rola de verdade,
-   em vez da página) — é o que impedia a barra de botões do corpo da
-   notícia de acompanhar o scroll. .card-header/.card-body não têm fundo
-   próprio (mostram o da .card por baixo), então não há costura visível nos
-   cantos arredondados sem o clipping. */
+/* ── LISTAS E TELAS DE ITEM ── */
+/* Cada item (notícia, episódio, verbete, categoria, integrante) aparece na
+   lista como uma linha (.card-header). Clicar abre a tela do item: a seção
+   ganha .em-detalhe, o resto da lista some e o item ocupa a tela inteira,
+   com "← voltar" no topo e as ações grudadas no rodapé (ver abrirItem). Não
+   há overflow em nenhum ancestral do editor, então o position: sticky da
+   barra de botões do corpo funciona. */
 .card {
   background: var(--adm-surface);
   border: 1px solid var(--adm-border);
   border-radius: 3px;
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.5rem;
 }
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.85rem 1.15rem;
+  padding: 0.75rem 1.15rem;
   user-select: none;
   gap: 0.75rem;
-  /* Sem overflow:hidden no .card (ver acima), o hover (que tem fundo
-     diferente do .card) precisa arredondar os próprios cantos de cima pra
-     não sobrar canto quadrado por cima do canto arredondado do card. */
-  border-radius: 3px 3px 0 0;
+  cursor: pointer;
+  border-radius: 3px;
 }
 .card-header:hover { background: var(--adm-surface-2); }
 .card-header-left { display: flex; align-items: center; gap: 0.7rem; min-width: 0; flex: 1; }
 .card-num { font-family: var(--adm-mono); font-size: 0.7rem; color: var(--adm-muted); min-width: 22px; flex: none; }
-.card-name { font-family: var(--adm-mono); font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-name { font-family: var(--adm-mono); font-size: 0.86rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 0; min-width: 8rem; }
 .card-readonly-links { margin: 0; padding-left: 1.1rem; font-size: 0.86rem; line-height: 1.7; }
 .card-readonly-links a { color: var(--adm-accent); }
 .card-readonly-text { font-size: 0.86rem; color: var(--adm-off-white); line-height: 1.6; white-space: pre-line; margin: 0; }
-.card-meta { font-family: var(--adm-mono); font-size: 0.7rem; color: var(--adm-muted); white-space: nowrap; flex: none; }
-.card-chevron { font-size: 0.7rem; color: var(--adm-muted); transition: transform 0.2s; flex: none; }
-.card.open .card-chevron { transform: rotate(180deg); }
-
-.card-body {
-  max-height: 0;
-  overflow: hidden;
-  padding: 0 1.15rem;
-  border-top: 1px solid transparent;
-  transition: max-height 0.3s cubic-bezier(0.4,0,0.2,1), padding 0.3s cubic-bezier(0.4,0,0.2,1), border-color 0.2s;
+.card-meta { font-family: var(--adm-mono); font-size: 0.7rem; color: var(--adm-muted); white-space: nowrap; flex: 0 1 auto; max-width: 45%; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.card-chevron { font-size: 0.8rem; color: var(--adm-muted); flex: none; }
+.selo-traduzir {
+  font-family: var(--adm-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e8c547;
+  border: 1px solid #5a4b17;
+  border-radius: 3px;
+  padding: 0.05rem 0.4rem;
+  white-space: nowrap;
+  flex: none;
 }
-/* O teto alto (em vez de max-height: none) é só pra permitir a transição
-   animada — CSS não anima até "none"/auto. 4000px já tinha sido visto
-   cortando o card de notícias grandes (corpo longo + imagens), escondendo os
-   botões "Salvar alterações"/"Remover" que vêm depois; 100000px cobre
-   qualquer notícia realista sem cortar nada. */
-.card.open .card-body { max-height: 100000px; padding: 1.15rem; border-top-color: var(--adm-border); }
+
+.card-body { display: none; }
+.item-voltar { display: none; }
+
+/* Tela do item aberta */
+.section-panel.em-detalhe:has(.card.open) > :not(:has(.card.open)) { display: none; }
+.section-panel.em-detalhe:has(.card.open) .card:not(.open) { display: none; }
+.card.open { background: none; border: none; margin: 0; }
+.tela-voltar,
+.card.open .item-voltar {
+  display: inline-block;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-bottom: 1rem;
+  font-family: var(--adm-mono);
+  font-size: 0.75rem;
+  color: var(--adm-muted);
+  cursor: pointer;
+}
+.tela-voltar:hover,
+.card.open .item-voltar:hover { color: var(--adm-accent); }
+.card.open .card-header {
+  cursor: default;
+  padding: 0 0 0.9rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--adm-border);
+  border-radius: 0;
+}
+.card.open .card-header:hover { background: none; }
+.card.open .card-header .reorder-btns,
+.card.open .card-header .card-num,
+.card.open .card-header .card-chevron { display: none; }
+.card.open .card-header-left { flex-wrap: wrap; row-gap: 0.4rem; }
+.card.open .card-name { font-size: 1.25rem; white-space: normal; color: var(--adm-white); flex-basis: 100%; }
+.card.open .card-meta { max-width: none; white-space: normal; }
+.card.open .card-body { display: block; }
+
+/* Linha "Textos da página" no topo das listas de Notícias, Podcast e
+   Estudos (ver setupPagePanels). */
+.textos-da-pagina {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--adm-border);
+  border-radius: 3px;
+  padding: 0.7rem 1.15rem;
+  margin-bottom: 1.25rem;
+  color: var(--adm-off-white);
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.textos-da-pagina:hover { border-color: var(--adm-accent); }
+.textos-da-pagina-nome { font-family: var(--adm-mono); font-size: 0.82rem; }
+.textos-da-pagina-dica { font-size: 0.78rem; color: var(--adm-muted); flex: 1; }
+.tela-voltar { display: inline-block; }
+.textos-extras { margin-top: 2rem; }
+.bloco-idiomas { margin-bottom: 0.5rem; }
 
 .card-actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
-  margin-top: 1rem;
-  padding-top: 0.9rem;
+  margin-top: 1.5rem;
+  padding: 0.8rem 0;
   border-top: 1px solid var(--adm-border);
 }
+/* Na tela do item e nas telas de textos, as ações ficam sempre à vista. */
+.card.open .card-actions,
+.barra-publicar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--adm-black);
+}
+.barra-publicar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--adm-border);
+}
+.barra-estado {
+  margin-right: auto;
+  font-family: var(--adm-mono);
+  font-size: 0.72rem;
+  color: var(--adm-accent);
+}
+.card-actions { align-items: center; flex-wrap: wrap; }
+.barra-lista { border-top-color: var(--adm-accent); }
+.barra-lista .barra-estado { color: var(--adm-off-white); flex: 1 1 14rem; }
 
 .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
 .fields-grid .full { grid-column: 1 / -1; }
@@ -407,8 +472,6 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 /* ── PAR PT/EN (textos do site: ver buildSiteField) ── */
 .field-group { display: flex; flex-direction: column; gap: 0.6rem; }
 .field-group.full { grid-column: 1 / -1; }
-.field--en { padding-left: 0.7rem; border-left: 2px solid var(--adm-border); }
-.field--en label { color: var(--adm-muted); }
 
 /* ── DESTAQUE NA HOME (checkbox) ── */
 .checkbox-field { justify-content: center; }
@@ -511,74 +574,22 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
   aspect-ratio: 4 / 3;
 }
 
-/* ── NOTÍCIA: seções colapsáveis "Versão em português"/"Versão em inglês"
-   (ver buildArticlePortugueseSection/buildArticleEnglishSection — mutuamente
-   exclusivas, só 1 aberta por vez, ver buildArticleCard) — sem transição de
-   altura suave de propósito: o corpo é um editor rich-text que pode ficar bem
-   mais alto que qualquer outro campo, e um teto de altura fixo cortaria
-   conteúdo comprido em vez de só escondê-lo por inteiro. */
-.article-lang-summary {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background: none;
-  border: none;
-  padding: 0;
-  font-family: var(--adm-sans);
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--adm-accent);
-  cursor: pointer;
-}
-.article-lang-chevron { display: inline-block; transition: transform 0.2s ease; }
-.article-lang-summary.open .article-lang-chevron { transform: rotate(90deg); }
-.article-lang-panel { margin-top: 0.75rem; }
-/* .article-lang-panel também é .fields-grid (display: grid) — sem esta
-   regra, esse display vence o "display: none" do atributo hidden (mesma
-   origem e especificidade, decidido só pela ordem das regras) e o painel
-   nunca some de fato ao recolher. */
-.article-lang-panel[hidden] { display: none; }
-
-/* ── CORPO COM FORMATAÇÃO (negrito, itálico, tamanho, parágrafos, imagens) ── */
-/* Editor à esquerda, barra de botões à direita (ver .rich-text-layout) — a
-   barra é sticky (gruda abaixo da .adm-topbar, top:56px) então acompanha o
-   scroll conforme o corpo é mais alto que a tela: fica sempre alcançável do
-   lado do texto, mesmo editando perto do fim de um corpo longo. Some por
-   padrão; só fica visível/clicável enquanto o foco está em algum lugar
-   dentro do campo (editor ou os próprios controles da barra), via
-   :focus-within — não depende de rastrear foco/blur manualmente. */
-.rich-text-layout {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-}
-.rich-text-layout .rich-text-editor {
-  flex: 1;
-  min-width: 0;
-}
+/* ── CORPO COM FORMATAÇÃO ── */
+/* Barra fina em cima do texto (+ Inserir, Imagem), grudada abaixo da
+   .adm-topbar enquanto se rola um texto longo. Negrito, itálico, link e
+   título ficam no menu que aparece ao selecionar um trecho (.menu-selecao);
+   "/" numa linha vazia abre o mesmo menu do "+ Inserir" (.menu-blocos). */
+.rich-text-field { position: relative; }
 .rich-text-toolbar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
-  flex: none;
-  width: 7.5rem;
   position: sticky;
   top: 56px;
   z-index: 5;
-  background: var(--adm-surface);
-  padding: 0.5rem 0.4rem;
-  border-radius: 3px;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateX(4px);
-  transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s;
-  pointer-events: none;
-}
-.rich-text-field:focus-within .rich-text-toolbar {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(0);
-  pointer-events: auto;
+  background: var(--adm-black);
+  padding: 0.35rem 0;
 }
 .rich-text-btn {
   font-family: var(--adm-mono);
@@ -588,24 +599,77 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
   background: var(--adm-surface-2);
   border: 1px solid var(--adm-border);
   color: var(--adm-off-white);
-  padding: 0.4rem 0.7rem;
+  padding: 0.35rem 0.7rem;
   border-radius: 3px;
   transition: all 0.15s;
 }
 .rich-text-btn:hover { border-color: var(--adm-accent); color: var(--adm-accent); }
-.rich-text-btn--italic { font-style: italic; }
-.rich-text-select {
+.rich-text-dica {
+  margin-left: auto;
   font-family: var(--adm-mono);
-  font-size: 0.7rem;
-  letter-spacing: 0.03em;
-  background: var(--adm-surface-2);
-  border: 1px solid var(--adm-border);
-  color: var(--adm-off-white);
-  padding: 0.4rem 0.5rem;
-  border-radius: 3px;
-  transition: border-color 0.15s;
+  font-size: 0.68rem;
+  color: var(--adm-muted);
 }
-.rich-text-select:hover, .rich-text-select:focus { border-color: var(--adm-accent); color: var(--adm-accent); }
+
+.menu-editor {
+  position: absolute;
+  z-index: 30;
+  background: var(--adm-surface);
+  border: 1px solid var(--adm-border);
+  border-radius: 4px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+.menu-editor[hidden] { display: none; }
+.menu-blocos { display: flex; flex-direction: column; min-width: 15rem; padding: 0.3rem; }
+.menu-blocos-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  color: var(--adm-white);
+  font-family: var(--adm-sans);
+  font-size: 0.92rem;
+}
+.menu-blocos-item:hover, .menu-blocos-item.ativo { background: var(--adm-surface-2); }
+.menu-blocos-item.ativo .menu-blocos-rotulo { color: var(--adm-accent); }
+.menu-blocos-dica { font-family: var(--adm-mono); font-size: 0.68rem; color: var(--adm-muted); }
+
+.menu-selecao { padding: 0.25rem; white-space: nowrap; }
+.menu-selecao-botoes, .menu-selecao-link { display: flex; align-items: center; gap: 0.2rem; }
+.menu-selecao-botoes[hidden], .menu-selecao-link[hidden] { display: none; }
+.menu-selecao-btn {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--adm-off-white);
+  font-family: var(--adm-mono);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  min-width: 2rem;
+}
+.menu-selecao-btn:hover { background: var(--adm-surface-2); color: var(--adm-white); }
+.menu-selecao-btn.ativo { color: var(--adm-accent); border-color: var(--adm-accent); }
+.menu-selecao-btn--negrito { font-weight: 700; }
+.menu-selecao-btn--italico { font-style: italic; font-family: Georgia, serif; font-size: 0.85rem; }
+.menu-selecao-btn[hidden] { display: none; }
+.menu-selecao-campo {
+  width: 16rem;
+  max-width: 60vw;
+  background: var(--adm-black);
+  border: 1px solid var(--adm-border);
+  border-radius: 3px;
+  color: var(--adm-white);
+  font-family: var(--adm-mono);
+  font-size: 0.78rem;
+  padding: 0.35rem 0.5rem;
+}
+.menu-selecao-campo:focus { outline: none; border-color: var(--adm-accent); }
+
 .rich-text-editor {
   min-height: 12rem;
   line-height: 1.6;
@@ -615,6 +679,13 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 .rich-text-editor:focus { border-color: var(--adm-accent); }
 .rich-text-editor p { margin: 0 0 0.9em; }
 .rich-text-editor img { max-width: 100%; display: block; margin: 0.6em 0; border-radius: 3px; }
+.rich-text-editor h2 { font-size: 1.35rem; margin: 1.1em 0 0.5em; }
+.rich-text-editor h3 { font-size: 1.15rem; margin: 1em 0 0.45em; }
+.rich-text-editor > :first-child { margin-top: 0; }
+.rich-text-editor ul, .rich-text-editor ol { padding-left: 1.4rem; margin: 0 0 0.9em; }
+.rich-text-editor ul { list-style: disc; }
+.rich-text-editor ol { list-style: decimal; }
+.rich-text-editor a { color: var(--adm-accent); text-decoration: underline; }
 
 /* ── REORDER ── */
 .reorder-btns { display: flex; flex-direction: column; gap: 2px; flex: none; }
@@ -674,36 +745,37 @@ h3.section-heading {
 h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 
 /* ── TOAST ── */
+/* No alto, logo abaixo da barra de cima: embaixo ficam as barras de Publicar. */
 #toast {
   position: fixed;
-  bottom: 1.5rem;
+  top: calc(56px + 0.75rem);
   right: 1.5rem;
+  left: auto;
   background: var(--adm-surface);
   border: 1px solid var(--adm-border);
   font-family: var(--adm-mono);
   font-size: 0.78rem;
   padding: 0.75rem 1.2rem;
   border-radius: 3px;
-  transform: translateY(120%);
+  transform: translateY(-0.5rem);
+  opacity: 0;
   visibility: hidden;
-  transition: transform 0.3s, visibility 0.3s;
+  transition: transform 0.25s, opacity 0.25s, visibility 0.25s;
   z-index: 999;
   max-width: 24rem;
 }
-#toast.show { transform: translateY(0); visibility: visible; }
+#toast.show { transform: translateY(0); opacity: 1; visibility: visible; }
 #toast[data-kind="ok"] { border-color: var(--adm-accent); color: var(--adm-accent); }
 #toast[data-kind="error"] { border-color: var(--adm-danger); color: var(--adm-danger); }
 
 /* ── RESPONSIVO ── */
 @media (max-width: 720px) {
+  #toast { left: 1rem; right: 1rem; max-width: none; }
   .adm-content { padding: 1.25rem; }
   .adm-layout { flex-direction: column; }
   .adm-sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--adm-border); }
   .fields-grid { grid-template-columns: 1fr; }
-  /* Barra lateral não cabe ao lado do texto numa tela estreita — volta a
-     ficar em cima, ocupando a largura toda, como uma barra normal. */
-  .rich-text-layout { flex-direction: column; }
-  .rich-text-toolbar { flex-direction: row; flex-wrap: wrap; width: 100%; top: 0; }
+  .rich-text-dica { display: none; }
   .adm-topbar { padding: 0 1rem; }
   .adm-save-status { display: none; }
   .admin-item-row { flex-wrap: wrap; }
