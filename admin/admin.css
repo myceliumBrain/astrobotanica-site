@@ -446,6 +446,25 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
   z-index: 20;
   background: var(--adm-black);
 }
+.barra-publicar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--adm-border);
+}
+.barra-estado {
+  margin-right: auto;
+  font-family: var(--adm-mono);
+  font-size: 0.72rem;
+  color: var(--adm-accent);
+}
+.card-actions { align-items: center; flex-wrap: wrap; }
+.barra-lista { border-top-color: var(--adm-accent); }
+.barra-lista .barra-estado { color: var(--adm-off-white); flex: 1 1 14rem; }
 
 .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
 .fields-grid .full { grid-column: 1 / -1; }
@@ -690,28 +709,32 @@ h3.section-heading {
 h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
 
 /* ── TOAST ── */
+/* No alto, logo abaixo da barra de cima: embaixo ficam as barras de Publicar. */
 #toast {
   position: fixed;
-  bottom: 1.5rem;
+  top: calc(56px + 0.75rem);
   right: 1.5rem;
+  left: auto;
   background: var(--adm-surface);
   border: 1px solid var(--adm-border);
   font-family: var(--adm-mono);
   font-size: 0.78rem;
   padding: 0.75rem 1.2rem;
   border-radius: 3px;
-  transform: translateY(120%);
+  transform: translateY(-0.5rem);
+  opacity: 0;
   visibility: hidden;
-  transition: transform 0.3s, visibility 0.3s;
+  transition: transform 0.25s, opacity 0.25s, visibility 0.25s;
   z-index: 999;
   max-width: 24rem;
 }
-#toast.show { transform: translateY(0); visibility: visible; }
+#toast.show { transform: translateY(0); opacity: 1; visibility: visible; }
 #toast[data-kind="ok"] { border-color: var(--adm-accent); color: var(--adm-accent); }
 #toast[data-kind="error"] { border-color: var(--adm-danger); color: var(--adm-danger); }
 
 /* ── RESPONSIVO ── */
 @media (max-width: 720px) {
+  #toast { left: 1rem; right: 1rem; max-width: none; }
   .adm-content { padding: 1.25rem; }
   .adm-layout { flex-direction: column; }
   .adm-sidebar { width: 100%; height: auto; position: static; border-right: none; border-bottom: 1px solid var(--adm-border); }

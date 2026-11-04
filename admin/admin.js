@@ -3,11 +3,11 @@
 //
 // Modelo: ao entrar, as notícias (src/content/noticias/{pt,en}/*.md, ver
 // noticias-md.js) e episodes.json/site.json etc. são carregados uma vez para
-// a memória (contentData). Reordenar, adicionar, remover e
-// editar campos só mudam essa cópia em memória e marcam a seção como suja
-// (dirty) — nada é gravado no GitHub até clicar em "Salvar no GitHub", que
-// faz o commit de cada arquivo sujo de uma vez. Os acessos (data/auth.json)
-// são a exceção: cada ação ali já commita na hora, como antes.
+// a memória (contentData). Cada tela (um item, ou uma tela de textos do
+// site) tem o próprio "Publicar", que grava só aquela parte (ver "Publicação
+// por tela"); remover um item publica na hora, e a ordem da lista é
+// publicada pela barra no rodapé da lista. Os acessos (data/auth.json) já
+// commitam a cada ação, como antes.
 //
 // Autenticação: cada pessoa usa seu próprio token de acesso pessoal do
 // GitHub, criptografado (AES-GCM, chave derivada via PBKDF2 a partir da
@@ -791,12 +791,15 @@ let painelAtual = null;
 
 function showPanel(name) {
   if (ROLE !== "admin" && document.getElementById("panel-" + name)?.closest(".admin-only")) return;
+  if (!podeSairDaTela()) return;
   painelAtual = name;
   document.querySelectorAll(".section-panel.em-detalhe").forEach(fecharItem);
   document.querySelectorAll(".section-panel").forEach((p) => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach((b) => b.classList.remove("active"));
   const panel = document.getElementById("panel-" + name);
   if (panel) panel.classList.add("active");
+  abrirTela(panel?.querySelector(":scope > .barra-publicar") ? panel : null, SECOES_DE_TEXTOS);
+  atualizarBarrasDeLista();
   irParaOConteudo();
   const btn = document.querySelector(`.nav-btn[data-panel="${BOTAO_DA_TELA[name] || name}"]`);
   if (btn) {
@@ -843,6 +846,7 @@ function setupPagePanels() {
     const formContainer = el("div");
     formContainer.id = `page-form-${tela.id}`;
     panel.appendChild(formContainer);
+    panel.appendChild(barraDePublicar(publicarTextos));
     panelsContainer.appendChild(panel);
 
     // Na lista, uma linha leva a esta tela.
@@ -865,10 +869,22 @@ async function enterApp() {
   setupPagePanels();
   setupNav();
   document.getElementById("logout-btn").addEventListener("click", () => {
+    if (!podeSairDaTela()) return;
     TOKEN = "";
     location.reload();
   });
-  document.getElementById("save-btn").addEventListener("click", saveAll);
+  // Fechar ou recarregar a aba com alterações não publicadas.
+  window.addEventListener("beforeunload", (e) => {
+    if (TOKEN && (telaTemAlteracoes() || dirty.size)) e.preventDefault();
+  });
+  // A barra da tela aberta acompanha o que é digitado.
+  document.getElementById("app-screen").addEventListener("input", atualizarBarrasDeTela);
+  document.getElementById("app-screen").addEventListener("change", atualizarBarrasDeTela);
+  document.getElementById("app-screen").addEventListener("click", atualizarBarrasDeTela);
+  // Telas de textos que já vêm no HTML.
+  for (const id of ["panel-menu", "panel-general"]) {
+    document.getElementById(id).appendChild(barraDePublicar(publicarTextos));
+  }
   vigiarVersaoDoPainel();
   document.getElementById("add-article-btn").addEventListener("click", addArticle);
   document.getElementById("add-episode-btn").addEventListener("click", addEpisode);
@@ -949,8 +965,211 @@ function toast(message, kind) {
 
 function markDirty(section) {
   dirty.add(section);
-  document.getElementById("save-btn").disabled = false;
-  setSaveStatus("alterações pendentes", "pending");
+  setSaveStatus("não publicado", "pending");
+  atualizarBarrasDeLista();
+}
+
+// ----------------------------------------------------------------------------
+// Publicação por tela
+// ----------------------------------------------------------------------------
+// Cada tela (um item, ou uma tela de textos do site) tem o próprio botão
+// "Publicar", que grava só aquela parte. Ao sair de uma tela com alterações
+// não publicadas, o painel pergunta se pode descartá-las; descartar volta a
+// seção para a última versão publicada (`publicado`).
+
+// Cópia de contentData como está publicado (no carregamento e a cada
+// publicação). Descartar restaura daqui.
+let publicado = {};
+
+// Seções gravadas pelas telas de textos do site.
+const SECOES_DE_TEXTOS = ["site", "siteEn", "paginas"];
+
+// Tela aberta agora: { root, secoes, base, novo }. `base` é a assinatura dos
+// campos quando a tela abriu; `novo` marca um item criado e ainda não
+// publicado.
+let telaAberta = null;
+
+// Retrato dos campos de uma tela, para saber se algo mudou desde que ela
+// abriu. Inclui os arquivos escolhidos e ainda não enviados (status
+// "pending" de buildFileUploadField).
+function assinatura(root) {
+  if (!root) return "";
+  const campos = [...root.querySelectorAll("input, textarea, select, [contenteditable]")].map((e) => {
+    if (e.isContentEditable) return e.innerHTML;
+    if (e.type === "checkbox") return e.checked;
+    if (e.type === "file") return "";
+    return e.value;
+  });
+  campos.push(root.querySelectorAll('[data-kind="pending"]').length);
+  return JSON.stringify(campos);
+}
+
+function abrirTela(root, secoes, novo = false) {
+  telaAberta = root ? { root, secoes, base: assinatura(root), novo } : null;
+  atualizarBarrasDeTela();
+}
+
+function telaTemAlteracoes() {
+  return !!telaAberta && (telaAberta.novo || assinatura(telaAberta.root) !== telaAberta.base);
+}
+
+// Antes de sair da tela aberta. Devolve false se a pessoa preferiu ficar.
+function podeSairDaTela() {
+  if (!telaAberta) return true;
+  const mudou = assinatura(telaAberta.root) !== telaAberta.base;
+  if (mudou && !confirm("Esta tela tem alterações que ainda não foram publicadas. Sair e descartar as alterações?")) return false;
+  if (mudou || telaAberta.novo) descartarSecoes(telaAberta.secoes);
+  else if (telaAberta.secoes === SECOES_DE_TEXTOS) {
+    // Digitou e desfez: o campo marcou a seção, mas nada mudou de fato.
+    for (const secao of SECOES_DE_TEXTOS) {
+      if (secao === "paginas" || JSON.stringify(contentData[secao]) === JSON.stringify(publicado[secao])) dirty.delete(secao);
+    }
+  }
+  telaAberta = null;
+  return true;
+}
+
+// Volta as seções para a última versão publicada e redesenha as telas delas.
+function descartarSecoes(secoes) {
+  for (const secao of secoes) {
+    if (secao in publicado) contentData[secao] = structuredClone(publicado[secao]);
+    dirty.delete(secao);
+  }
+  pendingUploads.length = 0;
+  pendingDeletions.length = 0;
+  redesenharSecoes(secoes);
+  setSaveStatus(dirty.size ? "não publicado" : "tudo publicado", dirty.size ? "pending" : "ok");
+  atualizarBarrasDeLista();
+}
+
+function redesenharSecoes(secoes) {
+  const s = new Set(secoes);
+  if (s.has("articles")) renderArticlesList();
+  if (s.has("episodes")) renderEpisodesList();
+  if (s.has("members")) renderMembersList();
+  if (s.has("categoriasEstudo")) renderCategoriasEstudoList();
+  if (s.has("estudos") || s.has("categoriasEstudo")) renderEstudosList();
+  if (SECOES_DE_TEXTOS.some((x) => s.has(x))) redesenharTextosDoSite();
+}
+
+function redesenharTextosDoSite() {
+  renderGeneralForm();
+  renderSiteSocialLinks();
+  renderSiteMenu();
+  renderPageForms();
+  renderHomeEventBanner();
+  carregarPaginasDeTexto(paginasMarkdownOriginais);
+  renderSidebarPaginas();
+}
+
+// Seção de um cartão de item, pelo id do cartão.
+function secaoDoCard(card) {
+  const prefixos = [
+    ["article-card-", "articles"],
+    ["episode-card-", "episodes"],
+    ["member-card-", "members"],
+    ["member-view-", "members"],
+    ["categoria-estudo-card-", "categoriasEstudo"],
+    ["estudo-card-", "estudos"],
+  ];
+  return prefixos.find(([p]) => card.id.startsWith(p))?.[1];
+}
+
+// "Publicar" de um item: `preparar` confirma os arquivos escolhidos e passa
+// os campos do cartão para contentData (o que o antigo "Salvar alterações"
+// fazia). Depois de publicar, redesenha a lista (a linha mostra o título
+// novo) e reabre o mesmo item.
+async function publicarItem(card, preparar) {
+  const secao = secaoDoCard(card);
+  preparar();
+  markDirty(secao);
+  const id = card.id;
+  const ok = await saveAll([secao]);
+  if (!ok) return;
+  redesenharSecoes([secao]);
+  const reaberto = document.getElementById(id);
+  if (reaberto) abrirItem(reaberto, { manterRolagem: true });
+}
+
+// "Publicar" de uma tela de textos do site.
+async function publicarTextos() {
+  const ok = await saveAll(SECOES_DE_TEXTOS);
+  if (!ok) return;
+  // A tela de uma página de texto é recriada depois de publicar.
+  const painel = document.getElementById(`panel-${painelAtual}`);
+  abrirTela(painel, SECOES_DE_TEXTOS);
+}
+
+// Barra "Publicar" no rodapé das telas de textos do site.
+function barraDePublicar(onPublicar) {
+  const barra = el("div", "barra-publicar");
+  barra.appendChild(el("span", "barra-estado"));
+  const btn = el("button", "btn btn-primary btn-small btn-publicar", "Publicar");
+  btn.type = "button";
+  btn.addEventListener("click", onPublicar);
+  barra.appendChild(btn);
+  return barra;
+}
+
+// Mostra "alterações não publicadas" na barra da tela aberta.
+let barraTimer = null;
+function atualizarBarrasDeTela() {
+  if (barraTimer) return;
+  barraTimer = requestAnimationFrame(() => {
+    barraTimer = null;
+    document.querySelectorAll(".barra-publicar:not(.barra-lista) .barra-estado, .card-actions .barra-estado").forEach((e) => (e.textContent = ""));
+    const mudou = !!telaAberta && telaTemAlteracoes();
+    if (telaAberta) {
+      let estado = telaAberta.root.querySelector(":scope > .barra-publicar .barra-estado, .card-actions .barra-estado");
+      const acoes = telaAberta.root.querySelector(".card-actions");
+      if (!estado && acoes) acoes.prepend((estado = el("span", "barra-estado")));
+      if (estado) estado.textContent = mudou ? "alterações não publicadas" : "";
+    }
+    // O topo acompanha a tela, mas não apaga "publicando…" nem um erro.
+    const topo = document.getElementById("save-status");
+    if (topo && /^(tudo publicado|não publicado|publicado ✓)$/.test(topo.textContent)) {
+      if (mudou || dirty.size) setSaveStatus("não publicado", "pending");
+      else if (topo.textContent === "não publicado") setSaveStatus("tudo publicado", "ok");
+    }
+  });
+}
+
+// Lista com mudança que não é de um item só (ordem, ou correção automática
+// do carregamento): uma barra no rodapé da lista oferece Publicar e
+// Desfazer.
+const LISTAS = {
+  articles: "panel-articles",
+  episodes: "panel-episodes",
+  members: "panel-members",
+  estudos: "panel-estudos",
+  categoriasEstudo: "panel-estudos",
+};
+
+function atualizarBarrasDeLista() {
+  for (const [secao, painelId] of Object.entries(LISTAS)) {
+    const painel = document.getElementById(painelId);
+    if (!painel) continue;
+    let barra = painel.querySelector(`.barra-lista[data-secao="${secao}"]`);
+    const aberto = telaAberta?.secoes.includes(secao);
+    const mostrar = dirty.has(secao) && !aberto;
+    if (!mostrar) {
+      barra?.remove();
+      continue;
+    }
+    if (barra) continue;
+    barra = barraDePublicar(async () => {
+      if (await saveAll([secao])) atualizarBarrasDeLista();
+    });
+    barra.classList.add("barra-lista");
+    barra.dataset.secao = secao;
+    barra.querySelector(".barra-estado").textContent =
+      secao === "categoriasEstudo" ? "As categorias têm alterações não publicadas (ordem ou correções)." : "A lista tem alterações não publicadas (ordem ou correções).";
+    const desfazer = el("button", "btn btn-secondary btn-small", "Desfazer");
+    desfazer.type = "button";
+    desfazer.addEventListener("click", () => descartarSecoes([secao]));
+    barra.insertBefore(desfazer, barra.querySelector(".btn-publicar"));
+    painel.appendChild(barra);
+  }
 }
 
 // Busca um arquivo de conteúdo que pode ainda não existir no repositório
@@ -1043,13 +1262,13 @@ async function loadContent() {
     renderSiteSocialLinks();
     renderSiteMenu();
     renderSidebarPaginas();
+    publicado = structuredClone(contentData);
+    atualizarBarrasDeLista();
     if (fixedArticles || fixedEpisodes || fixedEstudos || fixedCategoriasEstudo) {
-      document.getElementById("save-btn").disabled = false;
-      setSaveStatus("alterações pendentes", "pending");
-      toast('Encontrei alguma coisa desatualizada (identificador fora do padrão ou campo removido) e já corrigi — clique em "Salvar no GitHub" para confirmar.', "ok");
+      setSaveStatus("não publicado", "pending");
+      toast('Encontrei alguma coisa desatualizada (identificador fora do padrão ou campo removido) e já corrigi. Confira e clique em "Publicar" na barra da lista.', "ok");
     } else {
-      setSaveStatus("dados carregados ✓", "ok");
-      document.getElementById("save-btn").disabled = true;
+      setSaveStatus("tudo publicado", "ok");
     }
   } catch (err) {
     setSaveStatus("erro ao carregar ✗", "err");
@@ -1348,13 +1567,18 @@ function vigiarVersaoDoPainel() {
   });
 }
 
-async function saveAll() {
-  if (dirty.size === 0 && pendingUploads.length === 0 && pendingDeletions.length === 0) return;
+// Publica as seções `secoes` que tiverem alteração (todas, sem o
+// argumento), mais os envios de arquivo na fila. Devolve true se publicou
+// (ou se não havia nada a publicar) e false se algo deu errado ou foi
+// cancelado.
+async function saveAll(secoes) {
+  const alvo = new Set([...dirty].filter((s) => !secoes || secoes.includes(s)));
+  if (alvo.size === 0 && pendingUploads.length === 0 && pendingDeletions.length === 0) return true;
   if (await painelDesatualizado()) {
     await avisarSePainelDesatualizado();
     setSaveStatus("erro: painel desatualizado — recarregue a página", "err");
     toast("Nada foi enviado: o painel foi atualizado desde que esta página abriu. Recarregue (Ctrl+Shift+R) e refaça a alteração.", "error");
-    return;
+    return false;
   }
   // Sem isso, campos de "Rodapé e marca"/"Páginas" (data-site/data-site-en)
   // e as listas de tamanho livre (links de integrante, redes sociais do
@@ -1363,13 +1587,11 @@ async function saveAll() {
   // direto em "Salvar no GitHub" depois de só editar um desses campos
   // salvava a versão antiga, sem a edição.
   collectAll();
-  const saveBtn = document.getElementById("save-btn");
-  saveBtn.disabled = true;
-  setSaveStatus("salvando…", "pending");
+  setSaveStatus("publicando…", "pending");
   try {
     // Antes dos envios: um id de integrante repetido faria a foto de um
     // sobrescrever a do outro (o caminho da foto vem do id).
-    if (dirty.has("members")) {
+    if (alvo.has("members")) {
       const problemas = contentData.members
         .filter((m) => m._isNew)
         .flatMap((m) => {
@@ -1382,42 +1604,40 @@ async function saveAll() {
     const memberIds = contentData.members?.map((m) => m.id) || [];
     const duplicate = memberIds.find((id, i) => memberIds.indexOf(id) !== i);
     if (duplicate) throw new Error(`dois integrantes com o mesmo identificador ("${duplicate}")`);
-    if (dirty.has("members")) alinharFotosDeIntegrantesNovos();
+    if (alvo.has("members")) alinharFotosDeIntegrantesNovos();
     // Menu: item sem nome ou com link fora do formato faria o build falhar
     // (ver src/lib/menu.ts).
-    if (dirty.has("site")) {
+    if (alvo.has("site")) {
       const problemas = problemasDoMenu(contentData.site.menu || []);
       if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
     }
     // Episódios: data inválida faria o build do site falhar.
-    if (dirty.has("episodes")) {
+    if (alvo.has("episodes")) {
       const semData = contentData.episodes.filter((e) => !/^\d{4}-\d{2}-\d{2}$/.test(e.date || ""));
       if (semData.length) throw new Error(`corrija antes de salvar: data inválida no episódio ${semData.map((e) => e.title || e.id).join(", ")}`);
     }
     // Notícias: valida e calcula os arquivos antes de qualquer envio — um
     // título vazio ou uma data inválida faria o build do site falhar.
     let noticias = null;
-    if (dirty.has("articles")) {
+    if (alvo.has("articles")) {
       const problemas = problemasDasNoticias(contentData.articles);
       if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
       const arquivos = noticiasParaArquivos(contentData.articles);
       noticias = { arquivos, mudancas: mudancasDeArquivos(noticiasMarkdownOriginais, arquivos) };
       if (!confirmarApagarTraducoes(noticias.mudancas.apagar, arquivos)) {
-        setSaveStatus("alterações pendentes", "pending");
-        saveBtn.disabled = false;
-        return;
+        setSaveStatus("não publicado", "pending");
+        return false;
       }
     }
     // Páginas de texto: idem, um commit só com os .md que mudaram.
     let paginas = null;
-    if (dirty.has("paginas")) {
+    if (alvo.has("paginas")) {
       const { arquivos, problemas } = paginasParaArquivos();
       if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
       paginas = { arquivos, mudancas: mudancasDeArquivos(paginasMarkdownOriginais, arquivos) };
       if (paginas.mudancas.apagar.length && !confirm(`Apagar a versão em inglês de: ${paginas.mudancas.apagar.map(slugDoCaminho).join(", ")}? (o texto em inglês foi esvaziado)`)) {
-        setSaveStatus("alterações pendentes", "pending");
-        saveBtn.disabled = false;
-        return;
+        setSaveStatus("não publicado", "pending");
+        return false;
       }
     }
     for (const upload of pendingUploads) {
@@ -1434,14 +1654,14 @@ async function saveAll() {
     // addMember) pra liberar a edição do id enquanto o integrante ainda não
     // tinha sido salvo — nunca deve ir pro JSON do GitHub.
     let savedNewMembers = false;
-    if (dirty.has("members")) {
+    if (alvo.has("members")) {
       contentData.members.forEach((m) => {
         if (m._isNew) savedNewMembers = true;
         delete m._isNew;
         delete m._idManual;
       });
     }
-    for (const section of dirty) {
+    for (const section of alvo) {
       if (section === "articles") {
         await salvarNoticias(noticias);
         continue;
@@ -1461,17 +1681,21 @@ async function saveAll() {
       await putFile(PATHS[section], contentData[section], fresh.sha, `admin: atualiza ${section}`);
     }
     // A lista de integrantes de "Acessos" passa a ter os recém-salvos.
-    if (dirty.has("members") && accessCache) renderAccessList();
-    dirty.clear();
+    if (alvo.has("members") && accessCache) renderAccessList();
+    alvo.forEach((section) => {
+      dirty.delete(section);
+      publicado[section] = structuredClone(contentData[section]);
+    });
     // Redesenha os cards de integrante pra travar o id dos que acabaram de
     // ser salvos pela primeira vez (some o campo editável, aparece o travado).
     if (savedNewMembers) renderMembersList();
-    setSaveStatus("salvo ✓", "ok");
-    toast("Salvo no GitHub!", "ok");
+    setSaveStatus("publicado ✓", "ok");
+    toast("Publicado! O site atualiza em um ou dois minutos.", "ok");
+    return true;
   } catch (err) {
-    setSaveStatus("erro ao salvar ✗", "err");
+    setSaveStatus("erro ao publicar ✗", "err");
     toast(`Erro: ${err.message}`, "error");
-    saveBtn.disabled = false;
+    return false;
   }
 }
 
@@ -1726,7 +1950,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     pendingClear = false;
     const path = opts.buildPath(file);
     pending = { path, file, message: opts.buildMessage(path) };
-    status.textContent = `Selecionado: ${path} — clique em "Salvar alterações" para confirmar.`;
+    status.textContent = `Selecionado: ${path} — é enviado ao clicar em "Publicar".`;
     status.dataset.kind = "pending";
     if (previews.length) {
       const objectUrl = URL.createObjectURL(file);
@@ -1745,7 +1969,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
       pendingClear = !!currentValue;
       textInput.value = "";
       status.textContent = currentValue
-        ? `Marcado para remover — clique em "Salvar alterações" para confirmar.`
+        ? `Marcado para remover — é removido ao clicar em "Publicar".`
         : "";
       status.dataset.kind = currentValue ? "pending" : "";
       for (const img of previews) img.style.display = "none";
@@ -1760,7 +1984,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
         message: `admin: remove arquivo (${currentValue})`,
       });
       pendingClear = false;
-      status.textContent = `Removido — será excluído ao clicar em "Salvar no GitHub".`;
+      status.textContent = `Removido — será excluído ao clicar em "Publicar".`;
       status.dataset.kind = "ok";
       return;
     }
@@ -1776,7 +2000,7 @@ function buildFileUploadField(labelText, currentValue, dataset, opts) {
     }
     pendingUploads.push(pending);
     textInput.value = pending.path;
-    status.textContent = `Na fila — será enviado ao clicar em "Salvar no GitHub".`;
+    status.textContent = `Na fila — será enviado ao clicar em "Publicar".`;
     status.dataset.kind = "ok";
     pending = null;
     updateButtonStates();
@@ -2189,17 +2413,15 @@ function buildRichTextField(labelText, value, dataset, opts) {
   return wrap;
 }
 
-// Botão "Salvar alterações" de um card: é o único gatilho que sincroniza
-// os campos daquele bloco pra dentro de contentData e marca a seção como
-// suja — digitar/marcar checkbox/escolher arquivo, sozinhos, não fazem
-// nada até esse clique (ver collectArticleCardFields/collectEpisodeCardFields
-// e confirmFileUpload em buildFileUploadField).
+// Botão "Publicar" da tela de um item. `onSave` confirma os arquivos
+// escolhidos e passa os campos do cartão para contentData; publicarItem
+// grava só a seção do item.
 function buildSaveCardButton(onSave) {
-  const btn = el("button", "btn btn-primary btn-small", "Salvar alterações");
+  const btn = el("button", "btn btn-primary btn-small btn-publicar", "Publicar");
   btn.type = "button";
   btn.addEventListener("click", (e) => {
     e.stopPropagation();
-    onSave();
+    publicarItem(btn.closest(".card"), onSave);
   });
   return btn;
 }
@@ -2212,10 +2434,15 @@ function buildSaveCardButton(onSave) {
 function wireCardAccordion(card, header, body, _container, voltarPara) {
   const voltar = el("button", "item-voltar", `← ${voltarPara || "Voltar para a lista"}`);
   voltar.type = "button";
-  voltar.addEventListener("click", () => fecharItem(card.closest(".section-panel")));
+  voltar.addEventListener("click", () => {
+    // Pega o painel antes: descartar redesenha a lista e tira este card da página.
+    const panel = card.closest(".section-panel");
+    if (podeSairDaTela()) fecharItem(panel);
+  });
   card.prepend(voltar);
   header.addEventListener("click", () => {
-    if (!card.classList.contains("open")) abrirItem(card);
+    if (card.classList.contains("open") || !listaSemPendencias(secaoDoCard(card))) return;
+    if (podeSairDaTela()) abrirItem(card);
   });
 }
 
@@ -2223,14 +2450,18 @@ function wireCardAccordion(card, header, body, _container, voltarPara) {
 // ponto ao fechar.
 const posicaoDaLista = new WeakMap();
 
-function abrirItem(card) {
+// `novo`: item criado agora e ainda não publicado (sair sem publicar o
+// descarta). `manterRolagem`: reabertura depois de publicar.
+function abrirItem(card, { novo = false, manterRolagem = false } = {}) {
   const panel = card.closest(".section-panel");
   if (!panel) return;
-  posicaoDaLista.set(panel, window.scrollY);
+  if (!panel.classList.contains("em-detalhe")) posicaoDaLista.set(panel, window.scrollY);
   panel.querySelectorAll(".card.open").forEach((c) => c !== card && c.classList.remove("open"));
   card.classList.add("open");
   panel.classList.add("em-detalhe");
-  irParaOConteudo();
+  abrirTela(card, [secaoDoCard(card)], novo);
+  atualizarBarrasDeLista();
+  if (!manterRolagem) irParaOConteudo();
 }
 
 // Rola até o começo da área de conteúdo (no celular a barra lateral fica em
@@ -2245,6 +2476,8 @@ function fecharItem(panel) {
   if (!panel?.classList.contains("em-detalhe")) return;
   panel.querySelectorAll(".card.open").forEach((c) => c.classList.remove("open"));
   panel.classList.remove("em-detalhe");
+  if (telaAberta && panel.contains(telaAberta.root)) telaAberta = null;
+  atualizarBarrasDeLista();
   window.scrollTo(0, posicaoDaLista.get(panel) || 0);
 }
 
@@ -2268,6 +2501,14 @@ function blocoDeIdiomas({ pt, en, pares = [], dica }) {
   };
   abasDeIdioma(wrap, () => pares.filter(([a, b]) => valor(blocoPt, a) && !valor(blocoEn, b)).length);
   return wrap;
+}
+
+// Com a ordem da lista alterada e não publicada, abrir ou criar um item
+// misturaria as duas coisas (descartar o item desfaria também a ordem).
+function listaSemPendencias(secao) {
+  if (!dirty.has(secao)) return true;
+  toast('Antes, publique ou desfaça as alterações da lista (barra no rodapé).', "error");
+  return false;
 }
 
 // Selo "falta traduzir" das linhas da lista.
@@ -2803,7 +3044,6 @@ function buildArticleCard(article, i, total, container) {
     englishSection.confirmBodyImages();
     collectArticleCardFields(i);
     markDirty("articles");
-    toast('Alterações da notícia prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover notícia");
@@ -2824,21 +3064,22 @@ function moveArticle(from, to) {
   contentData.articles.splice(to, 0, item);
   renderArticlesList();
   markDirty("articles");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeArticle(i) {
   const article = contentData.articles[i];
-  if (!confirm(`Remover a notícia "${article.title || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  if (!confirm(`Remover a notícia "${article.title || "(sem título)"}"? A remoção é publicada agora.`)) return;
   fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.articles.splice(i, 1);
   renderArticlesList();
   markDirty("articles");
-  toast('Notícia removida — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["articles"]).then(atualizarBarrasDeLista);
 }
 
 function addArticle() {
+  if (!listaSemPendencias("articles")) return;
   collectAll();
   const id = `noticia-${nextIdNumber(contentData.articles, "noticia")}`;
   // Insere no início: a home e a lista pública mostram as notícias na ordem
@@ -2856,7 +3097,7 @@ function addArticle() {
   renderArticlesList();
   markDirty("articles");
   const card = document.getElementById("article-card-0");
-  if (card) abrirItem(card);
+  if (card) abrirItem(card, { novo: true });
 }
 
 // ----------------------------------------------------------------------------
@@ -2990,7 +3231,6 @@ function buildEpisodeCard(episode, i, total, container) {
     imageField.confirmFileUpload();
     collectEpisodeCardFields(i);
     markDirty("episodes");
-    toast('Alterações do episódio prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover episódio");
@@ -3011,21 +3251,22 @@ function moveEpisode(from, to) {
   contentData.episodes.splice(to, 0, item);
   renderEpisodesList();
   markDirty("episodes");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeEpisode(i) {
   const episode = contentData.episodes[i];
-  if (!confirm(`Remover o episódio "${episode.title || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  if (!confirm(`Remover o episódio "${episode.title || "(sem título)"}"? A remoção é publicada agora.`)) return;
   fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.episodes.splice(i, 1);
   renderEpisodesList();
   markDirty("episodes");
-  toast('Episódio removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["episodes"]).then(atualizarBarrasDeLista);
 }
 
 function addEpisode() {
+  if (!listaSemPendencias("episodes")) return;
   collectAll();
   const nextNumber = nextIdNumber(contentData.episodes, "ep");
   const id = `ep-${nextNumber}`;
@@ -3045,7 +3286,7 @@ function addEpisode() {
   renderEpisodesList();
   markDirty("episodes");
   const card = document.getElementById("episode-card-0");
-  if (card) abrirItem(card);
+  if (card) abrirItem(card, { novo: true });
 }
 
 // ----------------------------------------------------------------------------
@@ -3342,7 +3583,6 @@ function buildMemberCard(member, i, total) {
     photoField.confirmFileUpload();
     collectMemberCardFields(i);
     markDirty("members");
-    toast('Alterações do integrante prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover integrante");
@@ -3364,7 +3604,7 @@ function moveMember(from, to) {
   contentData.members.splice(to, 0, item);
   renderMembersList();
   markDirty("members");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeMember(i) {
@@ -3372,16 +3612,17 @@ function removeMember(i) {
   if (!canEditMember(member)) return;
   const linked = (accessCache?.content?.tokens || []).filter((t) => member.id && t.integrante === member.id);
   const aviso = linked.length ? ` O acesso "${linked.map((t) => t.label).join('", "')}" vai ficar sem integrante (dá para ligar outro em "Acessos").` : "";
-  if (!confirm(`Remover o integrante "${member.name || "(sem nome)"}"? Só é definitivo ao clicar em "Salvar no GitHub".${aviso}`)) return;
+  if (!confirm(`Remover o integrante "${member.name || "(sem nome)"}"? A remoção é publicada agora.${aviso}`)) return;
   fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.members.splice(i, 1);
   renderMembersList();
   markDirty("members");
-  toast('Integrante removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["members"]).then(atualizarBarrasDeLista);
 }
 
 function addMember() {
+  if (!listaSemPendencias("members")) return;
   collectAll();
   // O id nasce vazio e acompanha o nome digitado (ver buildMemberCard).
   const id = "";
@@ -3395,7 +3636,7 @@ function addMember() {
   renderMembersList();
   markDirty("members");
   const card = document.getElementById("member-card-0");
-  if (card) abrirItem(card);
+  if (card) abrirItem(card, { novo: true });
 }
 
 // A foto de um integrante novo pode ter sido escolhida antes de o nome estar
@@ -3500,7 +3741,6 @@ function buildCategoriaEstudoCard(categoria, i, total) {
   const saveBtn = buildSaveCardButton(() => {
     collectCategoriaEstudoCardFields(i);
     markDirty("categoriasEstudo");
-    toast('Alterações da categoria prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover categoria");
@@ -3520,7 +3760,7 @@ function moveCategoriaEstudo(from, to) {
   contentData.categoriasEstudo.splice(to, 0, item);
   renderCategoriasEstudoList();
   markDirty("categoriasEstudo");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeCategoriaEstudo(i) {
@@ -3531,15 +3771,16 @@ function removeCategoriaEstudo(i) {
     toast(`Não é possível remover "${categoria.nome || categoria.id}": ainda há verbetes cadastrados nessa categoria.`, "error");
     return;
   }
-  if (!confirm(`Remover a categoria "${categoria.nome || "(sem nome)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  if (!confirm(`Remover a categoria "${categoria.nome || "(sem nome)"}"? A remoção é publicada agora.`)) return;
   fecharItem(document.querySelector(".section-panel.em-detalhe"));
   contentData.categoriasEstudo.splice(i, 1);
   renderCategoriasEstudoList();
   markDirty("categoriasEstudo");
-  toast('Categoria removida — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["categoriasEstudo"]).then(atualizarBarrasDeLista);
 }
 
 function addCategoriaEstudo() {
+  if (!listaSemPendencias("categoriasEstudo")) return;
   collectAll();
   const id = `categoria-${nextIdNumber(contentData.categoriasEstudo, "categoria")}`;
   // Ao fim da lista (não no início, diferente de notícia/episódio): categoria
@@ -3549,7 +3790,7 @@ function addCategoriaEstudo() {
   renderCategoriasEstudoList();
   markDirty("categoriasEstudo");
   const card = document.getElementById(`categoria-estudo-card-${contentData.categoriasEstudo.length - 1}`);
-  if (card) abrirItem(card);
+  if (card) abrirItem(card, { novo: true });
 }
 
 // ----------------------------------------------------------------------------
@@ -3703,11 +3944,10 @@ function buildEstudoCard(verbete, i, total, container) {
     conteudoEnField.confirmBodyImages();
     collectEstudoCardFields(i);
     // dataAtualizacao não tem campo próprio no formulário — é sempre a data
-    // deste "Salvar alterações", igual a como readingTime é recalculado a
-    // cada confirmação de card de notícia.
+    // desta publicação, igual a como readingTime é recalculado a cada
+    // publicação de notícia.
     contentData.estudos[i].dataAtualizacao = new Date().toISOString().slice(0, 10);
     markDirty("estudos");
-    toast('Alterações do verbete prontas — clique em "Salvar no GitHub" para enviar.', "ok");
   });
   actions.appendChild(saveBtn);
   const removeBtn = el("button", "btn btn-danger btn-small", "Remover verbete");
@@ -3727,21 +3967,22 @@ function moveEstudo(from, to) {
   contentData.estudos.splice(to, 0, item);
   renderEstudosList();
   markDirty("estudos");
-  toast('Ordem atualizada — clique em "Salvar no GitHub" para confirmar.', "ok");
+  toast('Ordem alterada. Para valer no site, clique em "Publicar" no rodapé da lista.', "ok");
 }
 
 function removeEstudo(i) {
   const verbete = contentData.estudos[i];
-  if (!confirm(`Remover o verbete "${verbete.titulo || "(sem título)"}"? Só é definitivo ao clicar em "Salvar no GitHub".`)) return;
+  if (!confirm(`Remover o verbete "${verbete.titulo || "(sem título)"}"? A remoção é publicada agora.`)) return;
   fecharItem(document.querySelector(".section-panel.em-detalhe"));
   collectAll();
   contentData.estudos.splice(i, 1);
   renderEstudosList();
   markDirty("estudos");
-  toast('Verbete removido — clique em "Salvar no GitHub" para confirmar.', "ok");
+  saveAll(["estudos"]).then(atualizarBarrasDeLista);
 }
 
 function addEstudo() {
+  if (!listaSemPendencias("estudos")) return;
   collectAll();
   const id = `verbete-${nextIdNumber(contentData.estudos, "verbete")}`;
   contentData.estudos.unshift({
@@ -3757,7 +3998,7 @@ function addEstudo() {
   renderEstudosList();
   markDirty("estudos");
   const card = document.getElementById("estudo-card-0");
-  if (card) abrirItem(card);
+  if (card) abrirItem(card, { novo: true });
 }
 
 // ----------------------------------------------------------------------------
@@ -3854,8 +4095,11 @@ function renderGeneralForm() {
     container.appendChild(grid);
   }
   abasDeIdioma(container);
-  container.addEventListener("input", handleSiteFieldChange);
-  container.addEventListener("change", handleSiteFieldChange);
+  if (!container.dataset.ligado) {
+    container.dataset.ligado = "1";
+    container.addEventListener("input", handleSiteFieldChange);
+    container.addEventListener("change", handleSiteFieldChange);
+  }
 }
 
 // Redes sociais do rodapé: mesma lógica de tamanho livre dos links de
@@ -3912,6 +4156,8 @@ function renderSiteSocialLinks() {
   if (!list || !addBtn) return;
   list.innerHTML = "";
   (contentData.site.socialLinks || []).forEach((link) => list.appendChild(buildSiteSocialLinkRow(link)));
+  if (list.dataset.ligado) return;
+  list.dataset.ligado = "1";
   list.addEventListener("input", () => markDirty("site"));
   addBtn.addEventListener("click", () => {
     list.appendChild(buildSiteSocialLinkRow());
@@ -4029,6 +4275,8 @@ function renderSiteMenu() {
   list.innerHTML = "";
   (contentData.site.menu || menuPadrao()).forEach((item) => list.appendChild(buildSiteMenuRow(item)));
   atualizarBotoesDoMenu();
+  if (list.dataset.ligado) return;
+  list.dataset.ligado = "1";
   list.addEventListener("input", menuMudou);
   list.addEventListener("change", menuMudou);
   addBtn.addEventListener("click", () => {
@@ -4178,7 +4426,7 @@ function garantirPainelDePagina(slug, nome) {
 
   const dica = el("p", "admin-hint");
   if (!pagina.pt) {
-    dica.textContent = `Esta página ainda não existe no site. Escreva o título e o texto e clique em "Salvar no GitHub" para criá-la em /${slug}.`;
+    dica.textContent = `Esta página ainda não existe no site. Escreva o título e o texto e clique em "Publicar" para criá-la em /${slug}.`;
   } else {
     dica.textContent = `Texto da página /${slug}${slug === "sobre" ? ". A lista de integrantes aparece logo abaixo do texto e é editada em Conteúdo → Integrantes" : ""}.`;
   }
@@ -4215,6 +4463,7 @@ function garantirPainelDePagina(slug, nome) {
   });
   form.addEventListener("change", () => markDirty("paginas"));
   panel.appendChild(form);
+  panel.appendChild(barraDePublicar(publicarTextos));
   // Textos fixos do site que aparecem nesta página (ex.: o título da seção
   // "Integrantes" do Sobre), na mesma tela e nas mesmas abas.
   const extras = PAGE_SCHEMA.find((p) => p.key === slug);
@@ -4364,9 +4613,7 @@ function renderHomeEventBanner() {
   );
   container.appendChild(linkField);
 
-  container.addEventListener("input", handleSiteFieldChange);
-  container.addEventListener("change", handleSiteFieldChange);
-
+  // Os ouvintes de input/change do container já vêm de renderPageForms.
   homeEventBannerField = bannerField;
 }
 
