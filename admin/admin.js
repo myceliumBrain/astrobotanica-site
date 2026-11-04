@@ -81,6 +81,8 @@ let TOKEN = ""; // token decifrado, só em memória — nunca persistido
 // seção Conteúdo). Acessos antigos, sem "role" no auth.json, contam como admin.
 let ROLE = "admin";
 const ROLES = { admin: "Admin", colaborador: "Colaborador" };
+// O que cada categoria vê, para os formulários de Acessos.
+const ROLES_DICA = { admin: "painel inteiro", colaborador: "só Conteúdo" };
 const roleOf = (entry) => (entry.role === "colaborador" ? "colaborador" : "admin");
 // Registros antigos, sem uid, usam o salt como identificador até o uid ser
 // gravado (migrateCurrentEntry/saveAccount gravam exatamente esse valor), então
@@ -412,10 +414,134 @@ function clearLoginState() {
 }
 
 // ----------------------------------------------------------------------------
+// Perfil de teste: o admin vê o painel como outra categoria (ex.: um
+// colaborador). O perfil fica no auth.json só com nome, categoria e
+// integrante, com "teste": true, sem token nem senha. Para entrar, o admin
+// clica em "Entrar como este perfil" (Acessos), o painel recarrega e pede a
+// senha do admin de novo (o token só existe na memória da aba). Nesse modo
+// nenhuma gravação sai do navegador (ver respostaSimulada).
+// ----------------------------------------------------------------------------
+
+const CHAVE_PERFIL_TESTE = "astrobotanica-perfil-teste";
+let PERFIL_TESTE = null; // { uid, label, role } enquanto ativo
+
+function perfilDeTestePedido() {
+  try {
+    return JSON.parse(sessionStorage.getItem(CHAVE_PERFIL_TESTE) || "null");
+  } catch {
+    return null;
+  }
+}
+function pedirPerfilDeTeste(entry) {
+  try {
+    sessionStorage.setItem(CHAVE_PERFIL_TESTE, JSON.stringify({ uid: entry.uid, label: entry.label || "" }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+function esquecerPerfilDeTeste() {
+  try {
+    sessionStorage.removeItem(CHAVE_PERFIL_TESTE);
+  } catch {
+    /* sem sessionStorage: nada a esquecer */
+  }
+}
+
+// Depois que o admin digitou a própria senha: assume nome, categoria e
+// integrante do perfil de teste pedido. Só um admin entra num perfil de teste.
+function aplicarPerfilDeTeste(tokens, pedido) {
+  const perfil = tokens.find((t) => t.teste && t.uid === pedido.uid);
+  if (ROLE !== "admin" || !perfil) {
+    esquecerPerfilDeTeste();
+    return;
+  }
+  PERFIL_TESTE = { uid: perfil.uid, label: perfil.label || "Perfil de teste", role: roleOf(perfil) };
+  ROLE = PERFIL_TESTE.role;
+  CURRENT_SALT = null;
+  CURRENT_LABEL = PERFIL_TESTE.label;
+  CURRENT_UID = perfil.uid;
+  CURRENT_INTEGRANTE = perfil.integrante || null;
+}
+
+function entrarComoPerfilDeTeste(entry) {
+  if (!podeSairDaTela()) return;
+  if (!pedirPerfilDeTeste(entry)) {
+    toast("Este navegador não deixou guardar a escolha do perfil (modo privado?).", "error");
+    return;
+  }
+  TOKEN = "";
+  location.reload();
+}
+
+function voltarParaOAdmin() {
+  if (!podeSairDaTela()) return;
+  esquecerPerfilDeTeste();
+  TOKEN = "";
+  location.reload();
+}
+
+// Arquivos que o último "Publicar" gravaria, mostrados na faixa de teste.
+let simulados = [];
+let ultimoSimulado = 0;
+function registrarSimulado(caminho) {
+  const agora = Date.now();
+  if (agora - ultimoSimulado > 4000) simulados = [];
+  ultimoSimulado = agora;
+  if (!simulados.includes(caminho)) simulados.push(caminho);
+  const lista = document.getElementById("faixa-teste-simulados");
+  if (!lista) return;
+  lista.hidden = false;
+  lista.textContent = `Último Publicar (simulado) gravaria: ${simulados.join(", ")}`;
+}
+
+// Resposta falsa às gravações (PUT/POST/PATCH) no modo de teste: o painel
+// segue o fluxo normal (mensagens, "publicado"), mas nada chega ao GitHub.
+// As leituras continuam de verdade.
+function respostaSimulada(path, options) {
+  const rota = path.replace(`/repos/${CONFIG.owner}/${CONFIG.repo}`, "").split("?")[0];
+  let corpo = {};
+  try {
+    corpo = options.body ? JSON.parse(options.body) : {};
+  } catch {
+    /* corpo que não é JSON: nada a listar */
+  }
+  if (rota.startsWith("/contents/")) registrarSimulado(decodeURIComponent(rota.slice("/contents/".length)));
+  if (rota === "/git/trees") (corpo.tree || []).forEach((e) => registrarSimulado(e.sha === null ? `${e.path} (apagado)` : e.path));
+  const sha = `simulado-${Date.now()}`;
+  return rota.startsWith("/contents/") ? { content: { sha, path: rota.slice("/contents/".length) } } : { sha };
+}
+
+function mostrarFaixaDeTeste() {
+  const modo = document.querySelector(".adm-modo");
+  if (modo) {
+    modo.textContent = "🧪 perfil de teste";
+    modo.classList.add("adm-modo--teste");
+  }
+  const faixa = el("div", "faixa-teste");
+  const texto = el("div", "faixa-teste-texto");
+  texto.appendChild(el("strong", "", `🧪 Perfil de teste: ${PERFIL_TESTE.label} (${ROLES[PERFIL_TESTE.role] || PERFIL_TESTE.role})`));
+  texto.appendChild(
+    el("span", "", "Você está vendo o painel como essa categoria vê. Publicar é só uma simulação: nada é gravado e o site não muda.")
+  );
+  const lista = el("span", "faixa-teste-simulados");
+  lista.id = "faixa-teste-simulados";
+  lista.hidden = true;
+  texto.appendChild(lista);
+  const voltar = el("button", "btn btn-secondary btn-small", "Voltar para o admin");
+  voltar.type = "button";
+  voltar.addEventListener("click", voltarParaOAdmin);
+  faixa.appendChild(texto);
+  faixa.appendChild(voltar);
+  document.querySelector(".adm-topbar").after(faixa);
+}
+
+// ----------------------------------------------------------------------------
 // GitHub API
 // ----------------------------------------------------------------------------
 
 async function ghRequest(path, { auth = true, ...options } = {}) {
+  if (PERFIL_TESTE && (options.method || "GET").toUpperCase() !== "GET") return respostaSimulada(path, options);
   const headers = {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
@@ -693,6 +819,21 @@ function setupLoginScreen() {
   const lockMessage = checkLockout();
   if (lockMessage) error.textContent = lockMessage;
 
+  const pedido = perfilDeTestePedido();
+  if (pedido) {
+    const aviso = el("div", "aviso-teste");
+    aviso.appendChild(el("p", "", `Para entrar como o perfil de teste "${pedido.label || "sem nome"}", digite a sua senha de admin.`));
+    const normal = el("button", "btn btn-secondary btn-small", "Entrar normalmente");
+    normal.type = "button";
+    normal.addEventListener("click", () => {
+      esquecerPerfilDeTeste();
+      aviso.remove();
+      passwordInput.focus();
+    });
+    aviso.appendChild(normal);
+    passwordInput.closest(".field").before(aviso);
+  }
+
   const attempt = async () => {
     const lock = checkLockout();
     if (lock) {
@@ -708,6 +849,7 @@ function setupLoginScreen() {
       const tokens = fresh.content?.tokens || [];
       let recovered = null;
       for (const entry of tokens) {
+        if (entry.teste) continue; // perfil de teste não tem senha própria
         recovered = await decryptToken(entry, password);
         if (recovered) {
           ROLE = roleOf(entry);
@@ -729,6 +871,8 @@ function setupLoginScreen() {
       clearLoginState();
       TOKEN = recovered;
       await migrateCurrentEntry(password);
+      const pedido = perfilDeTestePedido();
+      if (pedido) aplicarPerfilDeTeste(tokens, pedido);
       await enterApp();
     } catch (err) {
       error.textContent = `Não foi possível entrar: ${err.message}`;
@@ -892,11 +1036,14 @@ function setupPagePanels() {
 
 async function enterApp() {
   document.body.dataset.role = ROLE;
+  if (PERFIL_TESTE) document.body.dataset.teste = "";
   showScreen("app-screen");
+  if (PERFIL_TESTE) mostrarFaixaDeTeste();
   setupPagePanels();
   setupNav();
   document.getElementById("logout-btn").addEventListener("click", () => {
     if (!podeSairDaTela()) return;
+    esquecerPerfilDeTeste();
     TOKEN = "";
     location.reload();
   });
@@ -919,6 +1066,7 @@ async function enterApp() {
   document.getElementById("add-categoria-estudo-btn").addEventListener("click", addCategoriaEstudo);
   document.getElementById("add-estudo-btn").addEventListener("click", addEstudo);
   document.getElementById("access-submit").addEventListener("click", addAccess);
+  document.getElementById("teste-submit").addEventListener("click", criarPerfilDeTeste);
   document.getElementById("account-submit").addEventListener("click", saveAccount);
   document.getElementById("account-cancel").addEventListener("click", resetAccountForm);
   document.getElementById("account-edit-label").addEventListener("click", () => {
@@ -982,6 +1130,10 @@ function setSaveStatus(message, kind) {
 let toastTimer = null;
 function toast(message, kind) {
   const node = document.getElementById("toast");
+  // No perfil de teste, "Publicado!" e afins são só simulação.
+  if (PERFIL_TESTE && kind === "ok" && /publicad|sai do site|site atualiza/i.test(message)) {
+    message = "Simulação: no perfil de teste nada foi gravado e o site não mudou. Veja na faixa amarela o que seria gravado.";
+  }
   node.textContent = message;
   if (kind) node.setAttribute("data-kind", kind);
   else node.removeAttribute("data-kind");
@@ -5252,12 +5404,21 @@ function renderAccessList() {
   }
 
   tokens.forEach((entry, index) => {
-    const row = el("div", "admin-item-row");
+    const row = el("div", entry.teste ? "admin-item-row admin-item-row--teste" : "admin-item-row");
     const main = el("div", "admin-item-main");
-    main.appendChild(el("div", "admin-item-title", entry.label || "sem nome"));
+    const titulo = el("div", "admin-item-title", entry.label || "sem nome");
+    if (entry.teste) titulo.appendChild(el("span", "selo-teste", "🧪 perfil de teste"));
+    main.appendChild(titulo);
     row.appendChild(main);
 
     const actions = el("div", "admin-item-actions");
+    // Dentro de um perfil de teste não se entra em outro: primeiro volta ao admin.
+    if (entry.teste && !PERFIL_TESTE) {
+      const entrar = el("button", "btn btn-primary btn-small", "Entrar como este perfil");
+      entrar.type = "button";
+      entrar.addEventListener("click", () => entrarComoPerfilDeTeste(entry));
+      actions.appendChild(entrar);
+    }
     const memberSelect = buildAccessMemberSelect(entry.integrante);
     memberSelect.setAttribute("aria-label", `Integrante de ${entry.label || "sem nome"}`);
     memberSelect.addEventListener("change", () => changeAccessMember(index, entry.label, memberSelect));
@@ -5273,20 +5434,65 @@ function renderAccessList() {
     roleSelect.addEventListener("change", () => changeAccessRole(index, entry.label, roleSelect));
     actions.appendChild(roleSelect);
 
-    const delBtn = el("button", "btn btn-danger btn-small", "Revogar");
+    const delBtn = el("button", "btn btn-danger btn-small", entry.teste ? "Apagar" : "Revogar");
     delBtn.type = "button";
-    delBtn.addEventListener("click", () => revokeAccess(index, entry.label));
+    delBtn.addEventListener("click", () => revokeAccess(index, entry.label, entry.teste));
     actions.appendChild(delBtn);
     row.appendChild(actions);
 
     list.appendChild(row);
   });
 
-  // Formulário "Adicionar novo acesso": mesma lista, mantendo a escolha.
-  const formSelect = document.getElementById("access-integrante");
-  const chosen = formSelect.value;
-  formSelect.replaceChildren(...buildAccessMemberSelect(chosen).children);
-  formSelect.value = chosen;
+  // Formulários "Adicionar novo acesso" e "Criar perfil de teste": mesma
+  // lista de integrantes e as categorias de ROLES, mantendo a escolha.
+  for (const id of ["access-integrante", "teste-integrante"]) {
+    const formSelect = document.getElementById(id);
+    const chosen = formSelect.value;
+    formSelect.replaceChildren(...buildAccessMemberSelect(chosen).children);
+    formSelect.value = chosen;
+  }
+  for (const id of ["access-role", "teste-role"]) preencherCategorias(document.getElementById(id));
+}
+
+// Uma opção para cada categoria de ROLES (uma categoria nova aparece sozinha).
+function preencherCategorias(select) {
+  const escolhida = select.value || "colaborador";
+  select.replaceChildren(
+    ...Object.entries(ROLES).map(([valor, nome]) => {
+      const option = el("option", null, ROLES_DICA[valor] ? `${nome} (${ROLES_DICA[valor]})` : nome);
+      option.value = valor;
+      return option;
+    })
+  );
+  select.value = ROLES[escolhida] ? escolhida : "colaborador";
+}
+
+// Ninguém é "o último admin" por causa de um perfil de teste.
+const temAdminDeVerdade = (tokens) => tokens.some((t) => !t.teste && roleOf(t) === "admin");
+
+async function criarPerfilDeTeste() {
+  const labelInput = document.getElementById("teste-label");
+  const roleInput = document.getElementById("teste-role");
+  const memberInput = document.getElementById("teste-integrante");
+  const submit = document.getElementById("teste-submit");
+  const role = roleInput.value;
+  const label = labelInput.value.trim() || `Teste — ${ROLES[role] || role}`;
+  const integrante = memberInput.value;
+  submit.disabled = true;
+  try {
+    const fresh = await getFile(CONFIG.authPath);
+    const entry = { uid: crypto.randomUUID(), label, role, teste: true, ...(integrante ? { integrante } : {}) };
+    const updated = { tokens: [...(fresh.content?.tokens || []), entry] };
+    await putFile(CONFIG.authPath, updated, fresh.sha, `admin: cria perfil de teste "${label}" (${role})`);
+    toast(`Perfil de teste "${label}" criado. Para usar, clique em "Entrar como este perfil".`, "ok");
+    labelInput.value = "";
+    memberInput.value = "";
+    await loadAccess();
+  } catch (err) {
+    toast(`Erro ao criar o perfil de teste: ${err.message}`, "error");
+  } finally {
+    submit.disabled = false;
+  }
 }
 
 // Integrantes já salvos (os novos ainda não têm id definitivo) + "nenhum".
@@ -5315,7 +5521,10 @@ function buildAccessMemberSelect(current) {
 // Um integrante só pode estar ligado a um acesso.
 function checkMemberFree(tokens, integrante, exceptIndex) {
   if (!integrante) return;
-  const other = tokens.find((t, i) => i !== exceptIndex && t.integrante === integrante);
+  // Perfil de teste pode "ser" um integrante que já tem acesso (para testar a
+  // autoria), e não ocupa o integrante de ninguém.
+  if (tokens[exceptIndex]?.teste) return;
+  const other = tokens.find((t, i) => i !== exceptIndex && !t.teste && t.integrante === integrante);
   if (other) throw new Error(`esse integrante já está ligado ao acesso "${other.label}"`);
 }
 
@@ -5393,22 +5602,20 @@ async function addAccess() {
   }
 }
 
-async function revokeAccess(index, label) {
-  if (
-    !confirm(
-      `Revogar o acesso de "${label}"? Isso remove o registro de data/auth.json. Se o token dessa pessoa foi comprometido, revogue-o também diretamente no GitHub.`
-    )
-  )
-    return;
+async function revokeAccess(index, label, teste) {
+  const pergunta = teste
+    ? `Apagar o perfil de teste "${label}"?`
+    : `Revogar o acesso de "${label}"? Isso remove o registro de data/auth.json. Se o token dessa pessoa foi comprometido, revogue-o também diretamente no GitHub.`;
+  if (!confirm(pergunta)) return;
   try {
     const fresh = await getFile(CONFIG.authPath);
     const tokens = [...(fresh.content?.tokens || [])];
     tokens.splice(index, 1);
-    if (tokens.length > 0 && !tokens.some((t) => roleOf(t) === "admin")) {
+    if (tokens.some((t) => !t.teste) && !temAdminDeVerdade(tokens)) {
       throw new Error("precisa sobrar pelo menos um admin");
     }
     await putFile(CONFIG.authPath, { tokens }, fresh.sha, `admin: revoga acesso "${label}"`);
-    toast(`Acesso de "${label}" revogado.`, "ok");
+    toast(teste ? `Perfil de teste "${label}" apagado.` : `Acesso de "${label}" revogado.`, "ok");
     await loadAccess();
   } catch (err) {
     toast(`Erro ao revogar: ${err.message}`, "error");
@@ -5425,7 +5632,7 @@ async function changeAccessRole(index, label, select) {
       throw new Error("a lista de acessos mudou — recarregue a página");
     }
     tokens[index] = { ...tokens[index], role };
-    if (!tokens.some((t) => roleOf(t) === "admin")) {
+    if (!temAdminDeVerdade(tokens)) {
       throw new Error("precisa sobrar pelo menos um admin");
     }
     await putFile(CONFIG.authPath, { tokens }, fresh.sha, `admin: muda categoria de "${label}" para ${role}`);
@@ -5467,6 +5674,10 @@ function resetAccountForm() {
 }
 
 async function saveAccount() {
+  if (PERFIL_TESTE) {
+    toast("Perfil de teste não tem senha nem conta para mudar. Para mudar o nome dele, volte para o admin.", "error");
+    return;
+  }
   const labelInput = document.getElementById("account-label");
   const newInput = document.getElementById("account-new-password");
   const confirmInput = document.getElementById("account-confirm-password");
