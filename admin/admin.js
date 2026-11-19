@@ -5119,6 +5119,8 @@ const SECOES_DAS_PAGINAS = {
   "/podcast": { nome: "Podcast", painel: null },
   "/estudos": { nome: "Estudos", painel: null },
   "/contato": { nome: "Contato", painel: "page-contato" },
+  // Caixas para as páginas institucionais (src/pages/institucional.astro).
+  "/institucional": { nome: "Institucional", painel: null },
 };
 const RE_SLUG_PAGINA = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 

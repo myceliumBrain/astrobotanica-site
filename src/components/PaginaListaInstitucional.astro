@@ -1,0 +1,89 @@
+---
+// Página /institucional (item "Institucional" do menu): uma caixa grande e
+// clicável para cada página institucional (ver src/lib/institucional.ts).
+import Base from "../layouts/Base.astro";
+import { t, type Lang } from "../lib/i18n";
+import { paginasInstitucionais, SECAO_INSTITUCIONAL } from "../lib/institucional";
+
+interface Props {
+  lang: Lang;
+}
+
+const { lang } = Astro.props;
+const paginas = paginasInstitucionais(lang);
+const titulo = t(lang, "institucional.title");
+const intro = t(lang, "institucional.intro");
+---
+
+<Base lang={lang} title={`${titulo} — Astrobotânica`} description={intro} path={SECAO_INSTITUCIONAL} temOutroIdioma={true} destinoSemTraducao={SECAO_INSTITUCIONAL}>
+  <section class="page-header wrap">
+    <h1>{titulo}</h1>
+    <p>{intro}</p>
+  </section>
+  <section class="section wrap">
+    <ul class="institucional-grade">
+      {
+        paginas.map((p) => (
+          <li>
+            <a class="institucional-caixa" href={p.href}>
+              <span class="institucional-caixa-titulo">{p.texto}</span>
+              {p.descricao && <span class="institucional-caixa-descricao">{p.descricao}</span>}
+              <span class="institucional-caixa-seta" aria-hidden="true">→</span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</Base>
+
+<style>
+  .institucional-grade {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+    gap: var(--space-3);
+    list-style: none;
+    padding: 0;
+  }
+  .institucional-caixa {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    height: 100%;
+    min-height: 11rem;
+    padding: var(--space-3);
+    border: 1px solid var(--line);
+    background: var(--bg-panel);
+    color: inherit;
+    text-decoration: none;
+    transition:
+      border-color 0.15s,
+      background-color 0.15s;
+  }
+  .institucional-caixa:hover,
+  .institucional-caixa:focus-visible {
+    border-color: var(--accent-700);
+    background: var(--accent-100);
+  }
+  .institucional-caixa:focus-visible {
+    outline: 2px solid var(--accent-700);
+    outline-offset: 2px;
+  }
+  .institucional-caixa-titulo {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 1.45rem;
+    line-height: 1.15;
+  }
+  .institucional-caixa-descricao {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: var(--ink-dim);
+  }
+  .institucional-caixa-seta {
+    margin-top: auto;
+    padding-top: var(--space-2);
+    font-family: var(--font-mono);
+    color: var(--accent-700);
+  }
+</style>
