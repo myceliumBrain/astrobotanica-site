@@ -4,7 +4,6 @@
 // todos; em EN (/en/episodios/<id>/) só para o episódio com titleEn, com
 // hreflang entre os dois. O áudio é o mesmo, em português.
 import Base from "../layouts/Base.astro";
-import SeloIa from "./SeloIa.astro";
 import QuadroUsoDeIa from "./QuadroUsoDeIa.astro";
 import { textosIa } from "../lib/ia";
 import { caminhoNoIdioma, t, type Lang } from "../lib/i18n";
@@ -59,7 +58,6 @@ const podcast = caminhoNoIdioma("/podcast", lang);
       }
       {episodio.ia?.capa && <span class="selo-ia-imagem">{textosIa(lang).imagem}</span>}
       <div class="episode-content-col">
-        <SeloIa ia={episodio.ia} lang={lang} ancora />
         <p class="player-label">{t(lang, "episodio.listenLabel")}</p>
         <div class="player-panel">
           <audio controls preload="none">

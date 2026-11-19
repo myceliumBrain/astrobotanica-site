@@ -18,8 +18,6 @@ At the end of each piece there is a "Use of artificial intelligence" box. When n
 
 A.I.-generated images are labeled one by one, right below the image.
 
-A label at the top of the page and on list cards summarizes this information.
-
 ## 2. Content without a disclosure
 
 Content published before this policy has no box. This does not mean A.I. was or was not used: the information was simply not recorded at the time.

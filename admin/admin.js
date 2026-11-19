@@ -31,13 +31,7 @@ import {
   montarPagina,
   slugDoCaminho,
 } from "./paginas-md.js";
-import {
-  ROTULO_DO_STATUS,
-  campoUsoDeIa,
-  problemasDoUsoDeIa,
-  statusDoUsoDeIa,
-  temImagemDeIa,
-} from "./uso-de-ia.js";
+import { campoUsoDeIa, problemasDoUsoDeIa, temImagemDeIa } from "./uso-de-ia.js";
 
 const CONFIG = {
   owner: "myceliumBrain",
@@ -3242,48 +3236,6 @@ function listaSemPendencias(secao) {
   return false;
 }
 
-// Selo de uso de I.A. das linhas da lista (e o atributo que o filtro usa).
-function seloUsoDeIa(card, ia) {
-  const status = statusDoUsoDeIa(ia);
-  card.dataset.iaStatus = status;
-  const selo = el("span", `selo-ia selo-ia--${status}`, ROTULO_DO_STATUS[status]);
-  selo.title = "Declaração de uso de inteligência artificial";
-  return selo;
-}
-
-// Filtro "Uso de I.A." no topo das listas de notícias, episódios e
-// verbetes: mostra só os itens com aquela resposta.
-const filtroIa = {};
-function aplicarFiltroDeIa(secao, container) {
-  const lista = contentData[secao] || [];
-  let filtro = document.getElementById(`filtro-ia-${secao}`);
-  if (!filtro) {
-    const wrap = el("label", "filtro-ia");
-    wrap.appendChild(document.createTextNode("Uso de I.A.: "));
-    filtro = document.createElement("select");
-    filtro.id = `filtro-ia-${secao}`;
-    filtro.className = "input";
-    filtro.addEventListener("change", () => {
-      filtroIa[secao] = filtro.value;
-      aplicarFiltroDeIa(secao, container);
-    });
-    wrap.appendChild(filtro);
-    container.before(wrap);
-  }
-  const contagem = { todos: lista.length, "nao-informado": 0, nao: 0, sim: 0 };
-  lista.forEach((item) => contagem[statusDoUsoDeIa(item.ia)]++);
-  const atual = filtroIa[secao] || "todos";
-  filtro.innerHTML = "";
-  [["todos", "todos"], ["nao-informado", "não informado"], ["nao", "sem I.A."], ["sim", "com I.A."]].forEach(([valor, texto]) => {
-    const op = new Option(`${texto} (${contagem[valor]})`, valor);
-    op.selected = valor === atual;
-    filtro.appendChild(op);
-  });
-  container.querySelectorAll(".card").forEach((card) => {
-    card.classList.toggle("filtrado-ia", atual !== "todos" && card.dataset.iaStatus !== atual);
-  });
-}
-
 // Selo "falta traduzir" das linhas da lista.
 function seloFaltaTraduzir(falta) {
   if (!falta) return document.createTextNode("");
@@ -3756,7 +3708,6 @@ function renderArticlesList() {
 
   items.forEach((article, i) => container.appendChild(buildArticleCard(article, i, items.length, container)));
   enforceFeaturedLimit("articles");
-  aplicarFiltroDeIa("articles", container);
 }
 
 function buildArticleCard(article, i, total, container) {
@@ -3780,7 +3731,6 @@ function buildArticleCard(article, i, total, container) {
   textos.appendChild(el("span", "card-meta", [article.category, formatarDataPt(article.date), article.author].filter(Boolean).join(" · ")));
   left.appendChild(textos);
   left.appendChild(seloFaltaTraduzir(article.title && !article.titleEn));
-  left.appendChild(seloUsoDeIa(card, article.ia));
   header.appendChild(left);
   header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
@@ -3962,7 +3912,6 @@ function renderEpisodesList() {
 
   items.forEach((episode, i) => container.appendChild(buildEpisodeCard(episode, i, items.length, container)));
   enforceFeaturedLimit("episodes");
-  aplicarFiltroDeIa("episodes", container);
 }
 
 function buildEpisodeCard(episode, i, total, container) {
@@ -3976,7 +3925,6 @@ function buildEpisodeCard(episode, i, total, container) {
   left.appendChild(el("span", "card-name", episode.title || "(sem título)"));
   left.appendChild(el("span", "card-meta", [episode.date, episode.duration].filter(Boolean).join(" · ")));
   left.appendChild(seloFaltaTraduzir(episode.title && !episode.titleEn));
-  left.appendChild(seloUsoDeIa(card, episode.ia));
   header.appendChild(left);
   header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
@@ -4642,7 +4590,6 @@ function renderEstudosList() {
   }
 
   items.forEach((verbete, i) => container.appendChild(buildEstudoCard(verbete, i, items.length, container)));
-  aplicarFiltroDeIa("estudos", container);
 }
 
 function buildEstudoCard(verbete, i, total, container) {
@@ -4658,7 +4605,6 @@ function buildEstudoCard(verbete, i, total, container) {
   left.appendChild(el("span", "card-name", verbete.titulo || "(sem título)"));
   left.appendChild(el("span", "card-meta", `${categoria ? categoria.nome : "sem categoria"} · ${verbete.publicado ? "publicado" : "rascunho"}`));
   left.appendChild(seloFaltaTraduzir(verbete.titulo && !verbete.tituloEn));
-  left.appendChild(seloUsoDeIa(card, verbete.ia));
   header.appendChild(left);
   header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);

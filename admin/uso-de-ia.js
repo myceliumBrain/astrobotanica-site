@@ -33,18 +33,6 @@ export const ELABORACOES = [
 
 export const TEXTO_SEM_IA = "Não foi utilizado I.A. para a produção desse conteúdo.";
 
-/** "nao-informado" | "nao" | "sim" — para o selo e o filtro da lista. */
-export function statusDoUsoDeIa(ia) {
-  if (!ia || typeof ia !== "object") return "nao-informado";
-  return ia.usou ? "sim" : "nao";
-}
-
-export const ROTULO_DO_STATUS = {
-  "nao-informado": "I.A.: não informado",
-  nao: "Sem I.A.",
-  sim: "Com I.A.",
-};
-
 /** O HTML tem alguma imagem marcada como gerada por I.A.? */
 export function temImagemDeIa(...htmls) {
   return htmls.some((html) => /<img\b[^>]*\bdata-ia\b/i.test(html || ""));
@@ -143,7 +131,7 @@ export function campoUsoDeIa(ia, { capa = false, imagensNoTexto = false } = {}) 
   raiz.dataset.iaBloco = "";
   raiz.appendChild(el("h2", "previa-secao", "Uso de inteligência artificial"));
   raiz.appendChild(
-    el("span", "field-hint", "Aparece no fim do conteúdo, nas duas línguas, e como um selo no topo e nas listas. Sem resposta, fica \"não informado\" e nada aparece no site.")
+    el("span", "field-hint", "Aparece no fim do conteúdo, nas duas línguas. Sem resposta, fica \"não informado\" e nada aparece no site.")
   );
 
   const avisar = () => raiz.dispatchEvent(new Event("input", { bubbles: true }));
