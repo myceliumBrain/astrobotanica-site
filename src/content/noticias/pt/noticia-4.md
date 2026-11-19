@@ -1,5 +1,5 @@
 ---
-title: "Ervilhas em Marte: Adubo de Insetos Pode Proporcionar a Agricultura no Planeta Vermelho"
+title: "Estudo utiliza adubo a base de insetos para plantio em regolito marciano "
 description: ""
 date: "2026-07-26"
 updated: ""

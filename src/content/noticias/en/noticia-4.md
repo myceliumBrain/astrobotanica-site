@@ -1,5 +1,5 @@
 ---
-title: "Peas on Mars: Insect-Based Fertilizer Could Enable Agriculture on the Red Planet"
+title: "Study uses insect-based fertilizer for planting in Martian regolith"
 description: ""
 date: "2026-07-26"
 updated: ""
