@@ -41,7 +41,7 @@ ia:
   usou: true
   ferramenta: "NotebookLM"
   elaboracao: "auxilio"
-  usos: ["resumo"]
+  usos: ["traducao","resumo"]
   revisado: true
   revisor: "Pedro Henrique Tenorio Alvarenga"
 ---
