@@ -11,7 +11,6 @@ import Base from "../layouts/Base.astro";
 import PaginaProvisoria from "./PaginaProvisoria.astro";
 import { t, type Lang } from "../lib/i18n";
 import { formatarData } from "../lib/noticias";
-import { ehPaginaInstitucional, SECAO_INSTITUCIONAL } from "../lib/institucional";
 
 interface Props {
   lang: Lang;
@@ -34,7 +33,6 @@ const { Content } = pagina ? await render(pagina) : { Content: null };
       path={path}
       temOutroIdioma={Boolean(traducao)}
       destinoSemTraducao={path}
-      secao={ehPaginaInstitucional(slug) ? SECAO_INSTITUCIONAL : undefined}
     >
       <section class="page-header wrap">
         <h1>{pagina.data.title}</h1>

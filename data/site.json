@@ -28,31 +28,71 @@
       "rotulo": "Notícias",
       "rotuloEn": "Articles",
       "link": "/noticias",
-      "visivel": true
+      "visivel": true,
+      "grupo": "conteudo"
     },
     {
       "rotulo": "Estudos",
       "rotuloEn": "Studies",
       "link": "/estudos",
-      "visivel": false
+      "visivel": false,
+      "grupo": "conteudo"
     },
     {
       "rotulo": "Podcast",
       "rotuloEn": "Podcast",
       "link": "/podcast",
-      "visivel": true
+      "visivel": true,
+      "grupo": "conteudo"
     },
     {
-      "rotulo": "Institucional",
-      "rotuloEn": "Institutional",
-      "link": "/institucional",
-      "visivel": true
+      "rotulo": "Sobre",
+      "rotuloEn": "About",
+      "link": "/sobre",
+      "visivel": true,
+      "grupo": "institucional"
+    },
+    {
+      "rotulo": "Expediente",
+      "rotuloEn": "Masthead",
+      "link": "/expediente",
+      "visivel": true,
+      "grupo": "institucional"
+    },
+    {
+      "rotulo": "Política Editorial",
+      "rotuloEn": "Editorial Policy",
+      "link": "/politica-editorial",
+      "visivel": true,
+      "grupo": "institucional"
+    },
+    {
+      "rotulo": "Publique conosco",
+      "rotuloEn": "Publish with us",
+      "link": "/normas-para-colaboradores",
+      "visivel": true,
+      "grupo": "institucional"
+    },
+    {
+      "rotulo": "Privacidade",
+      "rotuloEn": "Privacy",
+      "link": "/privacidade",
+      "visivel": true,
+      "grupo": "institucional"
+    },
+    {
+      "rotulo": "Política de uso de I.A.",
+      "rotuloEn": "A.I. use policy",
+      "link": "/politica-de-ia",
+      "visivel": true,
+      "grupo": "institucional"
     },
     {
       "rotulo": "Contato",
       "rotuloEn": "Contact",
       "link": "/contato",
-      "visivel": true
+      "visivel": true,
+      "grupo": "destaque"
     }
   ],
   "footer": {

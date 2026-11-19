@@ -4951,19 +4951,27 @@ function renderSiteSocialLinks() {
 
 // Menu de navegação (cabeçalho, menu do celular e coluna "Navegação" do
 // rodapé): itens livres em contentData.site.menu, na ordem da lista —
-// { rotulo, rotuloEn, link, visivel }. Esconder só tira do menu; a página
-// continua no ar. O site lê a lista em src/lib/menu.ts. Sem "menu" no
+// { rotulo, rotuloEn, link, visivel, grupo }. Esconder só tira do menu; a
+// página continua no ar. O site lê a lista em src/lib/menu.ts. Sem "menu" no
 // site.json, o painel parte do menu original (os textos de nav.*).
+// grupo: em que lugar do cabeçalho o item aparece (GRUPOS_DO_MENU).
+const GRUPOS_DO_MENU = [
+  ["", "Link solto"],
+  ["conteudo", "Lista \"Conteúdo\""],
+  ["institucional", "Lista \"Institucional\""],
+  ["destaque", "Botão à direita"],
+];
+
 function menuPadrao() {
   const nav = contentData.site.nav || {};
   const navEn = contentData.siteEn.nav || {};
   return [
-    ["/noticias", "articles"],
-    ["/estudos", "estudos"],
-    ["/podcast", "podcast"],
-    ["/sobre", "about"],
-    ["/contato", "contact"],
-  ].map(([link, chave]) => ({ rotulo: nav[chave] || "", rotuloEn: navEn[chave] || "", link, visivel: true }));
+    ["/noticias", "articles", "conteudo"],
+    ["/estudos", "estudos", "conteudo"],
+    ["/podcast", "podcast", "conteudo"],
+    ["/sobre", "about", "institucional"],
+    ["/contato", "contact", "destaque"],
+  ].map(([link, chave, grupo]) => ({ rotulo: nav[chave] || "", rotuloEn: navEn[chave] || "", link, visivel: true, grupo }));
 }
 
 function problemasDoMenu(menu) {
@@ -4982,8 +4990,8 @@ function cabecalhoDoMenu() {
   const row = buildSiteMenuRow({});
   row.className = "site-menu-row site-menu-cabecalho";
   row.setAttribute("aria-hidden", "true");
-  const nomes = ["Nome no menu", "Nome no site em inglês", "Endereço (página do site ou https://…)"];
-  row.querySelectorAll("input[type=text]").forEach((input, n) => {
+  const nomes = ["Nome no menu", "Nome no site em inglês", "Endereço (página do site ou https://…)", "Onde aparece"];
+  row.querySelectorAll("input[type=text], select").forEach((input, n) => {
     const span = el("span", input.className, nomes[n]);
     input.replaceWith(span);
   });
@@ -5016,6 +5024,13 @@ function buildSiteMenuRow(item) {
   campo("site-menu-rotulo", "Nome", item?.rotulo, "Nome no menu");
   campo("site-menu-rotulo-en", "Nome (EN)", item?.rotuloEn, "Nome no menu (EN)");
   campo("site-menu-link", "/pagina ou https://...", item?.link, "Link");
+
+  const grupo = document.createElement("select");
+  grupo.className = "input site-menu-grupo";
+  grupo.setAttribute("aria-label", "Onde aparece no cabeçalho");
+  GRUPOS_DO_MENU.forEach(([valor, texto]) => grupo.appendChild(new Option(texto, valor)));
+  grupo.value = GRUPOS_DO_MENU.some(([v]) => v === item?.grupo) ? item.grupo : "";
+  row.appendChild(grupo);
 
   const mover = (delta) => {
     const lista = row.parentElement;
@@ -5060,8 +5075,10 @@ function collectSiteMenu() {
         rotuloEn: row.querySelector(".site-menu-rotulo-en").value.trim(),
         link: row.querySelector(".site-menu-link").value.trim(),
         visivel: row.querySelector(".site-menu-visivel-input").checked,
+        grupo: row.querySelector(".site-menu-grupo").value,
       };
       if (!item.rotuloEn) delete item.rotuloEn;
+      if (!item.grupo) delete item.grupo;
       return item;
     })
     .filter((item) => item.rotulo || item.link);
@@ -5119,8 +5136,6 @@ const SECOES_DAS_PAGINAS = {
   "/podcast": { nome: "Podcast", painel: null },
   "/estudos": { nome: "Estudos", painel: null },
   "/contato": { nome: "Contato", painel: "page-contato" },
-  // Caixas para as páginas institucionais (src/pages/institucional.astro).
-  "/institucional": { nome: "Institucional", painel: null },
 };
 const RE_SLUG_PAGINA = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 

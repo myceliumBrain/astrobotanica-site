@@ -126,7 +126,7 @@ for (const rel of fs.readdirSync(pasta, { recursive: true })) {
   const url = urlDoArquivo(rel);
   if (bloqueados.some((b) => url.startsWith(b))) continue;
   const noindex = /<meta name="robots" content="noindex"/.test(html);
-  const redirecionamento = html.includes('id="redirecionamentos"');
+  const redirecionamento = html.includes('id="redirecionamentos"') || /<meta http-equiv="refresh"/.test(html);
   paginas.push({
     url,
     html,
