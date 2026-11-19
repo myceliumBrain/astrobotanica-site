@@ -1,5 +1,5 @@
 ---
-title: "A Alquimia do Regolito: Revisão das Metodologias e Desafios da Agricultura Espacial"
+title: "Revisão das Metodologias do Uso do Regolito Lunar na Agricultura Espacial"
 description: ""
 date: "2026-10-31"
 updated: ""
