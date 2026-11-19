@@ -43,9 +43,9 @@
       "visivel": true
     },
     {
-      "rotulo": "Sobre",
-      "rotuloEn": "About",
-      "link": "/sobre",
+      "rotulo": "Institucional",
+      "rotuloEn": "Institutional",
+      "link": "/institucional",
       "visivel": true
     },
     {

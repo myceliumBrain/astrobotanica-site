@@ -5,6 +5,7 @@
 // preenchidos no build (visíveis sem JavaScript).
 import { t, valor, caminhoNoIdioma, type Lang } from "../lib/i18n";
 import { itensDoMenu } from "../lib/menu";
+import { paginasInstitucionais } from "../lib/institucional";
 import { NOME_SITE, OG_IMAGEM_PADRAO, jsonLdSeguro, organizacao } from "../lib/seo";
 
 interface Props {
@@ -57,18 +58,22 @@ const secaoAtual = secao ?? "/" + (path.split("/")[1] ?? "");
 // Itens e ordem vêm do painel (data/site.json → menu, ver src/lib/menu.ts).
 const navItens = itensDoMenu(lang);
 
-const institucionais = [
-  { href: "/sobre", texto: t(lang, "nav.about") },
-  { href: "/expediente", texto: t(lang, "footer.expediente") },
-  { href: "/politica-editorial", texto: t(lang, "footer.editorialPolicy") },
-  { href: "/normas-para-colaboradores", texto: t(lang, "footer.contributorGuidelines") },
-  { href: "/privacidade", texto: t(lang, "footer.privacy") },
-];
+const institucionais = paginasInstitucionais(lang);
 
 // Links cadastrados no painel às vezes vêm sem protocolo ("www.youtube.com"),
 // o que viraria um link relativo quebrado.
 const comProtocolo = (url: string) => (/^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`);
-const redes = (valor<{ label: string; url: string }[]>(lang, "socialLinks") ?? []).filter((r) => r.label && r.url);
+// Rede social só aparece com o endereço do perfil preenchido: só o domínio
+// ("www.youtube.com", que é o que fica enquanto ninguém preencheu) não conta.
+const temPerfil = (url: string) => {
+  try {
+    const u = new URL(comProtocolo(url.trim()));
+    return u.pathname.replace(/\/+$/, "") !== "" || u.search !== "";
+  } catch {
+    return false;
+  }
+};
+const redes = (valor<{ label: string; url: string }[]>(lang, "socialLinks") ?? []).filter((r) => r.label?.trim() && r.url && temPerfil(r.url));
 
 const licencaUrl =
   lang === "pt" ? "https://creativecommons.org/licenses/by/4.0/deed.pt-br" : "https://creativecommons.org/licenses/by/4.0/deed.en";
