@@ -1,0 +1,25 @@
+---
+// Selo curto de uso de I.A. (topo da página e cartões das listas). Não
+// aparece quando o uso não foi informado. `ancora`: leva ao quadro do fim
+// da página.
+import { seloIa, type UsoDeIa } from "../lib/ia";
+import type { Lang } from "../lib/i18n";
+
+interface Props {
+  ia?: UsoDeIa;
+  lang: Lang;
+  ancora?: boolean;
+}
+
+const { ia, lang, ancora = false } = Astro.props;
+const selo = seloIa(ia, lang);
+const Tag = ancora ? "a" : "span";
+---
+
+{
+  selo && (
+    <Tag class:list={["selo-ia", selo.usou && "selo-ia--usou"]} href={ancora ? "#uso-de-ia" : undefined}>
+      {selo.texto}
+    </Tag>
+  )
+}

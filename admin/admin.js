@@ -31,6 +31,13 @@ import {
   montarPagina,
   slugDoCaminho,
 } from "./paginas-md.js";
+import {
+  ROTULO_DO_STATUS,
+  campoUsoDeIa,
+  problemasDoUsoDeIa,
+  statusDoUsoDeIa,
+  temImagemDeIa,
+} from "./uso-de-ia.js";
 
 const CONFIG = {
   owner: "myceliumBrain",
@@ -1180,6 +1187,8 @@ function assinatura(root) {
     return e.value;
   });
   campos.push(root.querySelectorAll('[data-kind="pending"]').length);
+  // O bloco "Uso de I.A." tem botões de escolha, que não são campos.
+  root.querySelectorAll("[data-ia-bloco]").forEach((bloco) => campos.push(JSON.stringify(bloco.ler())));
   return JSON.stringify(campos);
 }
 
@@ -1657,6 +1666,26 @@ function applyEstudoField(input) {
   record[key] = input.value;
 }
 
+// Bloco "Uso de inteligência artificial" (ver admin/uso-de-ia.js): grava
+// `ia` no item, ou tira o campo se a resposta ficou "não informado". Imagem
+// do texto marcada como gerada por I.A. também marca o uso "imagens".
+const CORPOS_DA_SECAO = { articles: ["body", "bodyEn"], episodes: [], estudos: ["conteudo", "conteudoEn"] };
+function applyIaBlock(bloco) {
+  const secao = bloco.dataset.iaSecao;
+  const record = contentData[secao]?.[Number(bloco.dataset.iaIndice)];
+  if (!record) return;
+  const ia = bloco.ler();
+  if (!ia) {
+    delete record.ia;
+    return;
+  }
+  const corpos = (CORPOS_DA_SECAO[secao] || []).map((k) => record[k]);
+  if (ia.usou && temImagemDeIa(...corpos) && !ia.usos.includes("imagens")) {
+    ia.usos.push("imagens");
+  }
+  record.ia = ia;
+}
+
 // collectAll(): sincroniza TUDO que está na tela pra dentro de contentData —
 // usado antes de reordenar/remover/adicionar (e no salvamento final), pra
 // não perder edição em outros cards quando a lista é redesenhada do zero.
@@ -1670,6 +1699,7 @@ function collectAll() {
   document.querySelectorAll("[data-verbete]").forEach(applyEstudoField);
   collectVerbeteFontes();
   collectVerbeteTermosRelacionados();
+  document.querySelectorAll("[data-ia-bloco]").forEach(applyIaBlock);
   if (homeEventBannerField) homeEventBannerField.confirmFileUpload();
   document.querySelectorAll("[data-site]").forEach((input) => {
     setByPath(contentData.site, input.dataset.site, input.value);
@@ -1688,9 +1718,11 @@ function collectAll() {
 function collectArticleCardFields(i) {
   document.querySelectorAll(`[data-article="${i}"]`).forEach(applyArticleField);
   collectArticleReferences();
+  document.querySelectorAll(`[data-ia-secao="articles"][data-ia-indice="${i}"]`).forEach(applyIaBlock);
 }
 function collectEpisodeCardFields(i) {
   document.querySelectorAll(`[data-episode="${i}"]`).forEach(applyEpisodeField);
+  document.querySelectorAll(`[data-ia-secao="episodes"][data-ia-indice="${i}"]`).forEach(applyIaBlock);
 }
 function collectMemberCardFields(i) {
   document.querySelectorAll(`[data-member="${i}"]`).forEach(applyMemberField);
@@ -1703,6 +1735,7 @@ function collectEstudoCardFields(i) {
   document.querySelectorAll(`[data-verbete="${i}"]`).forEach(applyEstudoField);
   collectVerbeteFontes();
   collectVerbeteTermosRelacionados();
+  document.querySelectorAll(`[data-ia-secao="estudos"][data-ia-indice="${i}"]`).forEach(applyIaBlock);
 }
 
 // Versão do painel (ver versionarPainel em astro.config.mjs): se o painel
@@ -1795,6 +1828,15 @@ async function saveAll(secoes) {
     if (alvo.has("episodes")) {
       const semData = contentData.episodes.filter((e) => !/^\d{4}-\d{2}-\d{2}$/.test(e.date || ""));
       if (semData.length) throw new Error(`corrija antes de salvar: data inválida no episódio ${semData.map((e) => e.title || e.id).join(", ")}`);
+    }
+    // Uso de I.A.: "Sim" sem a ferramenta, ou imagem marcada como gerada por
+    // I.A. sem o "Sim".
+    {
+      const problemas = [];
+      if (alvo.has("articles")) contentData.articles.forEach((a) => problemas.push(...problemasDoUsoDeIa(a.ia, a.title || a.id, temImagemDeIa(a.body, a.bodyEn))));
+      if (alvo.has("episodes")) contentData.episodes.forEach((e) => problemas.push(...problemasDoUsoDeIa(e.ia, e.title || e.id)));
+      if (alvo.has("estudos")) contentData.estudos.forEach((v) => problemas.push(...problemasDoUsoDeIa(v.ia, v.titulo || v.id, temImagemDeIa(v.conteudo, v.conteudoEn))));
+      if (problemas.length) throw new Error(`corrija antes de salvar: ${problemas.join("; ")}`);
     }
     // Notícias: valida e calcula os arquivos antes de qualquer envio — um
     // título vazio ou uma data inválida faria o build do site falhar.
@@ -2984,12 +3026,21 @@ function buildRichTextField(labelText, value, dataset, opts) {
       if (img && editor.contains(img)) acao(img);
     });
     menuDaImagem.appendChild(b);
+    return b;
   };
   botaoDaImagem("Trocar imagem", (img) => {
     imagemParaTrocar = img;
     imageInput.click();
   });
   botaoDaImagem("Legenda", escreverLegenda);
+  // Imagem gerada por I.A.: atributo data-ia no <img>; o site põe um aviso
+  // logo abaixo dela (ver avisarImagensIa em src/lib/ia.ts).
+  const botaoIa = !opts.simples
+    ? botaoDaImagem("Gerada por I.A.", (img) => {
+        img.toggleAttribute("data-ia");
+        editor.dispatchEvent(new Event("input", { bubbles: true }));
+      })
+    : null;
   botaoDaImagem("Remover imagem", (img) => {
     if (!confirm("Tirar esta imagem do texto? A legenda dela continua; apague-a se quiser.")) return;
     const bloco = blocoDe(img);
@@ -3001,6 +3052,7 @@ function buildRichTextField(labelText, value, dataset, opts) {
 
   function mostrarMenuDaImagem(img) {
     imagemAtual = img;
+    if (botaoIa) botaoIa.textContent = img.hasAttribute("data-ia") ? "✓ Gerada por I.A. (desmarcar)" : "Gerada por I.A.";
     const base = wrap.getBoundingClientRect();
     const r = img.getBoundingClientRect();
     Object.assign(moldura.style, { left: `${r.left - base.left}px`, top: `${r.top - base.top}px`, width: `${r.width}px`, height: `${r.height}px` });
@@ -3188,6 +3240,48 @@ function listaSemPendencias(secao) {
   if (!dirty.has(secao)) return true;
   toast('Antes, publique ou desfaça as alterações da lista (barra no rodapé).', "error");
   return false;
+}
+
+// Selo de uso de I.A. das linhas da lista (e o atributo que o filtro usa).
+function seloUsoDeIa(card, ia) {
+  const status = statusDoUsoDeIa(ia);
+  card.dataset.iaStatus = status;
+  const selo = el("span", `selo-ia selo-ia--${status}`, ROTULO_DO_STATUS[status]);
+  selo.title = "Declaração de uso de inteligência artificial";
+  return selo;
+}
+
+// Filtro "Uso de I.A." no topo das listas de notícias, episódios e
+// verbetes: mostra só os itens com aquela resposta.
+const filtroIa = {};
+function aplicarFiltroDeIa(secao, container) {
+  const lista = contentData[secao] || [];
+  let filtro = document.getElementById(`filtro-ia-${secao}`);
+  if (!filtro) {
+    const wrap = el("label", "filtro-ia");
+    wrap.appendChild(document.createTextNode("Uso de I.A.: "));
+    filtro = document.createElement("select");
+    filtro.id = `filtro-ia-${secao}`;
+    filtro.className = "input";
+    filtro.addEventListener("change", () => {
+      filtroIa[secao] = filtro.value;
+      aplicarFiltroDeIa(secao, container);
+    });
+    wrap.appendChild(filtro);
+    container.before(wrap);
+  }
+  const contagem = { todos: lista.length, "nao-informado": 0, nao: 0, sim: 0 };
+  lista.forEach((item) => contagem[statusDoUsoDeIa(item.ia)]++);
+  const atual = filtroIa[secao] || "todos";
+  filtro.innerHTML = "";
+  [["todos", "todos"], ["nao-informado", "não informado"], ["nao", "sem I.A."], ["sim", "com I.A."]].forEach(([valor, texto]) => {
+    const op = new Option(`${texto} (${contagem[valor]})`, valor);
+    op.selected = valor === atual;
+    filtro.appendChild(op);
+  });
+  container.querySelectorAll(".card").forEach((card) => {
+    card.classList.toggle("filtrado-ia", atual !== "todos" && card.dataset.iaStatus !== atual);
+  });
 }
 
 // Selo "falta traduzir" das linhas da lista.
@@ -3662,6 +3756,7 @@ function renderArticlesList() {
 
   items.forEach((article, i) => container.appendChild(buildArticleCard(article, i, items.length, container)));
   enforceFeaturedLimit("articles");
+  aplicarFiltroDeIa("articles", container);
 }
 
 function buildArticleCard(article, i, total, container) {
@@ -3685,6 +3780,7 @@ function buildArticleCard(article, i, total, container) {
   textos.appendChild(el("span", "card-meta", [article.category, formatarDataPt(article.date), article.author].filter(Boolean).join(" · ")));
   left.appendChild(textos);
   left.appendChild(seloFaltaTraduzir(article.title && !article.titleEn));
+  left.appendChild(seloUsoDeIa(card, article.ia));
   header.appendChild(left);
   header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
@@ -3717,6 +3813,10 @@ function buildArticleCard(article, i, total, container) {
   addReferenceBtn.addEventListener("click", () => referencesList.appendChild(buildArticleReferenceRow()));
   referencesField.appendChild(addReferenceBtn);
   principal.appendChild(referencesField);
+
+  const iaBloco = campoUsoDeIa(article.ia, { capa: true, imagensNoTexto: true });
+  Object.assign(iaBloco.dataset, { iaSecao: "articles", iaIndice: i });
+  principal.appendChild(iaBloco);
 
   // Detalhes da publicação: o que não aparece no meio da página.
   const detalhes = el("aside", "tela-detalhes");
@@ -3862,6 +3962,7 @@ function renderEpisodesList() {
 
   items.forEach((episode, i) => container.appendChild(buildEpisodeCard(episode, i, items.length, container)));
   enforceFeaturedLimit("episodes");
+  aplicarFiltroDeIa("episodes", container);
 }
 
 function buildEpisodeCard(episode, i, total, container) {
@@ -3875,6 +3976,7 @@ function buildEpisodeCard(episode, i, total, container) {
   left.appendChild(el("span", "card-name", episode.title || "(sem título)"));
   left.appendChild(el("span", "card-meta", [episode.date, episode.duration].filter(Boolean).join(" · ")));
   left.appendChild(seloFaltaTraduzir(episode.title && !episode.titleEn));
+  left.appendChild(seloUsoDeIa(card, episode.ia));
   header.appendChild(left);
   header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
@@ -3912,6 +4014,9 @@ function buildEpisodeCard(episode, i, total, container) {
       dica: "A página em inglês do episódio aparece no site quando o título em inglês estiver preenchido. O áudio é o mesmo, em português.",
     })
   );
+  const iaBloco = campoUsoDeIa(episode.ia, { capa: true });
+  Object.assign(iaBloco.dataset, { iaSecao: "episodes", iaIndice: i });
+  principal.push(iaBloco);
 
   const audioField = buildFileUploadField(
     "Áudio do episódio",
@@ -4537,6 +4642,7 @@ function renderEstudosList() {
   }
 
   items.forEach((verbete, i) => container.appendChild(buildEstudoCard(verbete, i, items.length, container)));
+  aplicarFiltroDeIa("estudos", container);
 }
 
 function buildEstudoCard(verbete, i, total, container) {
@@ -4552,6 +4658,7 @@ function buildEstudoCard(verbete, i, total, container) {
   left.appendChild(el("span", "card-name", verbete.titulo || "(sem título)"));
   left.appendChild(el("span", "card-meta", `${categoria ? categoria.nome : "sem categoria"} · ${verbete.publicado ? "publicado" : "rascunho"}`));
   left.appendChild(seloFaltaTraduzir(verbete.titulo && !verbete.tituloEn));
+  left.appendChild(seloUsoDeIa(card, verbete.ia));
   header.appendChild(left);
   header.appendChild(el("span", "card-chevron", "›"));
   card.appendChild(header);
@@ -4661,6 +4768,9 @@ function buildEstudoCard(verbete, i, total, container) {
   const termos = buildTermosRelacionadosField(verbete, i);
   termos.classList.add("campo-referencias");
   principal.push(termos);
+  const iaBloco = campoUsoDeIa(verbete.ia, { capa: true, imagensNoTexto: true });
+  Object.assign(iaBloco.dataset, { iaSecao: "estudos", iaIndice: i });
+  principal.push(iaBloco);
 
   telaComDetalhes(card, body, principal, detalhes, "Detalhes do verbete");
 

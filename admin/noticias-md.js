@@ -64,7 +64,7 @@ const CAMPOS_EDITORIAIS = [
 ];
 const CAMPOS_DO_SITE = [
   "id", "ordem", "time", "category", "subtitle", "readingTime", "image", "imageCaption",
-  "imageVertical", "authorAvatar", "featured", "references",
+  "imageVertical", "authorAvatar", "featured", "references", "ia",
 ];
 
 // Valores dos campos editoriais quando o arquivo ainda não existe (notícia
@@ -133,6 +133,9 @@ export function noticiaParaMarkdown(n, lang, ordem) {
     authorAvatar: n.authorAvatar,
     featured: n.featured,
     references: n.references,
+    // Declaração de uso de I.A. (a mesma nas duas línguas); sem ela, o campo
+    // não é gravado ("não informado").
+    ia: n.ia,
   };
   // Campos acrescentados à mão que o painel não conhece: vão no fim, como
   // estavam.
@@ -195,6 +198,7 @@ export function markdownParaNoticia(textoPt, textoEn) {
   copiar("imageVertical", comoTexto(d.imageVertical));
   if (d.featured === true) n.featured = true;
   copiar("references", Array.isArray(d.references) ? d.references : undefined);
+  copiar("ia", d.ia && typeof d.ia === "object" && !Array.isArray(d.ia) ? d.ia : undefined);
   n.body = pt.corpo;
   n._md = { pt: d };
   if (textoEn !== undefined) {

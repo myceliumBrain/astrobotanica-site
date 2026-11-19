@@ -8,6 +8,7 @@ import estudos from "../../data/estudos.json";
 import categorias from "../../data/categorias_estudo.json";
 import { semHtml } from "./noticias";
 import { dataIso, validar } from "./dados";
+import { esquemaIa } from "./ia";
 import { caminhoNoIdioma, type Lang } from "./i18n";
 
 const esquemaCategorias = z.array(
@@ -39,6 +40,7 @@ const esquemaVerbetes = z.array(
     tituloEn: z.string().optional(),
     definicaoCurtaEn: z.string().optional(),
     conteudoEn: z.string().optional(),
+    ia: esquemaIa.optional(),
   })
 );
 

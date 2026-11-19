@@ -3,6 +3,7 @@
 import { defineCollection } from "astro:content";
 import { glob } from "astro/loaders";
 import { z } from "astro/zod";
+import { esquemaIa } from "./lib/ia";
 
 const data = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "data no formato AAAA-MM-DD");
 const dataOpcional = z.union([z.literal(""), data]);
@@ -41,6 +42,8 @@ const noticias = defineCollection({
     authorAvatar: z.string().optional(),
     featured: z.boolean().optional(),
     references: z.array(z.object({ text: z.string(), url: z.string().optional() })).optional(),
+    // Declaração de uso de I.A. (ver src/lib/ia.ts); sem ela, "não informado".
+    ia: esquemaIa.optional(),
   }),
 });
 

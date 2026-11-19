@@ -1094,3 +1094,55 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
   white-space: nowrap;
 }
 .admin-item-row--teste { border-style: dashed; }
+
+/* ── Uso de inteligência artificial (admin/uso-de-ia.js) ── */
+.campo-ia { display: flex; flex-direction: column; gap: 0.9rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--linha); }
+.campo-ia .previa-secao { margin-top: 0; }
+.ia-detalhes { display: flex; flex-direction: column; gap: 1rem; padding: 1rem; background: var(--painel); border-left: 3px solid var(--verde-medio); border-radius: var(--raio); }
+.ia-detalhes[hidden], .ia-previa[hidden], .ia-estado[hidden] { display: none; }
+.ia-campo { display: flex; flex-direction: column; gap: 0.4rem; }
+.ia-campo[hidden] { display: none; }
+.ia-pergunta { font-weight: 600; color: var(--tinta); }
+.ia-obrigatorio { font-weight: 400; font-size: 0.85rem; color: var(--aviso); }
+.ia-botoes { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ia-botao {
+  font: inherit;
+  padding: 0.45rem 1.1rem;
+  border: 1px solid var(--linha-forte);
+  border-radius: var(--raio);
+  background: var(--fundo);
+  color: var(--tinta);
+  cursor: pointer;
+}
+.ia-botao:hover { border-color: var(--verde); }
+.ia-botao:focus-visible { outline: none; border-color: var(--verde); box-shadow: 0 0 0 3px var(--verde-claro); }
+.ia-botao.ativo { background: var(--verde); border-color: var(--verde); color: #fff; }
+.ia-usos { display: grid; grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); gap: 0.4rem 1rem; }
+.ia-usos .checkbox-row, .campo-ia .checkbox-row { font-size: 0.95rem; font-weight: 400; }
+.ia-estado { margin: 0; font-size: 0.9rem; color: var(--tinta-fraca); display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: baseline; }
+.ia-limpar { font: inherit; font-size: 0.85rem; background: none; border: none; padding: 0; color: var(--tinta-fraca); text-decoration: underline; cursor: pointer; }
+.ia-limpar:hover { color: var(--perigo); }
+.ia-previa { margin: 0; padding: 0.7rem 1rem; background: var(--painel); border-left: 3px solid var(--linha-forte); font-size: 0.95rem; }
+
+/* Selo na linha da lista e filtro no topo da lista. */
+.selo-ia {
+  font-family: var(--fonte-mono);
+  font-size: 0.72rem;
+  border-radius: 2px;
+  padding: 2px 8px;
+  white-space: nowrap;
+  flex: none;
+  border: 1px solid var(--linha);
+  color: var(--tinta-fraca);
+}
+.selo-ia--sim { background: var(--verde-claro); border-color: var(--verde-medio); color: var(--verde-escuro); }
+.selo-ia--nao { background: var(--painel); color: var(--tinta-suave); }
+.filtro-ia { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.8rem; font-size: 0.9rem; color: var(--tinta-suave); }
+.filtro-ia select { width: auto; padding: 0.3rem 0.5rem; font-size: 0.9rem; }
+.card.filtrado-ia:not(.open) { display: none; }
+@media (max-width: 640px) {
+  .card-header .selo-ia { display: none; }
+}
+
+/* Imagem do texto marcada como gerada por I.A. */
+.rich-text-editor img[data-ia] { outline: 3px dashed var(--verde-medio); outline-offset: 3px; }

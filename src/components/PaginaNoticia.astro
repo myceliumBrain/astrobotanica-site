@@ -15,6 +15,9 @@ import { miniatura } from "../lib/miniatura";
 import { noticiasDaLista } from "../lib/listas";
 import { redesDeCompartilhamento } from "../lib/compartilhar";
 import CartaoNoticia from "./CartaoNoticia.astro";
+import SeloIa from "./SeloIa.astro";
+import QuadroUsoDeIa from "./QuadroUsoDeIa.astro";
+import { avisarImagensIa, textosIa } from "../lib/ia";
 import membros from "../../data/members.json";
 import maisAcessadas from "../../data/pageviews.json";
 
@@ -108,6 +111,7 @@ const listasLaterais = [
       <div class="noticia-tags">
         {n.category && <span class="tag tag-accent">{n.category}</span>}
         {n.tipo_estudo && <span class="tag tag-outline noticia-tipo-estudo">{n.tipo_estudo}</span>}
+        <SeloIa ia={n.ia} lang={lang} ancora />
       </div>
       <h1>{n.title}</h1>
       {n.subtitle && <p class="article-subtitle">{n.subtitle}</p>}
@@ -182,13 +186,14 @@ const listasLaterais = [
               />
             </div>
             {n.imageCaption && <p class="article-cover-caption">{n.imageCaption}</p>}
+            {n.ia?.capa && <span class="selo-ia-imagem">{textosIa(lang).imagem}</span>}
           </>
         )
       }
 
       <div class="article-layout">
         <div class="article-main">
-          <div class="article-body" set:html={corpoHtmlDaPagina(noticia)} />
+          <div class="article-body" set:html={avisarImagensIa(corpoHtmlDaPagina(noticia), lang)} />
 
           {
             temFonte && (
@@ -249,6 +254,8 @@ const listasLaterais = [
               </section>
             )
           }
+
+          <QuadroUsoDeIa ia={n.ia} lang={lang} />
 
           <section class="noticia-caixa noticia-citar">
             <div class="noticia-citar-topo">

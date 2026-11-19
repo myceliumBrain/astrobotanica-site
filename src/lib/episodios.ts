@@ -5,6 +5,7 @@
 import { z } from "astro/zod";
 import dados from "../../data/episodes.json";
 import { dataIso, validar } from "./dados";
+import { esquemaIa } from "./ia";
 import { caminhoNoIdioma, type Lang } from "./i18n";
 
 const esquema = z.array(
@@ -25,6 +26,7 @@ const esquema = z.array(
     titleEn: z.string().optional(),
     descriptionEn: z.string().optional(),
     transcriptEn: z.array(z.string()).optional(),
+    ia: esquemaIa.optional(),
   })
 );
 

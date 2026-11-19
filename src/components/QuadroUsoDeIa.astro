@@ -1,0 +1,38 @@
+---
+// Quadro "Uso de inteligência artificial" no fim da notícia, do episódio e
+// do verbete. Não aparece quando o uso não foi informado.
+import { linhasIa, textosIa, URL_POLITICA_IA, type UsoDeIa } from "../lib/ia";
+import { caminhoNoIdioma, type Lang } from "../lib/i18n";
+
+interface Props {
+  ia?: UsoDeIa;
+  lang: Lang;
+}
+
+const { ia, lang } = Astro.props;
+const t = textosIa(lang);
+const linhas = ia?.usou ? linhasIa(ia, lang) : [];
+---
+
+{
+  ia && (
+    <aside class="quadro-ia" id="uso-de-ia">
+      <h2 class="quadro-ia-titulo">{t.titulo}</h2>
+      {ia.usou ? (
+        <dl class="quadro-ia-lista">
+          {linhas.map((l) => (
+            <div>
+              <dt>{l.rotulo}</dt>
+              <dd>{l.valor}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p class="quadro-ia-texto">{t.naoUsou}</p>
+      )}
+      <a class="quadro-ia-link" href={caminhoNoIdioma(URL_POLITICA_IA, lang)}>
+        {t.politica} →
+      </a>
+    </aside>
+  )
+}
