@@ -5,6 +5,7 @@ import { t, type Lang } from "../lib/i18n";
 import { formatarData } from "../lib/noticias";
 import { episodioNoIdioma, type Episodio } from "../lib/episodios";
 import { pad } from "../lib/listas";
+import SeloIa from "./SeloIa.astro";
 
 interface Props {
   episodio: Episodio;
@@ -31,6 +32,7 @@ const idioma = textos.soPortugues ? "pt" : undefined;
     <div class="episode-row-title" lang={idioma}>{textos.title}</div>
     {comDescricao && <p class="episode-row-desc" lang={idioma}>{textos.description}</p>}
     {textos.soPortugues && <span class="selo-so-portugues">{t(lang, "listas.soPortugues")}</span>}
+    <SeloIa ia={e.ia} lang={lang} />
   </div>
   <div class="episode-row-meta">
     <span>{formatarData(e.date, lang)}</span>

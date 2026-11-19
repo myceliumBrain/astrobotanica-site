@@ -6,6 +6,9 @@
 // EN só para o verbete com tituloEn, com hreflang entre os dois.
 import ContadorAcessos from "./ContadorAcessos.astro";
 import Base from "../layouts/Base.astro";
+import SeloIa from "./SeloIa.astro";
+import QuadroUsoDeIa from "./QuadroUsoDeIa.astro";
+import { avisarImagensIa, textosIa } from "../lib/ia";
 import { caminhoNoIdioma, t, type Lang } from "../lib/i18n";
 import { formatarData } from "../lib/noticias";
 import { NOME_SITE } from "../lib/seo";
@@ -65,15 +68,19 @@ const estudos = caminhoNoIdioma("/estudos/", lang);
     <div id="verbete-content">
       <span class="tag tag-accent">{categoria}</span>
       <h1>{textos.titulo}</h1>
+      <div class="selo-ia-topo"><SeloIa ia={v.ia} lang={lang} ancora /></div>
       {textos.definicaoCurta && <p class="verbete-lede">{textos.definicaoCurta}</p>}
       {
         v.imagemCapa && (
-          <div class="article-cover">
-            <img src={`/${v.imagemCapa}`} alt="" />
-          </div>
+          <>
+            <div class="article-cover">
+              <img src={`/${v.imagemCapa}`} alt="" />
+            </div>
+            {v.ia?.capa && <span class="selo-ia-imagem">{textosIa(lang).imagem}</span>}
+          </>
         )
       }
-      <div class="article-body" set:html={textos.conteudo} />
+      <div class="article-body" set:html={avisarImagensIa(textos.conteudo, lang)} />
       {
         relacionados.length > 0 && (
           <div class="article-references">
@@ -110,6 +117,7 @@ const estudos = caminhoNoIdioma("/estudos/", lang);
           </div>
         )
       }
+      <QuadroUsoDeIa ia={v.ia} lang={lang} />
       {v.dataAtualizacao && <p class="article-byline-meta">{t(lang, "estudo.updatedAt", { date: formatarData(v.dataAtualizacao, lang) })}</p>}
     </div>
   </article>

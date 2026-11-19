@@ -1056,3 +1056,105 @@ body.nav-open { overflow: hidden; }
   text-transform: uppercase;
   color: var(--ink-dim);
 }
+
+/* ============================================================================
+   USO DE I.A. — selo (topo e cartões), quadro no fim do conteúdo e aviso nas
+   imagens geradas por I.A. (ver src/lib/ia.ts)
+============================================================================ */
+.selo-ia {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.selo-ia--usou {
+  border-color: var(--accent-600);
+  color: var(--accent-800);
+  background: var(--accent-100);
+}
+a.selo-ia:hover {
+  border-color: var(--accent-700);
+}
+.selo-ia-topo {
+  margin-top: var(--space-1);
+}
+.quadro-ia {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent-600);
+  background: var(--bg-panel);
+  scroll-margin-top: 6rem;
+}
+.quadro-ia-titulo {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: var(--space-1);
+}
+.quadro-ia-texto {
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.quadro-ia-lista {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+.quadro-ia-lista div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 10rem) 1fr;
+  gap: var(--space-2);
+}
+.quadro-ia-lista dt {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--ink-dim);
+  padding-top: 0.15rem;
+}
+.quadro-ia-lista dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 560px) {
+  .quadro-ia-lista div {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+.quadro-ia-link {
+  display: inline-block;
+  margin-top: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--accent-700);
+}
+.selo-ia-imagem {
+  display: block;
+  width: fit-content;
+  margin-top: 0.35rem;
+  padding: 1px 6px;
+  border: 1px solid var(--accent-600);
+  background: var(--accent-100);
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--accent-800);
+}
+.article-card .selo-ia,
+.episode-row-main .selo-ia {
+  margin-top: 6px;
+}
