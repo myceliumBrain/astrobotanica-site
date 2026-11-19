@@ -15,7 +15,6 @@ import { miniatura } from "../lib/miniatura";
 import { noticiasDaLista } from "../lib/listas";
 import { redesDeCompartilhamento } from "../lib/compartilhar";
 import CartaoNoticia from "./CartaoNoticia.astro";
-import SeloIa from "./SeloIa.astro";
 import QuadroUsoDeIa from "./QuadroUsoDeIa.astro";
 import { avisarImagensIa, textosIa } from "../lib/ia";
 import membros from "../../data/members.json";
@@ -111,29 +110,10 @@ const listasLaterais = [
       <div class="noticia-tags">
         {n.category && <span class="tag tag-accent">{n.category}</span>}
         {n.tipo_estudo && <span class="tag tag-outline noticia-tipo-estudo">{n.tipo_estudo}</span>}
-        <SeloIa ia={n.ia} lang={lang} ancora />
       </div>
       <h1>{n.title}</h1>
       {n.subtitle && <p class="article-subtitle">{n.subtitle}</p>}
 
-      {
-        n.author && (
-          <p class="noticia-autor">
-            {t(lang, "artigo.byLine", { author: n.author })}
-            {orcid && (
-              <a class="noticia-id-link" href={orcid.url} target="_blank" rel="noopener noreferrer" title={`ORCID ${orcid.id}`}>
-                <span class="noticia-orcid-icone" aria-hidden="true">iD</span>
-                ORCID
-              </a>
-            )}
-            {lattes && (
-              <a class="noticia-id-link" href={lattes} target="_blank" rel="noopener noreferrer">
-                Lattes
-              </a>
-            )}
-          </p>
-        )
-      }
       {
         n.revisor_tecnico && (
           <p class="noticia-revisor">
@@ -195,116 +175,131 @@ const listasLaterais = [
         <div class="article-main">
           <div class="article-body" set:html={avisarImagensIa(corpoHtmlDaPagina(noticia), lang)} />
 
-          {
-            temFonte && (
-              <aside class="noticia-caixa noticia-fonte">
-                <h2 class="noticia-caixa-titulo">{t(lang, "artigo.fonteHeading")}</h2>
-                {n.fonte.citacao && <p class="noticia-fonte-citacao">{n.fonte.citacao}</p>}
-                <p class="noticia-fonte-links">
-                  {n.fonte.url && (
-                    <a href={n.fonte.url} target="_blank" rel="noopener noreferrer">
-                      {t(lang, "artigo.fonteLink")} ↗
-                    </a>
-                  )}
-                  {doi && (
-                    <span>
-                      DOI:{" "}
-                      <a href={doi.url} target="_blank" rel="noopener noreferrer">
-                        {doi.doi}
+          {/* Blocos do fim, todos na mesma caixa: fonte original (se houver),
+              referências, erratas, como citar, uso de I.A., autor e licença. */}
+          <div class="noticia-blocos">
+            {
+              temFonte && (
+                <aside class="noticia-caixa noticia-fonte">
+                  <h2 class="noticia-caixa-titulo">{t(lang, "artigo.fonteHeading")}</h2>
+                  {n.fonte.citacao && <p class="noticia-fonte-citacao">{n.fonte.citacao}</p>}
+                  <p class="noticia-fonte-links">
+                    {n.fonte.url && (
+                      <a href={n.fonte.url} target="_blank" rel="noopener noreferrer">
+                        {t(lang, "artigo.fonteLink")} ↗
                       </a>
-                    </span>
-                  )}
-                </p>
-              </aside>
-            )
-          }
-
-          {
-            n.references && n.references.length > 0 && (
-              <div class="article-references">
-                <h2 class="article-references-heading">{t(lang, "artigo.referencesHeading")}</h2>
-                <ol class="article-references-list">
-                  {n.references.map((ref) => (
-                    <li>
-                      {ref.url ? (
-                        <a href={ref.url} target="_blank" rel="noopener noreferrer">
-                          {ref.text}
+                    )}
+                    {doi && (
+                      <span>
+                        DOI:{" "}
+                        <a href={doi.url} target="_blank" rel="noopener noreferrer">
+                          {doi.doi}
                         </a>
-                      ) : (
-                        ref.text
-                      )}
-                    </li>
-                  ))}
-                </ol>
+                      </span>
+                    )}
+                  </p>
+                </aside>
+              )
+            }
+
+            {
+              n.references && n.references.length > 0 && (
+                <section class="noticia-caixa">
+                  <h2 class="noticia-caixa-titulo">{t(lang, "artigo.referencesHeading")}</h2>
+                  <ol class="noticia-lista">
+                    {n.references.map((ref) => (
+                      <li>
+                        {ref.url ? (
+                          <a href={ref.url} target="_blank" rel="noopener noreferrer">
+                            {ref.text}
+                          </a>
+                        ) : (
+                          ref.text
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                </section>
+              )
+            }
+
+            {
+              erratas.length > 0 && (
+                <section class="noticia-caixa">
+                  <h2 class="noticia-caixa-titulo">{t(lang, "artigo.erratasHeading")}</h2>
+                  <ul class="noticia-lista">
+                    {erratas.map((e) => (
+                      <li>
+                        <time datetime={e.data}>{formatarData(e.data, lang)}</time>: {e.texto}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )
+            }
+
+            <section class="noticia-caixa noticia-citar">
+              <div class="noticia-citar-topo">
+                <h2 class="noticia-caixa-titulo">{t(lang, "artigo.citeHeading")}</h2>
+                <button type="button" class="noticia-citar-copiar" data-copiado={t(lang, "artigo.citeCopied")} hidden>
+                  {t(lang, "artigo.citeCopy")}
+                </button>
               </div>
-            )
-          }
+              <p class="noticia-citar-texto">
+                {citacao.antes}<strong>{citacao.site}</strong>{citacao.depois} {citacao.acessoRotulo}{" "}
+                <span class="noticia-citar-acesso">{t(lang, "artigo.accessedPlaceholder")}</span>.
+              </p>
+            </section>
 
-          {
-            erratas.length > 0 && (
-              <section class="article-references noticia-erratas">
-                <h2 class="article-references-heading">{t(lang, "artigo.erratasHeading")}</h2>
-                <ul class="article-references-list">
-                  {erratas.map((e) => (
-                    <li>
-                      <time datetime={e.data}>{formatarData(e.data, lang)}</time>: {e.texto}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )
-          }
+            <QuadroUsoDeIa ia={n.ia} lang={lang} />
 
-          <QuadroUsoDeIa ia={n.ia} lang={lang} />
-
-          <section class="noticia-caixa noticia-citar">
-            <div class="noticia-citar-topo">
-              <h2 class="noticia-caixa-titulo">{t(lang, "artigo.citeHeading")}</h2>
-              <button type="button" class="noticia-citar-copiar" data-copiado={t(lang, "artigo.citeCopied")} hidden>
-                {t(lang, "artigo.citeCopy")}
-              </button>
-            </div>
-            <p class="noticia-citar-texto">
-              {citacao.antes}<strong>{citacao.site}</strong>{citacao.depois} {citacao.acessoRotulo}{" "}
-              <span class="noticia-citar-acesso">{t(lang, "artigo.accessedPlaceholder")}</span>.
-            </p>
-          </section>
-
-          <footer class="noticia-licenca">
-            <h2 class="noticia-caixa-titulo">{t(lang, "artigo.licenseHeading")}</h2>
-            <p>
-              {licencaAntes}<a href={licencaUrl} rel="license noopener" target="_blank">{t(lang, "artigo.licenseName")}</a>{licencaDepois}
-            </p>
-          </footer>
-
-          {
-            n.author && (
-              <>
-                <hr class="article-divider" />
-                <div class="article-author-card">
-                  {avatar && (
-                    <a class="article-author-photo" href={lang === "en" ? "/en/sobre" : "/sobre"} aria-label={n.author}>
-                      <img src={miniatura(avatar)} alt="" loading="lazy" width="192" height="192" />
-                    </a>
-                  )}
-                  <div class="article-author-info">
-                    <div class="article-author-name">{n.author}</div>
-                    {bio && <p class="article-author-bio">{bio}</p>}
-                    <div class="article-author-actions">
-                      <a class="btn btn-primary" href={lang === "en" ? "/en/sobre" : "/sobre"}>
-                        {t(lang, "artigo.authorCta")}
+            {
+              n.author && (
+                <section class="noticia-caixa">
+                  <h2 class="noticia-caixa-titulo">{t(lang, "artigo.authorHeading")}</h2>
+                  <div class="article-author-card">
+                    {avatar && (
+                      <a class="article-author-photo" href={lang === "en" ? "/en/sobre" : "/sobre"} aria-label={n.author}>
+                        <img src={miniatura(avatar)} alt="" loading="lazy" width="192" height="192" />
                       </a>
-                      {primeiroLink && (
-                        <a class="btn btn-secondary" href={primeiroLink.url} target="_blank" rel="noopener noreferrer">
-                          {primeiroLink.label}
+                    )}
+                    <div class="article-author-info">
+                      <div class="article-author-name">{n.author}</div>
+                      {bio && <p class="article-author-bio">{bio}</p>}
+                      <div class="article-author-actions">
+                        <a class="btn btn-primary" href={lang === "en" ? "/en/sobre" : "/sobre"}>
+                          {t(lang, "artigo.authorCta")}
                         </a>
-                      )}
+                        {primeiroLink && (
+                          <a class="btn btn-secondary" href={primeiroLink.url} target="_blank" rel="noopener noreferrer">
+                            {primeiroLink.label}
+                          </a>
+                        )}
+                        {orcid && (
+                          <a class="noticia-id-link" href={orcid.url} target="_blank" rel="noopener noreferrer" title={`ORCID ${orcid.id}`}>
+                            <span class="noticia-orcid-icone" aria-hidden="true">iD</span>
+                            ORCID
+                          </a>
+                        )}
+                        {lattes && (
+                          <a class="noticia-id-link" href={lattes} target="_blank" rel="noopener noreferrer">
+                            Lattes
+                          </a>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </>
-            )
-          }
+                </section>
+              )
+            }
+
+            <footer class="noticia-caixa noticia-licenca">
+              <h2 class="noticia-caixa-titulo">{t(lang, "artigo.licenseHeading")}</h2>
+              <p>
+                {licencaAntes}<a href={licencaUrl} rel="license noopener" target="_blank">{t(lang, "artigo.licenseName")}</a>{licencaDepois}
+              </p>
+            </footer>
+          </div>
         </div>
 
         {
@@ -406,7 +401,6 @@ const listasLaterais = [
     flex-wrap: wrap;
     gap: var(--space-1);
   }
-  .noticia-autor,
   .noticia-revisor {
     font-family: var(--font-mono);
     font-size: 0.78rem;
@@ -415,9 +409,6 @@ const listasLaterais = [
     flex-wrap: wrap;
     align-items: center;
     gap: 0.4rem 0.75rem;
-  }
-  .noticia-autor {
-    margin-top: var(--space-1);
   }
   .noticia-revisor {
     margin-top: 0.25rem;
@@ -446,14 +437,17 @@ const listasLaterais = [
     font-size: 0.55rem;
     font-weight: 600;
   }
-  .noticia-caixa {
+  /* Blocos do fim da notícia: todos com a mesma caixa e o mesmo título. */
+  .noticia-blocos {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
     margin-top: var(--space-4);
+  }
+  .noticia-caixa {
     padding: var(--space-3);
     border: 1px solid var(--line);
     background: var(--bg-panel);
-  }
-  .noticia-fonte {
-    border-left: 3px solid var(--accent-700);
   }
   .noticia-caixa-titulo {
     font-family: var(--font-mono);
@@ -462,7 +456,27 @@ const listasLaterais = [
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--ink-dim);
-    margin-bottom: var(--space-1);
+    margin-bottom: var(--space-2);
+  }
+  .noticia-lista {
+    padding-left: 1.2rem;
+    font-size: 0.88rem;
+    line-height: 1.6;
+    color: var(--ink-dim);
+  }
+  .noticia-lista li + li {
+    margin-top: var(--space-1);
+  }
+  .noticia-lista a {
+    color: var(--accent-700);
+    overflow-wrap: anywhere;
+  }
+  /* O cartão do autor fica dentro da caixa, sem fundo nem borda próprios. */
+  .noticia-blocos .article-author-card {
+    margin: 0;
+    padding: 0;
+    background: none;
+    border: none;
   }
   .noticia-fonte-citacao {
     font-size: 0.95rem;
@@ -506,9 +520,6 @@ const listasLaterais = [
     overflow-wrap: anywhere;
   }
   .noticia-licenca {
-    margin-top: var(--space-4);
-    padding-top: var(--space-3);
-    border-top: 1px solid var(--line);
     font-size: 0.82rem;
     line-height: 1.6;
     color: var(--ink-dim);

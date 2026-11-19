@@ -6,7 +6,6 @@
 // EN só para o verbete com tituloEn, com hreflang entre os dois.
 import ContadorAcessos from "./ContadorAcessos.astro";
 import Base from "../layouts/Base.astro";
-import SeloIa from "./SeloIa.astro";
 import QuadroUsoDeIa from "./QuadroUsoDeIa.astro";
 import { avisarImagensIa, textosIa } from "../lib/ia";
 import { caminhoNoIdioma, t, type Lang } from "../lib/i18n";
@@ -68,7 +67,6 @@ const estudos = caminhoNoIdioma("/estudos/", lang);
     <div id="verbete-content">
       <span class="tag tag-accent">{categoria}</span>
       <h1>{textos.titulo}</h1>
-      <div class="selo-ia-topo"><SeloIa ia={v.ia} lang={lang} ancora /></div>
       {textos.definicaoCurta && <p class="verbete-lede">{textos.definicaoCurta}</p>}
       {
         v.imagemCapa && (

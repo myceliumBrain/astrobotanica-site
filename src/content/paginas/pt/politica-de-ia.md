@@ -18,8 +18,6 @@ No fim de cada conteúdo há um quadro "Uso de inteligência artificial". Quando
 
 Imagens geradas por I.A. são identificadas uma a uma, logo abaixo da imagem.
 
-Um selo no topo da página e nos cartões das listas resume essa informação.
-
 ## 2. Conteúdo sem declaração
 
 Os conteúdos publicados antes desta política não têm o quadro. Isso não significa que houve ou que não houve uso de I.A.: a informação simplesmente não foi registrada na época.
