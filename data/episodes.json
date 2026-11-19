@@ -38,6 +38,9 @@
     ],
     "image": "images/episodios/ep-01.jpg",
     "featured": true,
-    "time": "20:05"
+    "time": "20:05",
+    "ia": {
+      "usou": false
+    }
   }
 ]
