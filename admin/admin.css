@@ -591,6 +591,7 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 .site-menu-row { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.5rem; }
 .site-menu-row .input { flex: 1; min-width: 0; }
 .site-menu-row .site-menu-link { flex: 1.4; }
+.site-menu-row .site-menu-grupo { flex: 0.9; }
 .site-menu-visivel { display: flex; align-items: center; gap: 0.25rem; white-space: nowrap; font-size: 0.95rem; }
 .article-reference-row .article-reference-text { flex: 1 1 60%; min-width: 0; }
 .article-reference-row .article-reference-url { flex: 1 1 30%; min-width: 0; }

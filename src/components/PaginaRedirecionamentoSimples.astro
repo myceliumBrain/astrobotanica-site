@@ -1,0 +1,30 @@
+---
+// Endereço que deixou de ter página própria e leva para outra (ex.:
+// /institucional, que virou a lista "Institucional" do menu → /sobre).
+// O GitHub Pages não redireciona pelo servidor: meta refresh +
+// location.replace, fora do índice, com canonical apontando o destino.
+import { BASE_URL } from "../lib/feeds";
+
+interface Props {
+  destino: string;
+  rotulo: string;
+}
+
+const { destino, rotulo } = Astro.props;
+---
+
+<!doctype html>
+<html lang={destino.startsWith("/en") ? "en" : "pt-BR"}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{rotulo} — Astrobotânica</title>
+    <meta name="robots" content="noindex" />
+    <link rel="canonical" href={new URL(destino, BASE_URL).href} />
+    <meta http-equiv="refresh" content={`0; url=${destino}`} />
+    <script is:inline define:vars={{ destino }}>location.replace(destino);</script>
+  </head>
+  <body>
+    <p><a href={destino}>{rotulo}</a></p>
+  </body>
+</html>

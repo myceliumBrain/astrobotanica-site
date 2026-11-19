@@ -359,7 +359,7 @@ button { font-family: inherit; }
   line-height: 1;
   padding: 0.35rem 0.6rem;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 0;
   background: none;
   cursor: pointer;
   transition: border-color 0.2s ease, background-color 0.2s ease;
@@ -1159,4 +1159,105 @@ a.selo-ia:hover {
 .article-card .selo-ia,
 .episode-row-main .selo-ia {
   margin-top: 6px;
+}
+
+/* ============================================================================
+   MENU: LISTAS "CONTEÚDO" / "INSTITUCIONAL" E BOTÃO "CONTATO"
+   (ver src/lib/menu.ts — campo grupo de cada item)
+============================================================================ */
+.nav-grupo { position: relative; }
+.nav-grupo-titulo {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  list-style: none;
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--ink-dim);
+  user-select: none;
+}
+.nav-grupo-titulo::-webkit-details-marker { display: none; }
+.nav-grupo-titulo::after {
+  content: "";
+  width: 0.4em;
+  height: 0.4em;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-0.15em) rotate(45deg);
+  transition: transform 0.2s ease;
+}
+.nav-grupo[open] > .nav-grupo-titulo::after { transform: translateY(0.1em) rotate(-135deg); }
+.nav-grupo-titulo:hover,
+.nav-grupo[open] > .nav-grupo-titulo,
+.nav-grupo-titulo.is-atual { color: var(--accent-700); }
+.nav-grupo-lista {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  left: calc(-1 * var(--space-2));
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 15rem;
+  padding: var(--space-1) 0;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.nav-grupo-lista a {
+  padding: 0.55rem var(--space-2);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  color: var(--ink);
+}
+.nav-grupo-lista a:hover,
+.nav-grupo-lista a:focus-visible { background: var(--accent-100); color: var(--accent-700); }
+.nav-grupo-lista a[aria-current='page'] { color: var(--accent-700); }
+
+/* Contato: separado dos outros links, com borda reta e fundo claro. */
+.nav-destaque {
+  display: inline-block;
+  padding: 0.35rem 0.9rem;
+  line-height: 1.1;
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  color: var(--ink);
+  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+.nav-destaque:hover,
+.nav-destaque[aria-current='page'] {
+  border-color: var(--accent-700);
+  background: var(--accent-100);
+  color: var(--accent-700);
+}
+
+/* Celular: listas já abertas, com o nome do grupo como título pequeno. */
+.nav-overlay-grupo {
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  gap: var(--space-1);
+}
+.nav-overlay-grupo-titulo {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.nav-overlay-panel .nav-overlay-grupo a { font-size: clamp(1.3rem, 4vw, 1.7rem); }
+.nav-overlay-panel a.nav-destaque { font-size: 1.1rem; padding: 0.5rem 1.2rem; }
+@media (max-width: 640px) {
+  .nav-overlay-panel .nav-overlay-grupo a { font-size: clamp(1.5rem, 7vw, 2rem); }
 }

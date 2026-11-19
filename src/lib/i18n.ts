@@ -17,7 +17,7 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
       institutionalHeading: "Institucional",
       expediente: "Expediente",
       editorialPolicy: "Política Editorial",
-      contributorGuidelines: "Normas para Colaboradores",
+      contributorGuidelines: "Publique conosco",
       privacy: "Privacidade",
       aiPolicy: "Política de uso de I.A.",
       licensePrefix: "Conteúdo licenciado sob",
@@ -26,19 +26,8 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
       aviso: "Página provisória — conteúdo em preparação.",
     },
     nav: {
+      content: "Conteúdo",
       institutional: "Institucional",
-    },
-    institucional: {
-      title: "Institucional",
-      intro: "Quem somos, como trabalhamos e as regras que seguimos.",
-      descricoes: {
-        sobre: "Quem faz o Astrobotânica e o que é a astrobotânica.",
-        expediente: "Equipe editorial, Conselho Científico e colaboradores.",
-        "politica-editorial": "Fontes, rigor, processo editorial e correções.",
-        "normas-para-colaboradores": "Como propor um texto para publicação.",
-        privacidade: "Como tratamos os dados de quem visita o site.",
-        "politica-de-ia": "Como usamos ferramentas de inteligência artificial e como isso é informado.",
-      },
     },
     listas: {
       soPortugues: "Só em português",
@@ -69,7 +58,7 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
       institutionalHeading: "Institutional",
       expediente: "Masthead",
       editorialPolicy: "Editorial Policy",
-      contributorGuidelines: "Contributor Guidelines",
+      contributorGuidelines: "Publish with us",
       privacy: "Privacy",
       aiPolicy: "A.I. use policy",
       licensePrefix: "Content licensed under",
@@ -78,19 +67,8 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
       aviso: "Provisional page — content in preparation.",
     },
     nav: {
+      content: "Content",
       institutional: "Institutional",
-    },
-    institucional: {
-      title: "Institutional",
-      intro: "Who we are, how we work and the rules we follow.",
-      descricoes: {
-        sobre: "Who makes Astrobotânica and what astrobotany is.",
-        expediente: "Editorial team, Scientific Board and contributors.",
-        "politica-editorial": "Sources, rigor, editorial process and corrections.",
-        "normas-para-colaboradores": "How to propose a text for publication.",
-        privacidade: "How we handle the data of site visitors.",
-        "politica-de-ia": "How we use artificial intelligence tools and how this is disclosed.",
-      },
     },
     listas: {
       soPortugues: "Portuguese only",

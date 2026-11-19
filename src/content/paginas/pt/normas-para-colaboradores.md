@@ -1,5 +1,5 @@
 ---
-title: "Normas para Colaboradores"
+title: "Publique conosco"
 description: "Pesquisadores e pós-graduandos podem propor textos sobre seu próprio trabalho ou sobre temas do escopo do Astrobotânica."
 lang: "pt"
 updated: ""

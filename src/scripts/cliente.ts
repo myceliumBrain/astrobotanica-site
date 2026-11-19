@@ -71,3 +71,29 @@ function setupHeaderAutoHide(): void {
 
 setupHeaderAutoHide();
 setupNavOverlay();
+
+// Listas do menu ("Conteúdo", "Institucional"): <details> abre e fecha
+// sozinho (funciona sem JavaScript); aqui só fecham ao clicar fora, com Esc
+// e quando outra é aberta.
+function setupNavGrupos(): void {
+  const grupos = Array.from(document.querySelectorAll<HTMLDetailsElement>(".nav-grupo"));
+  if (!grupos.length) return;
+  grupos.forEach((g) =>
+    g.addEventListener("toggle", () => {
+      if (g.open) grupos.forEach((outro) => outro !== g && (outro.open = false));
+    })
+  );
+  document.addEventListener("click", (e) => {
+    grupos.forEach((g) => g.open && !g.contains(e.target as Node) && (g.open = false));
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    grupos.forEach((g) => {
+      if (!g.open) return;
+      g.open = false;
+      g.querySelector("summary")?.focus();
+    });
+  });
+}
+
+setupNavGrupos();
