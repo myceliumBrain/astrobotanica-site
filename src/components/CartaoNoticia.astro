@@ -25,6 +25,7 @@ const meta = [formatarData(n.date, lang), n.readingTime].filter(Boolean).join(" 
   <div class="article-card-kicker">{n.category}</div>
   <div class="article-card-title" lang={item.soPortugues ? "pt" : undefined}>{n.title}</div>
   <div class="article-card-meta">{meta}</div>
+  {n.author && <div class="article-card-author">{t(lang, "artigo.byLine", { author: n.author })}</div>}
   {item.soPortugues && <span class="selo-so-portugues">{t(lang, "listas.soPortugues")}</span>}
   <SeloIa ia={n.ia} lang={lang} />
 </a>
