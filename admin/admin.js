@@ -5149,8 +5149,6 @@ function buildSiteField(fieldDef) {
       ? buildTextarea(fieldDef.label, valueEn, { siteEn: fieldDef.key })
       : buildInput(fieldDef.label, "text", valueEn, { siteEn: fieldDef.key });
   enField.classList.add("campo-en");
-  // Na aba English, o texto em português aparece como referência.
-  if (value) enField.appendChild(el("span", "field-hint campo-referencia", `Português: ${value}`));
   wrap.appendChild(enField);
 
   return wrap;

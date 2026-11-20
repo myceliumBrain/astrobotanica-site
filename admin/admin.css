@@ -1000,7 +1000,6 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
 .aba-falta { color: var(--aviso); font-size: 0.85rem; font-weight: 500; }
 [data-idioma="pt"] .campo-en,
 [data-idioma="en"] .campo-pt { display: none; }
-.campo-referencia { display: block; margin-top: 0.35rem; white-space: pre-wrap; }
 
 /* Faixa de "versão nova do painel" (avisarSePainelDesatualizado). */
 .aviso-versao {
