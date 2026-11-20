@@ -8,6 +8,12 @@
 // (inclusive endereços soltos, como o GitHub/Astro fazem), listas com marcador
 // ou numeradas e tabelas. Abrir e salvar sem mexer gera o mesmo arquivo, byte
 // a byte, e o painel só grava as páginas que mudaram.
+//
+// Alinhamento (centralizado, à direita, justificado) não existe em Markdown:
+// um bloco alinhado (parágrafo, título, lista ou tabela) é gravado como HTML
+// limpo — só as tags de texto do editor e o text-align —, numa linha (ou num
+// bloco sem linha em branco, a tabela), que o Markdown do site publica como
+// está. Blocos sem alinhamento continuam em Markdown comum.
 // ============================================================================
 
 import { load, CORE_SCHEMA } from "./vendor/js-yaml.mjs";
@@ -161,8 +167,12 @@ function celulas(linha) {
   return partes;
 }
 
+// Bloco HTML (ver htmlLimpo): vai até a próxima linha em branco, como no
+// CommonMark.
+const RE_BLOCO_HTML = /^<(p|h[1-6]|ul|ol|table)(\s|>|$)/i;
+
 const iniciaBloco = (linha, seguinte) =>
-  RE_TITULO.test(linha) || RE_ITEM.test(linha) || RE_ITEM_NUM.test(linha) || (RE_LINHA_TABELA.test(linha) && RE_SEPARADOR.test(seguinte || ""));
+  RE_BLOCO_HTML.test(linha) || RE_TITULO.test(linha) || RE_ITEM.test(linha) || RE_ITEM_NUM.test(linha) || (RE_LINHA_TABELA.test(linha) && RE_SEPARADOR.test(seguinte || ""));
 
 export function markdownParaHtml(md) {
   const linhas = (md || "").split(/\r?\n/);
@@ -172,6 +182,12 @@ export function markdownParaHtml(md) {
     const linha = linhas[i];
     if (!linha.trim()) {
       i++;
+      continue;
+    }
+    if (RE_BLOCO_HTML.test(linha)) {
+      const partes = [];
+      while (i < linhas.length && linhas[i].trim()) partes.push(linhas[i++]);
+      blocos.push(partes.join("\n"));
       continue;
     }
     const titulo = RE_TITULO.exec(linha);
@@ -242,7 +258,7 @@ function inlineMd(no, emTabela) {
     else if (tag === "a") {
       const href = filho.getAttribute("href") || "";
       md += href && filho.textContent === href && /^https?:\/\//.test(href) ? href : href ? `[${dentro}](${href})` : dentro;
-    } else if (tag === "br") md += emTabela ? " " : "<br>";
+    } else if (tag === "br") md += "<br>";
     else md += dentro;
   }
   return md;
@@ -251,6 +267,73 @@ function inlineMd(no, emTabela) {
 // Início de linha que o Markdown leria como outra coisa (título, lista,
 // tabela): vai escapado.
 const protegerInicio = (md) => md.replace(/^(#|[-+*]\s|\d+[.)]\s|\|)/, (m) => (/^\d/.test(m) ? m.replace(/([.)])/, "\\$1") : `\\${m}`));
+
+// ── Alinhamento ──
+const ALINHAMENTOS = ["center", "right", "justify"];
+
+/** Alinhamento de um elemento ("" = o padrão, à esquerda). */
+export function alinhamentoDe(no) {
+  const estilo = /text-align\s*:\s*([a-z]+)/i.exec(no.getAttribute?.("style") || "");
+  const v = (estilo ? estilo[1] : no.getAttribute?.("align") || "").toLowerCase();
+  return ALINHAMENTOS.includes(v) ? v : "";
+}
+
+const temAlinhamento = (no) => !!alinhamentoDe(no) || [...no.querySelectorAll("*")].some((e) => alinhamentoDe(e));
+
+function abre(tag, no, extra = "") {
+  const a = alinhamentoDe(no);
+  return `<${tag}${extra}${a ? ` style="text-align: ${a}"` : ""}>`;
+}
+
+// Texto de linha em HTML: negrito, itálico, link e quebra de linha; o resto
+// vira só o texto. Sem quebras de linha no código (uma linha em branco
+// encerraria o bloco HTML no Markdown).
+function inlineHtml(no) {
+  let html = "";
+  for (const filho of no.childNodes) {
+    if (filho.nodeType === 3) {
+      html += escaparHtml(filho.nodeValue.replace(/\s*\n\s*/g, " "));
+      continue;
+    }
+    if (filho.nodeType !== 1) continue;
+    const tag = filho.tagName.toLowerCase();
+    const dentro = inlineHtml(filho);
+    if (tag === "strong" || tag === "b") html += dentro.trim() ? `<strong>${dentro}</strong>` : dentro;
+    else if (tag === "em" || tag === "i") html += dentro.trim() ? `<em>${dentro}</em>` : dentro;
+    else if (tag === "a") {
+      const href = filho.getAttribute("href") || "";
+      html += href ? `<a href="${escaparAtributo(href)}">${dentro}</a>` : dentro;
+    } else if (tag === "br") html += "<br>";
+    else html += dentro;
+  }
+  return html;
+}
+
+// Conteúdo de uma célula ou item: sem as quebras de linha do começo e do fim
+// (o <br> que o editor põe numa célula vazia).
+const conteudo = (no) => inlineHtml(no).replace(/^(\s|<br>)+|(\s|<br>)+$/g, "");
+
+/** Um bloco do editor como HTML limpo, para gravar no Markdown. */
+function htmlLimpo(no) {
+  const tag = no.tagName.toLowerCase();
+  if (tag === "ul" || tag === "ol") {
+    const inicio = Number(no.getAttribute("start") || 1);
+    const extra = tag === "ol" && inicio !== 1 ? ` start="${inicio}"` : "";
+    const itens = [...no.children].filter((li) => li.tagName === "LI" && li.textContent.trim());
+    return [abre(tag, no, extra), ...itens.map((li) => `${abre("li", li)}${conteudo(li)}</li>`), `</${tag}>`].join("\n");
+  }
+  if (tag === "table") {
+    const linhas = [...no.querySelectorAll("tr")].map((tr) => [...tr.children]);
+    const n = Math.max(...linhas.map((l) => l.length));
+    const tr = (cs, t) => ["<tr>", ...Array.from({ length: n }, (_, k) => (cs[k] ? `${abre(t, cs[k])}${conteudo(cs[k])}</${t}>` : `<${t}></${t}>`)), "</tr>"];
+    const html = ["<table>", "<thead>", ...tr(linhas[0], "th"), "</thead>"];
+    if (linhas.length > 1) html.push("<tbody>", ...linhas.slice(1).flatMap((cs) => tr(cs, "td")), "</tbody>");
+    html.push("</table>");
+    return html.join("\n");
+  }
+  const t = /^h[1-6]$/.test(tag) ? tag : "p";
+  return `${abre(t, no)}${conteudo(no)}</${t}>`;
+}
 
 export function htmlParaMarkdown(raiz) {
   const blocos = [];
@@ -268,7 +351,9 @@ export function htmlParaMarkdown(raiz) {
       continue;
     }
     fecharSoltos();
-    if (/^h[1-6]$/.test(tag)) {
+    if (no.textContent.trim() && (tag === "table" ? no.querySelector("tr") : true) && temAlinhamento(no)) {
+      blocos.push(htmlLimpo(no));
+    } else if (/^h[1-6]$/.test(tag)) {
       const texto = inlineMd(no).trim();
       if (texto) blocos.push(`${"#".repeat(Number(tag[1]))} ${texto}`);
     } else if (tag === "ul" || tag === "ol") {
@@ -278,7 +363,9 @@ export function htmlParaMarkdown(raiz) {
         blocos.push(itens.map((li, k) => `${tag === "ol" ? `${inicio + k}.` : "-"} ${inlineMd(li).trim().replace(/\n/g, "\n  ")}`).join("\n"));
       }
     } else if (tag === "table") {
-      const linhas = [...no.querySelectorAll("tr")].map((tr) => [...tr.children].map((c) => inlineMd(c, true).trim()));
+      const linhas = [...no.querySelectorAll("tr")].map((tr) =>
+        [...tr.children].map((c) => inlineMd(c, true).replace(/^(\s|<br>)+|(\s|<br>)+$/g, ""))
+      );
       if (linhas.length) {
         const n = Math.max(...linhas.map((l) => l.length));
         const linha = (cs) => `| ${Array.from({ length: n }, (_, k) => cs[k] ?? "").join(" | ")} |`;

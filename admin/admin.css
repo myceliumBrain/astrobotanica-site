@@ -781,6 +781,14 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 }
 .rich-text-btn:hover { border-color: var(--verde); color: var(--verde-escuro); }
 .rich-text-dica { margin-left: auto; font-size: 0.85rem; color: var(--tinta-fraca); }
+.rich-text-grupo { display: flex; align-items: center; gap: 0.25rem; }
+.rich-text-grupo[hidden] { display: none; }
+.rich-text-grupo-rotulo { font-family: var(--fonte-mono); font-size: 0.75rem; color: var(--tinta-fraca); margin-right: 0.15rem; }
+.rich-text-btn--icone { display: inline-flex; align-items: center; justify-content: center; padding: 0.3rem 0.45rem; line-height: 0; }
+.rich-text-btn.ativo { color: var(--verde-escuro); background: var(--verde-claro); border-color: var(--verde-medio); }
+.rich-text-btn--perigo { color: var(--perigo); }
+.rich-text-btn--perigo:hover { border-color: var(--perigo); color: var(--perigo); }
+.rich-text-btn:disabled { opacity: 0.4; cursor: default; border-color: var(--linha); color: var(--tinta-fraca); }
 
 .menu-editor {
   position: absolute;
@@ -856,6 +864,19 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 .rich-text-editor ul { list-style: disc; }
 .rich-text-editor ol { list-style: decimal; }
 .rich-text-editor a { color: var(--verde); text-decoration: underline; }
+/* Tabela: grade cinza visível e colunas de largura fixa (o texto quebra
+   dentro da célula em vez de esticar a coluna). Cabeçalho à esquerda, como
+   no site; o alinhamento de cada célula vem dos botões da barra. */
+.rich-text-editor table { width: 100%; table-layout: fixed; border-collapse: collapse; margin: 0 0 1em; font-size: 0.95em; }
+.rich-text-editor th,
+.rich-text-editor td {
+  border: 1px solid var(--linha-forte);
+  padding: 0.35rem 0.6rem;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+.rich-text-editor th { font-weight: 600; background: var(--painel); }
 /* Mesmo tamanho único de texto do site (ver .article-body em css/style.css). */
 .rich-text-editor font[size="3"], .rich-text-editor font[size="4"] { font-size: inherit; }
 .rich-text-editor font[size="2"] { color: var(--tinta-suave); }

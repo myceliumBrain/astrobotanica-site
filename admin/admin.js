@@ -24,6 +24,7 @@ import {
 } from "./noticias-md.js";
 import {
   PASTA_PAGINAS,
+  alinhamentoDe,
   caminhoPagina,
   htmlParaMarkdown,
   lerPagina,
@@ -2270,6 +2271,8 @@ function ligarMenusDeSelecao() {
       if (!editor || !m.parentElement.contains(editor)) m.hidden = true;
     });
     editor?.atualizarMenuDeSelecao?.();
+    // A barra de cada editor (alinhamento, ações da tabela) acompanha o cursor.
+    document.querySelectorAll(".rich-text-editor").forEach((ed) => ed.atualizarBarra?.());
   });
   // Clicar fora do campo fecha os menus, mesmo onde o clique não muda a
   // seleção (cabeçalho, botões).
@@ -2334,6 +2337,9 @@ function splitEditorParagraphAtCursor(editor) {
   const newP = document.createElement("p");
   if (isEmpty(afterFragment)) newP.appendChild(document.createElement("br"));
   else newP.appendChild(afterFragment);
+  // O parágrafo novo continua com o alinhamento da linha (justificado etc.).
+  const alinhamento = topNode.nodeType === Node.ELEMENT_NODE ? alinhamentoDe(topNode) : "";
+  if (alinhamento) newP.style.textAlign = alinhamento;
   editor.insertBefore(newP, topNode.nextSibling);
 
   // Garante que o lado "antes" do corte também seja um <p> — se já era
@@ -2375,6 +2381,20 @@ function splitEditorParagraphAtCursor(editor) {
 // pelo "Publicar" da tela) é que de fato enfileira o arquivo em
 // pendingUploads, e finalizeRichTextHtml() troca o src temporário pelo
 // definitivo na hora de gravar.
+// Ícones dos botões de alinhamento (linhas de texto).
+const ICONES_DE_ALINHAMENTO = (() => {
+  const svg = (linhas) =>
+    `<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">${linhas
+      .map(([x1, x2], k) => `<line x1="${x1}" y1="${3 + k * 3.33}" x2="${x2}" y2="${3 + k * 3.33}"/>`)
+      .join("")}</svg>`;
+  return {
+    left: svg([[2, 14], [2, 10], [2, 14], [2, 9]]),
+    center: svg([[2, 14], [4, 12], [2, 14], [5, 11]]),
+    right: svg([[2, 14], [6, 14], [2, 14], [7, 14]]),
+    justify: svg([[2, 14], [2, 14], [2, 14], [2, 14]]),
+  };
+})();
+
 function buildRichTextField(labelText, value, dataset, opts) {
   const wrap = el("div", "field rich-text-field");
   wrap.appendChild(el("label", "", labelText));
@@ -2400,11 +2420,13 @@ function buildRichTextField(labelText, value, dataset, opts) {
         { rotulo: "Subseção", dica: "### + espaço", acao: () => virarBloco("h3") },
         { rotulo: "Lista", dica: "- + espaço", acao: () => virarLista("ul") },
         { rotulo: "Lista numerada", dica: "1. + espaço", acao: () => virarLista("ol") },
+        { rotulo: "Tabela", dica: "linhas e colunas", acao: () => inserirTabela() },
       ]
     : [
         { rotulo: "Texto", dica: "parágrafo comum", acao: () => virarBloco("p") },
         { rotulo: "Subtítulo", dica: "## + espaço", acao: () => virarBloco("h3") },
         { rotulo: "Imagem", dica: "do computador, com legenda", acao: () => imageInput.click() },
+        { rotulo: "Tabela", dica: "linhas e colunas", acao: () => inserirTabela() },
       ];
 
   // Barra fina em cima do texto, só com o que não depende de selecionar
@@ -2413,7 +2435,7 @@ function buildRichTextField(labelText, value, dataset, opts) {
   const toolbar = el("div", "rich-text-toolbar");
   const inserirBtn = el("button", "rich-text-btn", "+ Inserir");
   inserirBtn.type = "button";
-  inserirBtn.title = simples ? "Seção, subseção ou lista na linha do cursor" : "Subtítulo ou imagem na linha do cursor";
+  inserirBtn.title = simples ? "Seção, subseção, lista ou tabela na linha do cursor" : "Subtítulo, imagem ou tabela na linha do cursor";
   inserirBtn.addEventListener("mousedown", (e) => e.preventDefault());
   inserirBtn.addEventListener("click", () => {
     if (menuDeBlocos.aberto) return fecharMenuDeBlocos();
@@ -2428,6 +2450,52 @@ function buildRichTextField(labelText, value, dataset, opts) {
   imageBtn.appendChild(imageInput);
   if (!simples) toolbar.appendChild(imageBtn);
 
+  // Alinhamento da linha do cursor (ou das linhas/células selecionadas).
+  const grupoAlinhamento = el("div", "rich-text-grupo");
+  grupoAlinhamento.setAttribute("role", "group");
+  grupoAlinhamento.setAttribute("aria-label", "Alinhamento do texto");
+  const botoesDeAlinhamento = {};
+  for (const [valor, titulo] of [["left", "Alinhar à esquerda"], ["center", "Centralizar"], ["right", "Alinhar à direita"], ["justify", "Justificar"]]) {
+    const b = el("button", "rich-text-btn rich-text-btn--icone");
+    b.type = "button";
+    b.title = titulo;
+    b.setAttribute("aria-label", titulo);
+    b.innerHTML = ICONES_DE_ALINHAMENTO[valor];
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    b.addEventListener("click", () => alinhar(valor));
+    botoesDeAlinhamento[valor] = b;
+    grupoAlinhamento.appendChild(b);
+  }
+  toolbar.appendChild(grupoAlinhamento);
+
+  // Ações da tabela: sempre à vista (a barra não muda de altura no meio do
+  // clique), ativas só com o cursor dentro de uma tabela.
+  const grupoTabela = el("div", "rich-text-grupo rich-text-grupo--tabela");
+  const botoesDaTabela = [];
+  grupoTabela.appendChild(el("span", "rich-text-grupo-rotulo", "Tabela:"));
+  const botaoDaTabela = (texto, titulo, acao, classe = "") => {
+    const b = el("button", `rich-text-btn ${classe}`, texto);
+    b.type = "button";
+    b.title = titulo;
+    b.addEventListener("mousedown", (e) => e.preventDefault());
+    b.addEventListener("click", () => {
+      const celula = celulaDoCursor();
+      if (!celula) return;
+      acao(celula);
+      editor.dispatchEvent(new Event("input", { bubbles: true }));
+      atualizarBarra();
+    });
+    grupoTabela.appendChild(b);
+    botoesDaTabela.push(b);
+  };
+  botaoDaTabela("+ Linha", "Nova linha abaixo da linha do cursor", (c) => novaLinha(c));
+  botaoDaTabela("+ Coluna", "Nova coluna à direita da coluna do cursor", (c) => novaColuna(c));
+  botaoDaTabela("− Linha", "Tirar a linha do cursor", (c) => tirarLinha(c));
+  botaoDaTabela("− Coluna", "Tirar a coluna do cursor", (c) => tirarColuna(c));
+  botaoDaTabela("Excluir tabela", "Tirar a tabela inteira do texto", (c) => excluirTabela(c.closest("table")), "rich-text-btn--perigo");
+  toolbar.appendChild(grupoTabela);
+  botoesDaTabela.forEach((b) => (b.disabled = true));
+
   toolbar.appendChild(
     el("span", "rich-text-dica", "Selecione um trecho para formatar · digite / numa linha vazia para inserir")
   );
@@ -2440,6 +2508,10 @@ function buildRichTextField(labelText, value, dataset, opts) {
   editor.dataset.richtext = "html";
   editor.addEventListener("focus", () => {
     try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch { /* navegador sem suporte */ }
+    // Firefox: sem os botões e alças próprios dele nas tabelas e imagens (a
+    // barra do editor já tem as ações da tabela).
+    try { document.execCommand("enableInlineTableEditing", false, "false"); } catch { /* navegador sem suporte */ }
+    try { document.execCommand("enableObjectResizing", false, "false"); } catch { /* navegador sem suporte */ }
   });
   // Callback opcional pra reagir a cada edição do corpo em tempo real (ver
   // computeReadingTime/readingTimeInput em buildArticleCard) — usa o HTML
@@ -2536,6 +2608,181 @@ function buildRichTextField(labelText, value, dataset, opts) {
     sel.removeAllRanges();
     sel.addRange(r);
   }
+  // ── Alinhamento ──
+  // Vale para parágrafos, títulos, itens de lista e células de tabela;
+  // "à esquerda" é o padrão (tira o alinhamento). Guardado como
+  // style="text-align: …" (nas páginas de texto, ver htmlLimpo em
+  // paginas-md.js).
+  const SELETOR_ALINHAVEL = "td, th, li, p, h1, h2, h3, h4, h5, h6";
+  function alinhaveisDaSelecao() {
+    const sel = SEL();
+    if (!sel?.rangeCount || !editor.contains(sel.anchorNode)) return [];
+    const r = sel.getRangeAt(0);
+    // Dentro de uma célula, quem alinha é a célula.
+    const alvo = (e) => e?.closest("td, th") || e;
+    const elDe = (n) => (n.nodeType === 1 ? n : n.parentElement);
+    const achados = new Set();
+    const ini = alvo(elDe(r.startContainer)?.closest(SELETOR_ALINHAVEL));
+    if (ini && editor.contains(ini)) achados.add(ini);
+    if (!sel.isCollapsed) {
+      editor.querySelectorAll(SELETOR_ALINHAVEL).forEach((b) => {
+        if (r.intersectsNode(b)) achados.add(alvo(b));
+      });
+    }
+    // Só os de dentro (o item, não a lista; a célula, não a tabela).
+    const lista = [...achados];
+    return lista.filter((b) => !lista.some((o) => o !== b && b.contains(o)));
+  }
+  function alinhar(valor) {
+    garantirCursor();
+    let blocos = alinhaveisDaSelecao();
+    if (!blocos.length) {
+      // Texto solto direto no editor: ganha um <p> para poder ser alinhado.
+      const bloco = blocoAtual();
+      if (!bloco) return;
+      const p = document.createElement("p");
+      bloco.before(p);
+      p.appendChild(bloco);
+      blocos = [p];
+    }
+    for (const b of blocos) {
+      b.style.textAlign = valor === "left" ? "" : valor;
+      if (!b.getAttribute("style")?.trim()) b.removeAttribute("style");
+    }
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    atualizarBarra();
+  }
+
+  // ── Tabela ──
+  // A primeira linha é o cabeçalho (<th>), como no Markdown das páginas.
+  const celulaDoCursor = () => {
+    const c = elementoDoCursor()?.closest("td, th");
+    return c && editor.contains(c) ? c : null;
+  };
+  function novaCelula(tag) {
+    const c = document.createElement(tag);
+    c.appendChild(document.createElement("br"));
+    return c;
+  }
+  const colunasDe = (tabela) => Math.max(1, ...[...tabela.querySelectorAll("tr")].map((tr) => tr.children.length));
+  function linhaNova(n) {
+    const tr = document.createElement("tr");
+    for (let k = 0; k < n; k++) tr.appendChild(novaCelula("td"));
+    return tr;
+  }
+  function inserirTabela() {
+    sairDaLista();
+    const tabela = document.createElement("table");
+    const thead = document.createElement("thead");
+    const cab = document.createElement("tr");
+    cab.append(novaCelula("th"), novaCelula("th"));
+    thead.appendChild(cab);
+    const tbody = document.createElement("tbody");
+    tbody.append(linhaNova(2), linhaNova(2));
+    tabela.append(thead, tbody);
+    const bloco = blocoAtual();
+    const vazio = bloco?.nodeType === 1 && bloco.tagName === "P" && !bloco.textContent.trim() && !bloco.querySelector("img");
+    if (!bloco) editor.appendChild(tabela);
+    else if (vazio) bloco.replaceWith(tabela);
+    else bloco.after(tabela);
+    // Uma linha de texto depois, para continuar escrevendo abaixo da tabela.
+    if (!tabela.nextElementSibling || tabela.nextElementSibling.tagName === "TABLE") {
+      const p = document.createElement("p");
+      p.appendChild(document.createElement("br"));
+      tabela.after(p);
+    }
+    cursorEm(cab.firstChild, true);
+    saveSelection();
+  }
+  function novaLinha(celula) {
+    const tr = celula.closest("tr");
+    const tabela = tr.closest("table");
+    const nova = linhaNova(colunasDe(tabela));
+    if (tr.parentElement.tagName === "THEAD") {
+      let tbody = tabela.querySelector("tbody");
+      if (!tbody) tabela.appendChild((tbody = document.createElement("tbody")));
+      tbody.prepend(nova);
+    } else tr.after(nova);
+    cursorEm(nova.children[Math.min(celula.cellIndex, nova.children.length - 1)], true);
+    return nova;
+  }
+  function novaColuna(celula) {
+    const k = celula.cellIndex;
+    celula.closest("table").querySelectorAll("tr").forEach((tr) => {
+      const ref = tr.children[Math.min(k, tr.children.length - 1)];
+      const nova = novaCelula(tr.parentElement.tagName === "THEAD" ? "th" : "td");
+      if (ref) ref.after(nova);
+      else tr.appendChild(nova);
+    });
+    cursorEm(celula.nextElementSibling || celula, true);
+  }
+  function tirarLinha(celula) {
+    const tr = celula.closest("tr");
+    const tabela = tr.closest("table");
+    if (tabela.querySelectorAll("tr").length === 1) return excluirTabela(tabela);
+    const k = celula.cellIndex;
+    let destino;
+    if (tr.parentElement.tagName === "THEAD") {
+      // Sem o cabeçalho, a linha de baixo passa a ser o cabeçalho.
+      const prox = tabela.querySelector("tbody tr");
+      const cab = document.createElement("tr");
+      [...prox.children].forEach((td) => {
+        const th = document.createElement("th");
+        if (td.getAttribute("style")) th.setAttribute("style", td.getAttribute("style"));
+        while (td.firstChild) th.appendChild(td.firstChild);
+        cab.appendChild(th);
+      });
+      prox.remove();
+      tr.replaceWith(cab);
+      destino = cab;
+    } else {
+      destino = tr.nextElementSibling || tr.previousElementSibling || tabela.querySelector("thead tr");
+      tr.remove();
+    }
+    tabela.querySelectorAll("tbody:empty").forEach((t) => t.remove());
+    cursorEm(destino.children[Math.min(k, destino.children.length - 1)], true);
+  }
+  function tirarColuna(celula) {
+    const tabela = celula.closest("table");
+    if (colunasDe(tabela) === 1) return excluirTabela(tabela);
+    const k = celula.cellIndex;
+    const tr = celula.closest("tr");
+    tabela.querySelectorAll("tr").forEach((linha) => linha.children[k]?.remove());
+    cursorEm(tr.children[Math.min(k, tr.children.length - 1)], true);
+  }
+  function excluirTabela(tabela) {
+    if (!confirm("Excluir esta tabela inteira, com todo o texto dela?")) return;
+    const p = document.createElement("p");
+    p.appendChild(document.createElement("br"));
+    const prox = tabela.nextElementSibling;
+    if (prox && !prox.textContent.trim() && !prox.querySelector("img")) tabela.remove();
+    else tabela.replaceWith(p);
+    if (!editor.firstChild) editor.appendChild(p);
+    cursorEm(p.isConnected ? p : prox, true);
+  }
+  // Tab / Shift+Tab: próxima / célula anterior; Tab na última cria uma linha.
+  function pularCelula(celula, voltar) {
+    const celulas = [...celula.closest("table").querySelectorAll("th, td")];
+    const i = celulas.indexOf(celula) + (voltar ? -1 : 1);
+    if (i < 0) return;
+    if (i >= celulas.length) novaLinha(celula.closest("tr").firstElementChild);
+    else cursorEm(celulas[i], false);
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  // Estado da barra: alinhamento da linha do cursor e ações da tabela.
+  function atualizarBarra() {
+    const sel = SEL();
+    const dentro = sel?.rangeCount && editor.contains(sel.anchorNode);
+    const atual = dentro ? alinhaveisDaSelecao()[0] : null;
+    const valor = (atual && alinhamentoDe(atual)) || "left";
+    for (const [v, b] of Object.entries(botoesDeAlinhamento)) b.classList.toggle("ativo", !!dentro && v === valor);
+    const naTabela = !!(dentro && celulaDoCursor());
+    botoesDaTabela.forEach((b) => (b.disabled = !naTabela));
+    grupoTabela.title = naTabela ? "" : "Clique numa célula da tabela para usar estes botões";
+  }
+  editor.atualizarBarra = atualizarBarra;
+
   // Escrever "## " (e, nas páginas, "- " ou "1. ") no começo de uma linha.
   const ATALHOS_DE_LINHA = simples
     ? { "#": () => virarBloco("h2"), "##": () => virarBloco("h2"), "###": () => virarBloco("h3"), "-": () => virarLista("ul"), "*": () => virarLista("ul"), "1.": () => virarLista("ol") }
@@ -2826,7 +3073,7 @@ function buildRichTextField(labelText, value, dataset, opts) {
     }
     const sel = SEL();
     if (!sel?.rangeCount || !sel.isCollapsed) return;
-    if (e.key === " " && !naLista()) {
+    if (e.key === " " && !naLista() && !celulaDoCursor()) {
       const bloco = blocoAtual();
       if (!bloco) return;
       const antes = textoAntesDoCursor(bloco);
@@ -2880,9 +3127,22 @@ function buildRichTextField(labelText, value, dataset, opts) {
   // splitEditorParagraphAtCursor acima). Shift+Enter continua nativo
   // (quebra de linha simples dentro do mesmo parágrafo).
   editor.addEventListener("keydown", (e) => {
+    const celula = celulaDoCursor();
+    if (e.key === "Tab" && celula && !menuDeBlocos.aberto) {
+      e.preventDefault();
+      pularCelula(celula, e.shiftKey);
+      return;
+    }
     if (e.key !== "Enter" || e.shiftKey) return;
-    // Dentro de lista ou tabela, o Enter nativo (novo item, sair da lista).
-    if (opts.simples && window.getSelection()?.anchorNode?.parentElement?.closest("li, td, th")) return;
+    // Na célula da tabela, Enter quebra a linha dentro da própria célula.
+    if (celula) {
+      e.preventDefault();
+      document.execCommand("insertLineBreak");
+      saveSelection();
+      return;
+    }
+    // Dentro de lista, o Enter nativo (novo item, sair da lista).
+    if (opts.simples && window.getSelection()?.anchorNode?.parentElement?.closest("li")) return;
     e.preventDefault();
     splitEditorParagraphAtCursor(editor);
     saveSelection();
@@ -3102,6 +3362,15 @@ function buildRichTextField(labelText, value, dataset, opts) {
     const lines = text.split(/\r\n|\r|\n/).map((line) => line.trim()).filter((line) => line.length > 0);
     if (lines.length === 0) return;
     document.execCommand("insertText", false, lines[0]);
+    // Numa célula da tabela, as linhas coladas ficam na própria célula.
+    if (celulaDoCursor()) {
+      for (let i = 1; i < lines.length; i++) {
+        document.execCommand("insertLineBreak");
+        document.execCommand("insertText", false, lines[i]);
+      }
+      saveSelection();
+      return;
+    }
     for (let i = 1; i < lines.length; i++) {
       splitEditorParagraphAtCursor(editor);
       document.execCommand("insertText", false, lines[i]);
