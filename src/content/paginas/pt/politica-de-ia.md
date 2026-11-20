@@ -1,27 +1,27 @@
 ---
-title: "Política de uso de inteligência artificial"
-description: "Como o Astrobotânica usa ferramentas de inteligência artificial e como isso é informado em cada notícia, episódio e estudo."
+title: "Política de Uso de Inteligência Artificial (I.A.)"
+description: "Como o www.astrobotanica.com.br usa ferramentas de inteligência artificial e como isso é informado em cada notícia e episódio."
 lang: "pt"
-updated: "2026-11-19"
+updated: "2026-11-20"
 ---
 
-O Astrobotânica informa, em cada notícia, episódio do podcast e verbete de estudo, se alguma ferramenta de inteligência artificial (I.A.) foi usada na produção do conteúdo e de que forma.
+<p style="text-align: justify">O site <strong>www.astrobotanica.com.br</strong> informa, em cada notícia e episódio de podcast, se alguma ferramenta de inteligência artificial (I.A.) foi usada na produção do conteúdo e de que forma.</p>
 
-## 1. O que é declarado
+<h2 style="text-align: justify">1. O que é declarado</h2>
 
-No fim de cada conteúdo há um quadro "Uso de inteligência artificial". Quando nenhuma ferramenta foi usada, o quadro diz isso. Quando foi, ele informa:
+<p style="text-align: justify">No fim de cada conteúdo há um quadro "Uso de inteligência artificial". Quando nenhuma ferramenta foi usada, o quadro diz isso. Quando foi, ele informa:</p>
 
-- **Ferramenta:** o nome e, quando possível, a versão e a data de uso.
-- **Elaboração:** se o conteúdo foi feito inteiramente pelo autor, pelo autor com auxílio da I.A. ou inteiramente pela I.A.
-- **Uso da I.A.:** para que a ferramenta foi usada, por exemplo pesquisa de referências, correção ortográfica, tradução, transcrição de áudio ou geração de imagens.
-- **Revisão humana:** se o conteúdo foi revisado e checado por uma pessoa, e por quem.
+<ul>
+<li style="text-align: justify"><strong>Ferramenta:</strong> o nome e, quando possível, a versão e a data de uso.</li>
+<li style="text-align: justify"><strong>Elaboração:</strong> se o conteúdo foi feito pelo autor com auxílio da I.A. ou inteiramente pela I.A.</li>
+<li style="text-align: justify"><strong>Uso da I.A.:</strong> para que a ferramenta foi usada, por exemplo: pesquisa de referências, correção ortográfica, tradução, elaboração de texto, transcrição de áudio ou geração de imagens.</li>
+<li style="text-align: justify"><strong>Revisão humana:</strong> Por quem o conteúdo foi revisado.</li>
+</ul>
 
-Imagens geradas por I.A. são identificadas uma a uma, logo abaixo da imagem.
+<p style="text-align: justify">Imagens geradas por I.A. são identificadas uma a uma, logo abaixo da imagem.</p>
 
-## 2. Conteúdo sem declaração
+<h2 style="text-align: justify">2. Responsabilidade</h2>
 
-Os conteúdos publicados antes desta política não têm o quadro. Isso não significa que houve ou que não houve uso de I.A.: a informação simplesmente não foi registrada na época.
+<p style="text-align: justify">Ferramentas de I.A. não substituem a leitura das fontes originais. Todo conteúdo publicado é <strong>assumido pelos autores indicados</strong>, que respondem pela sua exatidão. Erros são corrigidos conforme a <a href="/politica-editorial">Política Editorial</a>.</p>
 
-## 3. Responsabilidade
-
-Ferramentas de I.A. não substituem a leitura das fontes originais. Todo conteúdo publicado é assumido pelos autores indicados, que respondem pela sua exatidão. Erros são corrigidos conforme a [Política Editorial](/politica-editorial).
+<p style="text-align: justify">Caso haja alguma dúvida em relação ao uso de I.A. pelo site www.astrobotanica.com.br, envie uma mensagem para <strong>contato@astrobotanica.com.br</strong></p>
