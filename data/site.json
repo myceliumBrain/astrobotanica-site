@@ -8,7 +8,8 @@
   "brand": {
     "name": "astrobotanica",
     "footerTagline": "Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.",
-    "copyright": "© 2026 Astrobotanica."
+    "copyright": "© 2026 Astrobotanica.",
+    "icon": ""
   },
   "social": {
     "bluesky": "",
@@ -140,7 +141,7 @@
     "metaDescription": "Notícias de divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra.",
     "tag": "Notícias",
     "title": "Notícias",
-    "intro": "Divulgação científica sobre botânica, agricultura espacial e a jornada das plantas para fora da Terra.",
+    "intro": "",
     "loadError": "Não foi possível carregar as notícias agora.",
     "emptyList": "Nenhuma notícia publicada ainda. Volte em breve."
   },
@@ -214,5 +215,13 @@
       "label": "Bluesky",
       "url": "www.bluesky.com"
     }
-  ]
+  ],
+  "idiomas": {
+    "pt": {
+      "bandeira": ""
+    },
+    "en": {
+      "bandeira": ""
+    }
+  }
 }
