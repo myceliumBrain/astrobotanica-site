@@ -2,7 +2,7 @@
 title: "Artificial Intelligence (A.I.) Use Policy"
 description: "How www.astrobotanica.com.br uses artificial intelligence (A.I) tools and how this is disclosed on every news and episodes."
 lang: "en"
-updated: "2026-11-19"
+updated: "2026-11-20"
 ---
 
 <p style="text-align: justify">The site www.astrobotanica.com.br discloses, on every news story, podcast episode and study entry, whether any artificial intelligence (A.I.) tool was used to produce the content, and how.</p>
