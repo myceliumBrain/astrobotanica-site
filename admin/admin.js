@@ -135,7 +135,7 @@ const PAGE_SCHEMA = [
     fields: [
       { key: "home.metaTitle", label: "Título da aba do navegador", type: "text" },
       { key: "home.metaDescription", label: "Descrição (SEO)", type: "textarea" },
-      { key: "home.panelKicker", label: "Selo do painel do podcast", type: "text" },
+      { key: "home.panelKicker", label: "Nome no bloco do podcast (leva à página do podcast)", type: "text" },
     ],
   },
   {

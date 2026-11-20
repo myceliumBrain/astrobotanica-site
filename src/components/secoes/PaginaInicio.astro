@@ -1,22 +1,19 @@
 ---
 // Página inicial, como renderHomeHighlights: até 5 notícias no topo
 // (1 destaque 50/50 + 4 pôsteres), banner de evento opcional, o restante em
-// grade horizontal; e o painel do podcast com até 6 episódios.
+// grade horizontal; e um bloco clicável que leva à página do podcast.
 import Base from "../../layouts/Base.astro";
 import CartaoNoticia from "../CartaoNoticia.astro";
 import CartaoNoticiaDestaque from "../CartaoNoticiaDestaque.astro";
-import LinhaEpisodio from "../LinhaEpisodio.astro";
-import { t, type Lang } from "../../lib/i18n";
+import { caminhoNoIdioma, t, type Lang } from "../../lib/i18n";
 import { NOME_SITE } from "../../lib/seo";
 import { categoriasDaLista, noticiasDaLista, selecionarDestaques } from "../../lib/listas";
 import FiltroCategorias from "../FiltroCategorias.astro";
-import { episodios } from "../../lib/episodios";
 
 interface Props {
   lang: Lang;
 }
 
-const HOME_MAX_ITEMS = 6;
 const HOME_ARTICLES_TOP = 5;
 
 const { lang } = Astro.props;
@@ -28,7 +25,6 @@ const [destaque, ...proximas] = topo;
 // nunca muda; o filtro vale para todas as outras notícias.
 const outras = noticias.filter((n) => n !== destaque);
 const categorias = categoriasDaLista(outras);
-const episodiosHome = selecionarDestaques(episodios, HOME_MAX_ITEMS, (e) => Boolean(e.featured));
 // Caminho relativo do painel ("images/...") vale a partir da raiz, também em /en/.
 const bannerCru = t(lang, "home.eventBannerImage");
 const bannerImagem = bannerCru && !/^(https?:)?\/\//.test(bannerCru) && !bannerCru.startsWith("/") ? `/${bannerCru}` : bannerCru;
@@ -96,14 +92,9 @@ const bannerLink = t(lang, "home.eventBannerLink");
   </section>
 
   <section class="section wrap">
-    <div class="feature-panel">
-      <div class="feature-panel-copy">
-        <h2>{t(lang, "home.panelKicker")}</h2>
-      </div>
-      <div class="feature-panel-episode">
-        {episodiosHome.length === 0 && <p class="empty-state">{t(lang, "home.emptyEpisodes")}</p>}
-        {episodiosHome.map((e) => <LinhaEpisodio episodio={e} lang={lang} />)}
-      </div>
-    </div>
+    <a class="bloco-podcast" href={caminhoNoIdioma("/podcast", lang)}>
+      <h2 class="bloco-podcast-titulo">{t(lang, "home.panelKicker")}</h2>
+      <span class="bloco-podcast-seta" aria-hidden="true">→</span>
+    </a>
   </section>
 </Base>
