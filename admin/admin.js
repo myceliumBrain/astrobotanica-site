@@ -1303,6 +1303,13 @@ function atualizarBarrasDeTela() {
     document.querySelectorAll(".barra-publicar:not(.barra-lista) .barra-estado, .card-actions .barra-estado").forEach((e) => (e.textContent = ""));
     const mudou = !!telaAberta && telaTemAlteracoes();
     if (telaAberta) {
+      // "Publicar" só fica ativo quando a tela tem alguma mudança.
+      telaAberta.root.querySelectorAll(".btn-publicar").forEach((b) => {
+        if (!b.closest(".barra-lista")) {
+          b.disabled = !mudou;
+          b.title = mudou ? "" : "Nada mudou nesta tela desde a última publicação";
+        }
+      });
       let estado = telaAberta.root.querySelector(":scope > .barra-publicar .barra-estado, .card-actions .barra-estado");
       const acoes = telaAberta.root.querySelector(".card-actions");
       if (!estado && acoes) acoes.prepend((estado = el("span", "barra-estado")));
@@ -2439,6 +2446,7 @@ function buildRichTextField(labelText, value, dataset, opts) {
   inserirBtn.addEventListener("mousedown", (e) => e.preventDefault());
   inserirBtn.addEventListener("click", () => {
     if (menuDeBlocos.aberto) return fecharMenuDeBlocos();
+    fecharMenusDaBarra();
     garantirCursor();
     abrirMenuDeBlocos({ ancora: inserirBtn });
   });
@@ -2450,51 +2458,93 @@ function buildRichTextField(labelText, value, dataset, opts) {
   imageBtn.appendChild(imageInput);
   if (!simples) toolbar.appendChild(imageBtn);
 
-  // Alinhamento da linha do cursor (ou das linhas/células selecionadas).
-  const grupoAlinhamento = el("div", "rich-text-grupo");
-  grupoAlinhamento.setAttribute("role", "group");
-  grupoAlinhamento.setAttribute("aria-label", "Alinhamento do texto");
-  const botoesDeAlinhamento = {};
-  for (const [valor, titulo] of [["left", "Alinhar à esquerda"], ["center", "Centralizar"], ["right", "Alinhar à direita"], ["justify", "Justificar"]]) {
-    const b = el("button", "rich-text-btn rich-text-btn--icone");
-    b.type = "button";
-    b.title = titulo;
-    b.setAttribute("aria-label", titulo);
-    b.innerHTML = ICONES_DE_ALINHAMENTO[valor];
-    b.addEventListener("mousedown", (e) => e.preventDefault());
-    b.addEventListener("click", () => alinhar(valor));
-    botoesDeAlinhamento[valor] = b;
-    grupoAlinhamento.appendChild(b);
-  }
-  toolbar.appendChild(grupoAlinhamento);
-
-  // Ações da tabela: sempre à vista (a barra não muda de altura no meio do
-  // clique), ativas só com o cursor dentro de uma tabela.
-  const grupoTabela = el("div", "rich-text-grupo rich-text-grupo--tabela");
-  const botoesDaTabela = [];
-  grupoTabela.appendChild(el("span", "rich-text-grupo-rotulo", "Tabela:"));
-  const botaoDaTabela = (texto, titulo, acao, classe = "") => {
-    const b = el("button", `rich-text-btn ${classe}`, texto);
-    b.type = "button";
-    b.title = titulo;
-    b.addEventListener("mousedown", (e) => e.preventDefault());
-    b.addEventListener("click", () => {
-      const celula = celulaDoCursor();
-      if (!celula) return;
-      acao(celula);
-      editor.dispatchEvent(new Event("input", { bubbles: true }));
+  // "+ Alinhamento" e "+ Tabela": um botão cada, que abre a lista de ações
+  // (a barra fica enxuta). Mesmo visual do menu do "+ Inserir".
+  function menuDaBarra(rotulo, titulo) {
+    const botao = el("button", "rich-text-btn", rotulo);
+    botao.type = "button";
+    botao.title = titulo;
+    botao.setAttribute("aria-haspopup", "true");
+    const menu = el("div", "menu-editor menu-blocos menu-barra");
+    menu.hidden = true;
+    menu.setAttribute("role", "menu");
+    botao.addEventListener("mousedown", (e) => e.preventDefault());
+    botao.addEventListener("click", () => {
+      if (!menu.hidden) return fecharMenusDaBarra();
+      fecharMenusDaBarra();
+      fecharMenuDeBlocos();
+      garantirCursor();
       atualizarBarra();
+      posicionar(menu, botao.getBoundingClientRect(), { abaixo: true });
+      botao.classList.add("ativo");
     });
-    grupoTabela.appendChild(b);
-    botoesDaTabela.push(b);
+    const item = (texto, dica, acao, { icone = "", perigo = false } = {}) => {
+      const b = el("button", `menu-blocos-item${perigo ? " menu-blocos-item--perigo" : ""}`);
+      b.type = "button";
+      b.setAttribute("role", "menuitem");
+      const r = el("span", "menu-blocos-rotulo");
+      if (icone) r.insertAdjacentHTML("afterbegin", icone);
+      r.appendChild(document.createTextNode(texto));
+      b.appendChild(r);
+      if (dica) b.appendChild(el("span", "menu-blocos-dica", dica));
+      b.addEventListener("mousedown", (e) => e.preventDefault());
+      b.addEventListener("click", () => {
+        fecharMenusDaBarra();
+        acao();
+      });
+      menu.appendChild(b);
+      return b;
+    };
+    toolbar.appendChild(botao);
+    wrap.appendChild(menu);
+    menusDaBarra.push({ botao, menu });
+    return { item, menu };
+  }
+  const menusDaBarra = [];
+  function fecharMenusDaBarra() {
+    menusDaBarra.forEach(({ botao, menu }) => {
+      menu.hidden = true;
+      botao.classList.remove("ativo");
+    });
+  }
+
+  // Alinhamento da linha do cursor (ou das linhas/células selecionadas).
+  const menuAlinhamento = menuDaBarra("+ Alinhamento", "Alinhar o texto da linha (ou do trecho selecionado)");
+  const itensDeAlinhamento = {};
+  for (const [valor, texto, dica] of [
+    ["left", "À esquerda", "o padrão"],
+    ["center", "Centralizado", ""],
+    ["right", "À direita", ""],
+    ["justify", "Justificado", "bordas retas dos dois lados"],
+  ]) {
+    itensDeAlinhamento[valor] = menuAlinhamento.item(texto, dica, () => alinhar(valor), { icone: ICONES_DE_ALINHAMENTO[valor] });
+  }
+
+  // Tabela: criar uma nova, ou mexer na tabela do cursor.
+  const menuTabela = menuDaBarra("+ Tabela", "Inserir uma tabela ou mudar a tabela onde está o cursor");
+  const acaoNaTabela = (acao) => () => {
+    garantirCursor();
+    const celula = celulaDoCursor();
+    if (!celula) return;
+    acao(celula);
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    atualizarBarra();
   };
-  botaoDaTabela("+ Linha", "Nova linha abaixo da linha do cursor", (c) => novaLinha(c));
-  botaoDaTabela("+ Coluna", "Nova coluna à direita da coluna do cursor", (c) => novaColuna(c));
-  botaoDaTabela("− Linha", "Tirar a linha do cursor", (c) => tirarLinha(c));
-  botaoDaTabela("− Coluna", "Tirar a coluna do cursor", (c) => tirarColuna(c));
-  botaoDaTabela("Excluir tabela", "Tirar a tabela inteira do texto", (c) => excluirTabela(c.closest("table")), "rich-text-btn--perigo");
-  toolbar.appendChild(grupoTabela);
-  botoesDaTabela.forEach((b) => (b.disabled = true));
+  menuTabela.item("Nova tabela", "na linha do cursor", () => {
+    garantirCursor();
+    inserirTabela();
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    atualizarBarra();
+  });
+  const avisoDaTabela = el("p", "menu-barra-aviso", "Clique numa célula de uma tabela para usar as opções abaixo.");
+  menuTabela.menu.appendChild(avisoDaTabela);
+  const itensDaTabela = [
+    menuTabela.item("+ Linha", "abaixo da linha do cursor", acaoNaTabela((c) => novaLinha(c))),
+    menuTabela.item("+ Coluna", "à direita da coluna do cursor", acaoNaTabela((c) => novaColuna(c))),
+    menuTabela.item("− Linha", "tira a linha do cursor", acaoNaTabela((c) => tirarLinha(c))),
+    menuTabela.item("− Coluna", "tira a coluna do cursor", acaoNaTabela((c) => tirarColuna(c))),
+    menuTabela.item("Excluir tabela", "a tabela inteira", acaoNaTabela((c) => excluirTabela(c.closest("table"))), { perigo: true }),
+  ];
 
   toolbar.appendChild(
     el("span", "rich-text-dica", "Selecione um trecho para formatar · digite / numa linha vazia para inserir")
@@ -2522,6 +2572,9 @@ function buildRichTextField(labelText, value, dataset, opts) {
 
   wrap.appendChild(toolbar);
   wrap.appendChild(editor);
+  // Clicar ou digitar no texto fecha os menus "+ Alinhamento" e "+ Tabela".
+  editor.addEventListener("mousedown", fecharMenusDaBarra);
+  editor.addEventListener("keydown", fecharMenusDaBarra);
 
   // Clicar no botão de imagem tira o foco do editor (é um <button>), então
   // sem guardar a seleção de texto a imagem sempre cairia no fim do
@@ -2776,10 +2829,10 @@ function buildRichTextField(labelText, value, dataset, opts) {
     const dentro = sel?.rangeCount && editor.contains(sel.anchorNode);
     const atual = dentro ? alinhaveisDaSelecao()[0] : null;
     const valor = (atual && alinhamentoDe(atual)) || "left";
-    for (const [v, b] of Object.entries(botoesDeAlinhamento)) b.classList.toggle("ativo", !!dentro && v === valor);
+    for (const [v, b] of Object.entries(itensDeAlinhamento)) b.classList.toggle("ativo", !!dentro && v === valor);
     const naTabela = !!(dentro && celulaDoCursor());
-    botoesDaTabela.forEach((b) => (b.disabled = !naTabela));
-    grupoTabela.title = naTabela ? "" : "Clique numa célula da tabela para usar estes botões";
+    itensDaTabela.forEach((b) => (b.disabled = !naTabela));
+    avisoDaTabela.hidden = naTabela;
   }
   editor.atualizarBarra = atualizarBarra;
 
