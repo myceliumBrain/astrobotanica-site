@@ -2,37 +2,27 @@
 title: "Expediente"
 description: "Astrobotânica — Divulgação científica em astrobotânica e agricultura espacial. Editor-chefe, Conselho Científico, colaboradores, vínculo institucional e licença."
 lang: "pt"
-updated: ""
+updated: "2026-11-19"
 ---
-
-**Astrobotânica — Divulgação científica em astrobotânica e agricultura espacial**
 
 | Campo | Informação |
 |---|---|
 | Endereço | https://astrobotanica.com.br |
-| ISSN | [em solicitação / número após atribuição] |
-| Periodicidade do Boletim | [mensal] |
-| Idioma | Português |
-| Fundação | [ano] |
-| Vínculo institucional | [Projeto de extensão "[nome]", Laboratório de Biologia Molecular de Plantas e Fungos, UNIRIO] |
-| Licença | Creative Commons Atribuição 4.0 Internacional (CC BY 4.0) |
+| Periodicidade das Notícias | Semanal |
+| Periodicidade do  podcast | Mensal |
+| Idioma | Português / Inglês |
+| Fundação | 2026 |
 | Contato | [e-mail institucional do site] |
+| Licença | Creative Commons Atribuição 4.0 Internacional (CC BY 4.0) |
+|  |  |
 
-### Editor-chefe
+## Colaboradores / Revisores
 
-Pedro Henrique Tenorio Alvarenga — Biólogo (UNIRIO). [ORCID] · [Lattes]
+O revisores orientam a linha editorial e revisam tecnicamente os textos propostos para publicação.
 
-### Conselho Científico
+**Pedro Henrique Tenorio Alvarenga**, Biólogo - Universidade Federal do Estado do Rio de Janeiro. [Currículo Lattes](http://lattes.cnpq.br/3569412519597121)
 
-O Conselho Científico orienta a linha editorial e revisa tecnicamente textos de sua área de especialidade.
-
-- [Nome], [título] — [instituição]. [ORCID/Lattes]
-- [Nome], [título] — [instituição]. [ORCID/Lattes]
-- [Nome], [título] — [instituição]. [ORCID/Lattes]
-
-### Colaboradores
-
-[Autores convidados e revisores técnicos, listados por edição ou por texto.]
+**Eduardo Dreyer Simões Saraiva**, Graduando em Ciências Ambientais - Universidade Federal do Estado do Rio de Janeiro. [Currículo Lattes](http://lattes.cnpq.br/2847590238543532)
 
 ### Podcast Jardim em Expansão
 
@@ -40,4 +30,4 @@ Apresentação: Pedro Henrique Tenorio Alvarenga.
 
 ### Como citar este site
 
-ALVARENGA, P. H. T. (ed.). Astrobotânica. Rio de Janeiro, [ano]. Disponível em: https://astrobotanica.com.br. Acesso em: [data].
+ASTROBOTÂNICA. Rio de Janeiro, [ano atual]. Disponível em: https://www.astrobotanica.com.br. Acesso em: [data].
