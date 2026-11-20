@@ -710,6 +710,15 @@ async function deleteBinaryFile(path, message) {
   await commitTreeChange([{ path, mode: "100644", type: "blob", sha: null }], message);
 }
 
+// "20261120-101500": data e hora no nome de um arquivo que pode ser trocado
+// (ícone, bandeiras) — nome novo a cada troca, para o navegador não mostrar
+// o antigo guardado em cache.
+function carimboDeAgora() {
+  const agora = new Date();
+  const p2 = (n) => String(n).padStart(2, "0");
+  return `${agora.getFullYear()}${p2(agora.getMonth() + 1)}${p2(agora.getDate())}-${p2(agora.getHours())}${p2(agora.getMinutes())}${p2(agora.getSeconds())}`;
+}
+
 function fileExtension(filename, fallback) {
   const match = /\.([a-zA-Z0-9]+)$/.exec(filename || "");
   return match ? match[1].toLowerCase() : fallback;
@@ -1112,6 +1121,8 @@ let noticiasMarkdownOriginais = {};
 let homeEventBannerField = null;
 // Idem para o ícone do site (Rodapé e marca → Marca; ver campoDoIcone).
 let brandIconField = null;
+// Idem para as bandeiras dos idiomas (Menu → Idiomas; ver renderIdiomas).
+let bandeiraFields = [];
 
 // Uploads de áudio/imagem confirmados (via "Salvar alterações" de um card),
 // aguardando o clique em "Salvar no GitHub" — só então são de fato
@@ -1707,6 +1718,7 @@ function collectAll() {
   document.querySelectorAll("[data-ia-bloco]").forEach(applyIaBlock);
   if (homeEventBannerField) homeEventBannerField.confirmFileUpload();
   if (brandIconField) brandIconField.confirmFileUpload();
+  bandeiraFields.forEach((f) => f.confirmFileUpload());
   document.querySelectorAll("[data-site]").forEach((input) => {
     setByPath(contentData.site, input.dataset.site, input.value);
   });
@@ -5205,12 +5217,7 @@ function campoDoIcone(fieldDef) {
     preview: true,
     allowClear: true,
     hint: "Aparece na aba do navegador e nos favoritos. Use uma imagem quadrada (PNG ou SVG, de preferência com 512×512 px ou mais). Sem ícone, o site usa o broto verde padrão.",
-    buildPath: (file) => {
-      const agora = new Date();
-      const p2 = (n) => String(n).padStart(2, "0");
-      const carimbo = `${agora.getFullYear()}${p2(agora.getMonth() + 1)}${p2(agora.getDate())}-${p2(agora.getHours())}${p2(agora.getMinutes())}${p2(agora.getSeconds())}`;
-      return `images/marca/icone-${carimbo}.${fileExtension(file.name, "png")}`;
-    },
+    buildPath: (file) => `images/marca/icone-${carimboDeAgora()}.${fileExtension(file.name, "png")}`,
     buildMessage: (path) => `admin: envia ícone do site (${path})`,
   });
   campo.classList.add("full", "campo-icone");
@@ -5317,7 +5324,7 @@ const GRUPOS_DO_MENU = [
   ["", "Link solto"],
   ["conteudo", "Lista \"Conteúdo\""],
   ["institucional", "Lista \"Institucional\""],
-  ["destaque", "Botão à direita"],
+  ["destaque", "Link à direita"],
 ];
 
 function menuPadrao() {
@@ -5442,7 +5449,42 @@ function collectSiteMenu() {
     .filter((item) => item.rotulo || item.link);
 }
 
+// Idiomas do seletor do site: a bandeira de cada um (data/site.json →
+// idiomas.<lang>.bandeira; ver src/lib/idiomas.ts). O site só tem português
+// e inglês: um idioma novo precisaria de uma versão inteira do site.
+const IDIOMAS_DO_SITE = [
+  ["pt", "Português"],
+  ["en", "English"],
+];
+
+function renderIdiomas() {
+  const container = document.getElementById("site-idiomas");
+  if (!container) return;
+  container.innerHTML = "";
+  bandeiraFields = IDIOMAS_DO_SITE.map(([lang, nome]) => {
+    const chave = `idiomas.${lang}.bandeira`;
+    const campo = buildFileUploadField(`Bandeira — ${nome}`, getByPath(contentData.site, chave) || "", { site: chave }, {
+      accept: "image/png,image/svg+xml,image/jpeg,image/webp",
+      buttonText: "Enviar bandeira",
+      preview: true,
+      allowClear: true,
+      hint: "Tamanho: 48×32 px (proporção 3:2), ou maior na mesma proporção, como 96×64 px. PNG ou SVG. No site ela aparece com 24×16 px.",
+      buildPath: (file) => `images/idiomas/bandeira-${lang}-${carimboDeAgora()}.${fileExtension(file.name, "png")}`,
+      buildMessage: (path) => `admin: envia bandeira do idioma ${nome} (${path})`,
+    });
+    campo.classList.add("campo-bandeira");
+    // Escolher ou remover o arquivo não passa por um campo com data-site.
+    campo.addEventListener("change", () => markDirty("site"));
+    campo.addEventListener("click", (e) => {
+      if (e.target.closest("button")) markDirty("site");
+    });
+    container.appendChild(campo);
+    return campo;
+  });
+}
+
 function renderSiteMenu() {
+  renderIdiomas();
   const list = document.getElementById("site-menu-list");
   const addBtn = document.getElementById("add-menu-item-btn");
   if (!list || !addBtn) return;
