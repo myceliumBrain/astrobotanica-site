@@ -15,18 +15,22 @@ updated: "2026-11-20"
 | Contact | **contato@astrobotanica.com.br** |
 | Licence | Creative Commons Attribution 4.0 International <br>(CC BY 4.0) |
 
-## Contributors / Reviewers
+<h2 style="text-align: justify">Contributors / Reviewers</h2>
 
-The reviewers provide guidance on the editorial direction and conduct technical reviews of texts proposed for publication.
+<p style="text-align: justify">The reviewers provide guidance on the editorial direction and conduct technical reviews of texts proposed for publication.</p>
 
-- Pedro Henrique Tenorio Alvarenga, Biologist - Federal University of the State of Rio de Janeiro (UNIRIO). [Lattes Curriculum](http://lattes.cnpq.br/3569412519597121)
+<ul>
+<li style="text-align: justify">Pedro Henrique Tenorio Alvarenga, Biologist - Federal University of the State of Rio de Janeiro (UNIRIO). <a href="http://lattes.cnpq.br/3569412519597121">Lattes Curriculum</a></li>
+</ul>
 
-- Eduardo Dreyer Simões Saraiva, Undergraduate Student in Environmental Sciences - Federal University of the State of Rio de Janeiro (UNIRIO). [Lattes Curriculum](http://lattes.cnpq.br/2847590238543532)
+<ul>
+<li style="text-align: justify">Eduardo Dreyer Simões Saraiva, Undergraduate Student in Environmental Sciences - Federal University of the State of Rio de Janeiro (UNIRIO). <a href="http://lattes.cnpq.br/2847590238543532">Lattes Curriculum</a></li>
+</ul>
 
-## Jardim em Expansão (Expanding Garden) Podcast
+<h2 style="text-align: justify">Jardim em Expansão (Expanding Garden) Podcast</h2>
 
-Host: Pedro Henrique Tenorio Alvarenga.
+<p style="text-align: justify">Host: Pedro Henrique Tenorio Alvarenga.</p>
 
-## How to cite this website
+<h2 style="text-align: justify">How to cite this website</h2>
 
-ASTROBOTÂNICA. Rio de Janeiro, [current year]. Available at: https://www.astrobotanica.com.br. Accessed on: [date].
+<p style="text-align: justify">ASTROBOTÂNICA. Rio de Janeiro, [current year]. Available at: <a href="https://www.astrobotanica.com.br">https://www.astrobotanica.com.br</a>. Accessed on: [date].</p>

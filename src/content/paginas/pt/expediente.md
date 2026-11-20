@@ -44,18 +44,22 @@ updated: "2026-11-20"
 </tbody>
 </table>
 
-## Colaboradores / Revisores
+<h2 style="text-align: justify">Colaboradores / Revisores</h2>
 
-O revisores orientam a linha editorial e revisam tecnicamente os textos propostos para publicação.
+<p style="text-align: justify">O revisores orientam a linha editorial e revisam tecnicamente os textos propostos para publicação.</p>
 
-- **Pedro Henrique Tenorio Alvarenga**, Biólogo - Universidade Federal do Estado do Rio de Janeiro. [Currículo Lattes](http://lattes.cnpq.br/3569412519597121)Currículo Lattes
+<ul>
+<li style="text-align: justify"><strong>Pedro Henrique Tenorio Alvarenga</strong>, Biólogo - Universidade Federal do Estado do Rio de Janeiro. <a href="http://lattes.cnpq.br/3569412519597121">Currículo Lattes</a>Currículo Lattes</li>
+</ul>
 
-- **Eduardo Dreyer Simões Saraiva**, Graduando em Ciências Ambientais - Universidade Federal do Estado do Rio de Janeiro. [Currículo Lattes](http://lattes.cnpq.br/2847590238543532)
+<ul>
+<li style="text-align: justify"><strong>Eduardo Dreyer Simões Saraiva</strong>, Graduando em Ciências Ambientais - Universidade Federal do Estado do Rio de Janeiro. <a href="http://lattes.cnpq.br/2847590238543532">Currículo Lattes</a></li>
+</ul>
 
-### Podcast Jardim em Expansão
+<h3 style="text-align: justify">Podcast Jardim em Expansão</h3>
 
-Apresentação: Pedro Henrique Tenorio Alvarenga.
+<p style="text-align: justify">Apresentação: Pedro Henrique Tenorio Alvarenga.</p>
 
-### Como citar este site
+<h3 style="text-align: justify">Como citar este site</h3>
 
-ASTROBOTÂNICA. Rio de Janeiro, [ano atual]. Disponível em: https://www.astrobotanica.com.br. Acesso em: [data].
+<p style="text-align: justify">ASTROBOTÂNICA. Rio de Janeiro, [ano atual]. Disponível em: <a href="https://www.astrobotanica.com.br">https://www.astrobotanica.com.br</a>. Acesso em: [data].</p>
