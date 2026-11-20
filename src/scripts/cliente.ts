@@ -9,35 +9,54 @@ function setupNavOverlay(): void {
 
   const closeBtn = overlay.querySelector<HTMLButtonElement>(".nav-overlay-close");
   const voltarBtn = overlay.querySelector<HTMLButtonElement>(".nav-overlay-voltar");
-  const camadas = Array.from(overlay.querySelectorAll<HTMLElement>(".nav-camada"));
-  const abridores = Array.from(overlay.querySelectorAll<HTMLButtonElement>(".nav-camada-abrir"));
+  const versoes = Array.from(overlay.querySelectorAll<HTMLElement>(".nav-overlay-idioma"));
+  // Idioma da página: o menu sempre abre nele.
+  const idiomaDaPagina = versoes.find((v) => !v.hidden)?.dataset.idioma ?? "pt";
+  const versaoAtual = () => versoes.find((v) => !v.hidden) ?? versoes[0];
+  const camadas = () => Array.from(versaoAtual()?.querySelectorAll<HTMLElement>(".nav-camada") ?? []);
+  const abridores = () => Array.from(versaoAtual()?.querySelectorAll<HTMLButtonElement>(".nav-camada-abrir") ?? []);
 
   // Camadas: "principal" (grupos e links soltos) ou a lista de um grupo
   // ("conteudo", "institucional"), com a seta ← para voltar.
   function mostrarCamada(nome: string): void {
-    camadas.forEach((c) => (c.hidden = c.dataset.camada !== nome));
-    const naPrincipal = nome === "principal";
-    if (voltarBtn) voltarBtn.hidden = naPrincipal;
-    abridores.forEach((b) => b.setAttribute("aria-expanded", String(b.dataset.abre === nome)));
-    const camada = camadas.find((c) => c.dataset.camada === nome);
+    camadas().forEach((c) => (c.hidden = c.dataset.camada !== nome));
+    if (voltarBtn) voltarBtn.hidden = nome === "principal";
+    abridores().forEach((b) => b.setAttribute("aria-expanded", String(b.dataset.abre === nome)));
+    const camada = camadas().find((c) => c.dataset.camada === nome);
     camada?.classList.remove("nav-camada--entra");
     void camada?.offsetWidth; // reinicia a animação de entrada
     camada?.classList.add("nav-camada--entra");
   }
-  abridores.forEach((b) =>
-    b.addEventListener("click", () => {
-      mostrarCamada(b.dataset.abre!);
-      voltarBtn?.focus();
-    })
-  );
-  voltarBtn?.addEventListener("click", () => {
-    const grupo = camadas.find((c) => !c.hidden)?.dataset.camada;
+
+  // Bandeiras do menu: trocam o idioma dos itens ali mesmo, sem sair da
+  // página nem fechar o menu; tocar num item leva à página naquele idioma.
+  function mostrarIdioma(idioma: string): void {
+    versoes.forEach((v) => (v.hidden = v.dataset.idioma !== idioma));
     mostrarCamada("principal");
-    abridores.find((b) => b.dataset.abre === grupo)?.focus();
+  }
+
+  overlay.addEventListener("click", (event) => {
+    const alvo = event.target as Element;
+    const abrir = alvo.closest<HTMLButtonElement>(".nav-camada-abrir");
+    if (abrir) {
+      mostrarCamada(abrir.dataset.abre!);
+      voltarBtn?.focus();
+      return;
+    }
+    const bandeira = alvo.closest<HTMLButtonElement>("[data-troca-idioma]");
+    if (bandeira) {
+      mostrarIdioma(bandeira.dataset.trocaIdioma!);
+      versaoAtual()?.querySelector<HTMLButtonElement>(`[data-troca-idioma="${bandeira.dataset.trocaIdioma}"]`)?.focus();
+    }
+  });
+  voltarBtn?.addEventListener("click", () => {
+    const grupo = camadas().find((c) => !c.hidden)?.dataset.camada;
+    mostrarCamada("principal");
+    abridores().find((b) => b.dataset.abre === grupo)?.focus();
   });
 
   function open(): void {
-    mostrarCamada("principal");
+    mostrarIdioma(idiomaDaPagina);
     overlay!.classList.add("is-open");
     toggle!.setAttribute("aria-expanded", "true");
     document.body.classList.add("nav-open");
@@ -128,3 +147,68 @@ function setupNavGrupos(): void {
 }
 
 setupNavGrupos();
+
+// Filtro de notícias por categoria (ver FiltroCategorias.astro): esconde as
+// notícias de outras categorias. Na página inicial, uma categoria escolhida
+// troca o arranjo de sempre ([data-filtro-todos]) por uma grade só com as
+// notícias dela ([data-filtro-grade]); o destaque de cima nunca muda. A
+// escolha vai para o endereço (?categoria=...), para dar para compartilhar.
+function setupFiltroCategorias(): void {
+  document.querySelectorAll<HTMLDetailsElement>(".filtro-categorias").forEach((filtro) => {
+    const alvo = document.getElementById(filtro.dataset.filtroAlvo ?? "");
+    if (!alvo) return;
+    filtro.hidden = false;
+    const todos = alvo.querySelector<HTMLElement>("[data-filtro-todos]");
+    const grade = alvo.querySelector<HTMLElement>("[data-filtro-grade]");
+    const vazio = alvo.querySelector<HTMLElement>("[data-filtro-vazio]");
+    const atual = filtro.querySelector<HTMLElement>(".filtro-categorias-atual");
+    const botoes = Array.from(filtro.querySelectorAll<HTMLButtonElement>("[data-filtro]"));
+
+    function aplicar(pedido: string, atualizarEndereco = true): void {
+      const botao = botoes.find((b) => b.dataset.filtro === pedido) ?? botoes[0];
+      const slug = botao.dataset.filtro ?? "";
+      botoes.forEach((b) => b.setAttribute("aria-pressed", String(b === botao)));
+      if (atual) atual.textContent = botao.textContent?.trim() ?? "";
+      filtro.classList.toggle("is-ativo", slug !== "");
+      if (todos && grade) {
+        todos.hidden = slug !== "";
+        grade.hidden = slug === "";
+      }
+      let visiveis = 0;
+      (grade ?? alvo).querySelectorAll<HTMLElement>("[data-categoria]").forEach((cartao) => {
+        const mostra = slug === "" || cartao.dataset.categoria === slug;
+        cartao.hidden = !mostra;
+        if (mostra) visiveis++;
+      });
+      if (vazio) vazio.hidden = visiveis > 0;
+      if (atualizarEndereco) {
+        const url = new URL(location.href);
+        if (slug) url.searchParams.set("categoria", slug);
+        else url.searchParams.delete("categoria");
+        history.replaceState(history.state, "", url);
+      }
+    }
+
+    botoes.forEach((b) =>
+      b.addEventListener("click", () => {
+        aplicar(b.dataset.filtro ?? "");
+        filtro.open = false;
+        filtro.querySelector("summary")?.focus({ focusVisible: false } as FocusOptions);
+      })
+    );
+    document.addEventListener("click", (e) => {
+      if (filtro.open && !filtro.contains(e.target as Node)) filtro.open = false;
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && filtro.open) {
+        filtro.open = false;
+        filtro.querySelector("summary")?.focus();
+      }
+    });
+
+    const inicial = new URLSearchParams(location.search).get("categoria");
+    if (inicial) aplicar(inicial, false);
+  });
+}
+
+setupFiltroCategorias();

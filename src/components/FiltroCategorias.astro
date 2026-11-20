@@ -1,0 +1,34 @@
+---
+// Botão "Categoria: Todos ▾" que filtra as notícias de um bloco da página
+// (o elemento com id={alvo}). As opções são "Todos" e as categorias das
+// próprias notícias (ver categoriasDaLista em src/lib/listas.ts). O filtro
+// roda no navegador (setupFiltroCategorias em src/scripts/cliente.ts); sem
+// JavaScript o botão fica escondido e a lista aparece inteira.
+import { t, type Lang } from "../lib/i18n";
+
+interface Props {
+  lang: Lang;
+  alvo: string;
+  categorias: { nome: string; slug: string }[];
+}
+
+const { lang, alvo, categorias } = Astro.props;
+const todos = t(lang, "listas.filtroTodos");
+---
+
+<details class="filtro-categorias" data-filtro-alvo={alvo} hidden>
+  <summary class="filtro-categorias-botao">
+    <span class="filtro-categorias-rotulo">{t(lang, "listas.filtroCategoria")}:</span>
+    <span class="filtro-categorias-atual">{todos}</span>
+  </summary>
+  <div class="filtro-categorias-lista">
+    <button type="button" data-filtro="" aria-pressed="true">{todos}</button>
+    {
+      categorias.map((c) => (
+        <button type="button" data-filtro={c.slug} aria-pressed="false">
+          {c.nome}
+        </button>
+      ))
+    }
+  </div>
+</details>

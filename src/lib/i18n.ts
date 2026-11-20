@@ -31,6 +31,10 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
     },
     listas: {
       soPortugues: "Só em português",
+      noticiasTitulo: "Notícias",
+      filtroCategoria: "Categoria",
+      filtroTodos: "Todos",
+      filtroVazio: "Nenhuma notícia nesta categoria.",
     },
     paginas: {
       updatedOn: "Última atualização: {{date}}",
@@ -72,6 +76,10 @@ const TEXTOS_NOVOS: Record<Lang, Dicionario> = {
     },
     listas: {
       soPortugues: "Portuguese only",
+      noticiasTitulo: "News",
+      filtroCategoria: "Category",
+      filtroTodos: "All",
+      filtroVazio: "No news in this category.",
     },
     paginas: {
       updatedOn: "Last updated: {{date}}",

@@ -3,7 +3,8 @@
 import Base from "../../layouts/Base.astro";
 import CartaoNoticia from "../CartaoNoticia.astro";
 import { caminhoNoIdioma, t, type Lang } from "../../lib/i18n";
-import { noticiasDaLista } from "../../lib/listas";
+import { categoriasDaLista, noticiasDaLista } from "../../lib/listas";
+import FiltroCategorias from "../FiltroCategorias.astro";
 
 interface Props {
   lang: Lang;
@@ -11,6 +12,7 @@ interface Props {
 
 const { lang } = Astro.props;
 const noticias = await noticiasDaLista(lang);
+const categorias = categoriasDaLista(noticias);
 ---
 
 <Base lang={lang} title={t(lang, "artigos.metaTitle")} description={t(lang, "artigos.metaDescription")} path="/noticias">
@@ -25,10 +27,18 @@ const noticias = await noticiasDaLista(lang);
       noticias.length === 0 ? (
         <p class="empty-state">{t(lang, "artigos.emptyList")}</p>
       ) : (
-        <div class="article-grid">
-          {noticias.map((item) => (
-            <CartaoNoticia item={item} lang={lang} />
-          ))}
+        <div id="lista-noticias">
+          <div class="filtro-categorias-barra">
+            <FiltroCategorias lang={lang} alvo="lista-noticias" categorias={categorias} />
+          </div>
+          <div class="article-grid">
+            {noticias.map((item) => (
+              <CartaoNoticia item={item} lang={lang} />
+            ))}
+          </div>
+          <p class="empty-state" data-filtro-vazio hidden>
+            {t(lang, "listas.filtroVazio")}
+          </p>
         </div>
       )
     }

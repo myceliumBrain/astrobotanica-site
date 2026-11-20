@@ -3,7 +3,7 @@
 // na lista de notícias e na página inicial. Variante "horizontal": imagem 16:9.
 import { t, type Lang } from "../lib/i18n";
 import { formatarData } from "../lib/noticias";
-import type { ItemNoticia } from "../lib/listas";
+import { slugCategoria, type ItemNoticia } from "../lib/listas";
 import { srcsetImagem } from "../lib/capa";
 
 interface Props {
@@ -19,7 +19,7 @@ const srcset = await srcsetImagem(n.id, imagem, imagem === n.image ? "capa" : "v
 const meta = [formatarData(n.date, lang), n.readingTime].filter(Boolean).join(" · ");
 ---
 
-<a class:list={["article-card", variante && `article-card--${variante}`]} href={item.href}>
+<a class:list={["article-card", variante && `article-card--${variante}`]} href={item.href} data-categoria={slugCategoria(item.categoria)}>
   <div class="article-card-image">{imagem && <img src={`/${imagem}`} srcset={srcset} sizes="(max-width: 640px) 50vw, 320px" alt="" loading="lazy" />}</div>
   <div class="article-card-kicker">{n.category}</div>
   <div class="article-card-title" lang={item.soPortugues ? "pt" : undefined}>{n.title}</div>
