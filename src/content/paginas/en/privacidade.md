@@ -1,11 +1,11 @@
 ---
 title: "Privacy Policy"
-description: "How Astrobotânica handles the personal data of site visitors, in accordance with Brazil's LGPD. The site does not use tracking cookies."
+description: "How www.astrobotanica.com.br handles the personal data of site visitors, in accordance with Brazil's LGPD. The site does not use tracking cookies."
 lang: "en"
 updated: "2026-11-01"
 ---
 
-This policy explains how Astrobotânica handles the personal data of visitors to **astrobotanica.com.br**, in accordance with Brazil's General Data Protection Law (LGPD, Law No. 13,709/2018).
+This policy explains how Astrobotânica handles the personal data of visitors to **astrobotanica.com.br**, in accordance with Brazil's General Data Protection Law ([LGPD, Law No. 13,709/2018](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm)).
 
 ## In short
 
@@ -16,11 +16,11 @@ This policy explains how Astrobotânica handles the personal data of visitors to
 
 ## Who is responsible
 
-The data controller, under the LGPD, is [name of the person responsible for the site]. For any matter related to privacy and personal data, write to [privacy contact e-mail].
+The data controller, under the LGPD, is the Biologist and Science Communicator Pedro Henrique Tenorio Alvarenga (See in [About](/en/sobre)). For any matter related to privacy and personal data, write to **contato@astrobotanica.com.br**
 
 ## Visit statistics
 
-To know which texts are read the most (for example, the "Most read" list), we use [GoatCounter](https://www.goatcounter.com/), a statistics service that **does not use cookies** and does not identify individual visitors. For each visit, it records:
+To know which texts are read the most (for example, the "Most read" list), we use [GoatCounter](https://www.goatcounter.com/), an *open source statistics service* that **does not use cookies** and does not identify individual visitors. For each visit, it records:
 
 - the page visited and the site the visitor came from (if any);
 - the type of browser and operating system, and the screen size;
@@ -30,7 +30,7 @@ We use this data only as totals (number of visits per page), based on our legiti
 
 ## Hosting
 
-The site is hosted on GitHub Pages, a service of GitHub, Inc., in the United States. Like any server, it records technical data about requests, such as the IP address, to keep the service secure and running, according to the [GitHub Privacy Statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement). This involves an international data transfer, under art. 33 of the LGPD.
+The site is hosted on GitHub Pages, a service of GitHub, Inc., in the United States. Like any server, it records technical data about requests, such as the IP address, to keep the service secure and running, according to the [GitHub Privacy Statement](https://docs.github.com/pt/site-policy/privacy-policies/github-general-privacy-statement). This involves an international data transfer, under art. 33 of the LGPD.
 
 ## Fonts
 
@@ -54,7 +54,7 @@ The LGPD (art. 18) guarantees you, among others, the right to:
 - know with whom your data has been shared;
 - object to processing based on legitimate interest.
 
-To exercise these rights, write to [privacy contact e-mail]. You may also file a complaint with Brazil's National Data Protection Authority ([ANPD](https://www.gov.br/anpd/)).
+To exercise these rights, write to **contato@astrobotanica.com.br**; You may also file a complaint with Brazil's National Data Protection Authority ([ANPD](https://www.gov.br/anpd/pt-br/canais_atendimento)).
 
 ## Changes
 

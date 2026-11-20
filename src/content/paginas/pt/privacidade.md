@@ -1,11 +1,11 @@
 ---
 title: "Política de Privacidade"
-description: "Como o Astrobotânica trata dados pessoais de quem visita o site, de acordo com a LGPD. O site não usa cookies de rastreamento."
+description: "Como o www.astrobotanica.com.br trata dados pessoais de quem visita o site, de acordo com a LGPD. O site não usa cookies de rastreamento."
 lang: "pt"
-updated: "2026-11-01"
+updated: "2026-11-20"
 ---
 
-Esta política explica como o Astrobotânica trata os dados pessoais de quem visita **astrobotanica.com.br**, de acordo com a Lei Geral de Proteção de Dados Pessoais (LGPD, Lei nº 13.709/2018).
+Esta política explica como o **www.astrobotanica.com.br** trata os dados pessoais, de acordo com a [Lei Geral de Proteção de Dados Pessoais (LGPD, Lei nº 13.709/2018)](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm).
 
 ## Em resumo
 
@@ -16,15 +16,15 @@ Esta política explica como o Astrobotânica trata os dados pessoais de quem vis
 
 ## Quem é o responsável
 
-O controlador dos dados, nos termos da LGPD, é [nome do responsável pelo site]. Para qualquer assunto relacionado a privacidade e dados pessoais, escreva para [e-mail de contato para privacidade].
+O controlador dos dados, nos termos da LGPD, é o Biólogo e Divulgador Científico Pedro Henrique Tenório Alvarenga (ver em [Sobre](/sobre)). Para qualquer assunto relacionado a privacidade e dados pessoais, escreva para **contato@astrobotanica.com.br**
 
 ## Estatísticas de acesso
 
-Para saber quais textos são mais lidos (por exemplo, a lista "Mais acessadas"), usamos o [GoatCounter](https://www.goatcounter.com/), um serviço de estatísticas que **não usa cookies** e não identifica visitantes individualmente. A cada visita, ele registra:
+Para saber quais textos são mais lidos (por exemplo, a lista "Mais acessadas"), usamos o [GoatCounter](https://www.goatcounter.com/), um *serviço de estatísticas open source* que **não usa cookies** e não identifica visitantes individualmente. A cada visita, ele registra:
 
 - a página acessada e o site de onde o visitante veio (se houver);
 - o tipo de navegador e de sistema operacional, e o tamanho da tela;
-- o país de origem, estimado a partir do endereço IP. O endereço IP em si não é armazenado.
+- o país de origem, estimado a partir do endereço IP. O **endereço IP em si não é armazenado**.
 
 Usamos esses dados apenas em forma de totais (número de acessos por página), com base no legítimo interesse de entender o alcance do conteúdo (art. 7º, IX, da LGPD).
 
@@ -54,7 +54,7 @@ A LGPD (art. 18) garante a você, entre outros, o direito de:
 - saber com quem os dados foram compartilhados;
 - se opor a um tratamento feito com base no legítimo interesse.
 
-Para exercer esses direitos, escreva para [e-mail de contato para privacidade]. Você também pode apresentar reclamação à Autoridade Nacional de Proteção de Dados ([ANPD](https://www.gov.br/anpd/)).
+Para exercer esses direitos, escreva para **contato@astrobotanica.com.br**; Você também pode apresentar reclamação à Autoridade Nacional de Proteção de Dados ([ANPD](https://www.gov.br/anpd/pt-br/canais_atendimento)).
 
 ## Alterações
 
