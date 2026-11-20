@@ -6,7 +6,7 @@
     "language": "Idioma"
   },
   "brand": {
-    "name": "astrobotanica",
+    "name": "Astrobotanica",
     "footerTagline": "Divulgação científica sobre o reino das plantas e sua jornada para fora da Terra.",
     "copyright": "© 2026 Astrobotanica.",
     "icon": ""
@@ -202,20 +202,6 @@
     "email": "contato@astrobotanica.com.br",
     "emailNote": "Estamos abertos a sugestões, parcerias, críticas, sugestões e conversas."
   },
-  "socialLinks": [
-    {
-      "label": "Youtube",
-      "url": "www.youtube.com"
-    },
-    {
-      "label": "Facebook",
-      "url": "www.facebook.com"
-    },
-    {
-      "label": "Bluesky",
-      "url": "www.bluesky.com"
-    }
-  ],
   "idiomas": {
     "pt": {
       "bandeira": ""
