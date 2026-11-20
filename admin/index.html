@@ -10,8 +10,14 @@
 </head>
 <body>
 
+<!-- Tela de espera: aparece enquanto o painel consulta data/auth.json, para
+     não piscar a tela de primeiro acesso antes da de senha. -->
+<div id="loading-screen" class="admin-screen" role="status">
+  <p class="admin-carregando">Carregando o painel…</p>
+</div>
+
 <!-- Tela 1: primeiro acesso (só aparece se data/auth.json ainda não tem nenhum acesso cadastrado) -->
-<div id="setup-screen" class="admin-screen">
+<div id="setup-screen" class="admin-screen" hidden>
   <div class="admin-card">
     <h1>Astrobotanica <span>primeiro acesso ao painel</span></h1>
     <p class="admin-hint">

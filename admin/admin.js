@@ -729,7 +729,7 @@ function fileExtension(filename, fallback) {
 // ----------------------------------------------------------------------------
 
 function showScreen(id) {
-  ["setup-screen", "login-screen", "app-screen"].forEach((s) => {
+  ["loading-screen", "setup-screen", "login-screen", "app-screen"].forEach((s) => {
     document.getElementById(s).hidden = s !== id;
   });
 }
