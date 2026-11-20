@@ -781,14 +781,14 @@ body:not([data-role="colaborador"]) .collaborator-only { display: none !importan
 }
 .rich-text-btn:hover { border-color: var(--verde); color: var(--verde-escuro); }
 .rich-text-dica { margin-left: auto; font-size: 0.85rem; color: var(--tinta-fraca); }
-.rich-text-grupo { display: flex; align-items: center; gap: 0.25rem; }
-.rich-text-grupo[hidden] { display: none; }
-.rich-text-grupo-rotulo { font-family: var(--fonte-mono); font-size: 0.75rem; color: var(--tinta-fraca); margin-right: 0.15rem; }
-.rich-text-btn--icone { display: inline-flex; align-items: center; justify-content: center; padding: 0.3rem 0.45rem; line-height: 0; }
 .rich-text-btn.ativo { color: var(--verde-escuro); background: var(--verde-claro); border-color: var(--verde-medio); }
-.rich-text-btn--perigo { color: var(--perigo); }
-.rich-text-btn--perigo:hover { border-color: var(--perigo); color: var(--perigo); }
-.rich-text-btn:disabled { opacity: 0.4; cursor: default; border-color: var(--linha); color: var(--tinta-fraca); }
+/* Menus "+ Alinhamento" e "+ Tabela" (mesmo visual do "+ Inserir"). */
+.menu-barra .menu-blocos-rotulo { display: inline-flex; align-items: center; gap: 0.5rem; }
+.menu-barra .menu-blocos-item.ativo .menu-blocos-rotulo { color: var(--verde-escuro); font-weight: 600; }
+.menu-barra .menu-blocos-item:disabled { opacity: 0.4; cursor: default; background: none; }
+.menu-blocos-item--perigo .menu-blocos-rotulo { color: var(--perigo); }
+.menu-barra-aviso { margin: 0.3rem 0.65rem; padding-top: 0.4rem; border-top: 1px solid var(--linha); font-size: 0.8rem; color: var(--tinta-fraca); max-width: 16rem; }
+.menu-barra-aviso[hidden] { display: none; }
 
 .menu-editor {
   position: absolute;
@@ -1148,3 +1148,6 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
 
 /* Imagem do texto marcada como gerada por I.A. */
 .rich-text-editor img[data-ia] { outline: 3px dashed var(--verde-medio); outline-offset: 3px; }
+
+/* Ícone do site (Rodapé e marca → Marca): prévia pequena e quadrada. */
+.campo-icone .file-upload-preview { width: 6rem; height: 6rem; max-width: 6rem; object-fit: contain; background: var(--painel); border-radius: var(--raio); }
