@@ -222,10 +222,18 @@ button { font-family: inherit; }
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  text-decoration: none;
   color: var(--ink-dim);
 }
 .header-nav > a:hover, .header-nav > a[aria-current='page'] { color: var(--accent-700); }
+/* Itens de cima do cabeçalho (listas, links soltos e Contato) sublinhados,
+   como no menu da Nature. */
+.header-nav > a,
+.nav-grupo-titulo,
+.nav-destaque {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.35em;
+}
 
 .header-nav-right {
   display: flex;
@@ -321,17 +329,69 @@ button { font-family: inherit; }
 }
 .nav-overlay.is-open .nav-overlay-panel { transform: translateX(0); }
 
-.nav-overlay-panel a {
+.nav-camada > a,
+.nav-camada-abrir {
+  line-height: 1.2;
   font-family: var(--font-heading);
   font-weight: 600;
-  font-size: clamp(1.8rem, 5vw, 2.6rem);
+  font-size: clamp(1.3rem, 4vw, 1.7rem);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   text-decoration: none;
   color: var(--ink);
   transition: color 0.2s ease;
 }
-.nav-overlay-panel a:hover, .nav-overlay-panel a[aria-current='page'] { color: var(--accent-700); }
+.nav-camada > a:hover, .nav-camada > a[aria-current='page'], .nav-camada-abrir:hover { color: var(--accent-700); }
+/* "Conteúdo" e "Institucional" abrem a lista na camada seguinte. */
+.nav-camada-abrir {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.nav-camada-abrir::after {
+  content: "";
+  width: 0.38em;
+  height: 0.38em;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg);
+}
+.nav-camada {
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  gap: var(--space-3);
+}
+.nav-camada[hidden] { display: none; }
+.nav-camada--entra { animation: nav-camada-entra 0.25s ease; }
+@keyframes nav-camada-entra {
+  from { opacity: 0; transform: translateX(1.5rem); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nav-camada--entra { animation: none; }
+}
+/* Seta ← (canto superior esquerdo): volta para a primeira camada. */
+.nav-overlay-voltar {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+}
+.nav-overlay-voltar[hidden] { display: none; }
+.nav-overlay-voltar:hover { color: var(--accent-700); }
 
 .nav-overlay-close {
   position: absolute;
@@ -364,6 +424,7 @@ button { font-family: inherit; }
   cursor: pointer;
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
+.lang-bandeira { display: block; width: 24px; height: 16px; object-fit: cover; }
 .lang-btn[aria-current='true'] {
   border-color: var(--accent-700);
   background: var(--accent-100);
@@ -1044,7 +1105,7 @@ body.nav-open { overflow: hidden; }
     align-items: center;
     text-align: center;
   }
-  .nav-overlay-panel a { font-size: clamp(2.8rem, 13vw, 4rem); }
+  .nav-camada > a, .nav-camada-abrir { font-size: clamp(1.5rem, 7vw, 2rem); }
 }
 
 /* Listas em inglês: item ainda sem tradução, mostrado em português. */
@@ -1166,7 +1227,7 @@ a.selo-ia:hover {
 }
 
 /* ============================================================================
-   MENU: LISTAS "CONTEÚDO" / "INSTITUCIONAL" E BOTÃO "CONTATO"
+   MENU: LISTAS "CONTEÚDO" / "INSTITUCIONAL" E LINK "CONTATO"
    (ver src/lib/menu.ts — campo grupo de cada item)
 ============================================================================ */
 .nav-grupo { position: relative; }
@@ -1223,45 +1284,18 @@ a.selo-ia:hover {
 .nav-grupo-lista a:focus-visible { background: var(--accent-100); color: var(--accent-700); }
 .nav-grupo-lista a[aria-current='page'] { color: var(--accent-700); }
 
-/* Contato: separado dos outros links, com borda reta e fundo claro. */
+/* Contato: link sublinhado como os outros itens, à direita, separado por
+   um traço vertical (como "Subscribe" no menu da Nature). */
 .nav-destaque {
-  display: inline-block;
-  padding: 0.35rem 0.9rem;
-  line-height: 1.1;
-  border: 1px solid var(--line);
-  background: var(--bg-panel);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--line);
   font-family: var(--font-heading);
   font-weight: 600;
   font-size: 0.9rem;
   text-transform: uppercase;
   letter-spacing: 0.02em;
-  text-decoration: none;
-  color: var(--ink);
-  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
-}
-.nav-destaque:hover,
-.nav-destaque[aria-current='page'] {
-  border-color: var(--accent-700);
-  background: var(--accent-100);
-  color: var(--accent-700);
-}
-
-/* Celular: listas já abertas, com o nome do grupo como título pequeno. */
-.nav-overlay-grupo {
-  display: flex;
-  flex-direction: column;
-  align-items: inherit;
-  gap: var(--space-1);
-}
-.nav-overlay-grupo-titulo {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--ink-dim);
 }
-.nav-overlay-panel .nav-overlay-grupo a { font-size: clamp(1.3rem, 4vw, 1.7rem); }
-.nav-overlay-panel a.nav-destaque { font-size: 1.1rem; padding: 0.5rem 1.2rem; }
-@media (max-width: 640px) {
-  .nav-overlay-panel .nav-overlay-grupo a { font-size: clamp(1.5rem, 7vw, 2rem); }
-}
+.nav-destaque:hover,
+.nav-destaque[aria-current='page'] { color: var(--accent-700); }
+

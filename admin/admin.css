@@ -1151,3 +1151,6 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
 
 /* Ícone do site (Rodapé e marca → Marca): prévia pequena e quadrada. */
 .campo-icone .file-upload-preview { width: 6rem; height: 6rem; max-width: 6rem; object-fit: contain; background: var(--painel); border-radius: var(--raio); }
+
+/* Bandeiras dos idiomas (Menu → Idiomas): prévia no formato 3:2. */
+.campo-bandeira .file-upload-preview { width: 4.5rem; height: 3rem; max-width: 4.5rem; object-fit: cover; border: 1px solid var(--linha); }
