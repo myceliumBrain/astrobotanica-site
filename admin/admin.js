@@ -111,6 +111,7 @@ const GENERAL_SCHEMA = [
     heading: "Marca",
     fields: [
       { key: "brand.name", label: "Nome (logo no menu e rodapé)", type: "text" },
+      { key: "brand.icon", label: "Ícone do site", type: "icone" },
       { key: "brand.footerTagline", label: "Frase do rodapé", type: "textarea" },
       { key: "brand.copyright", label: "Linha de copyright do rodapé", type: "text" },
     ],
@@ -1109,6 +1110,8 @@ let noticiasMarkdownOriginais = {};
 // integrante, não há um botão "Salvar alterações" de card que chame
 // confirmFileUpload() na hora certa; collectAll() chama direto por aqui.
 let homeEventBannerField = null;
+// Idem para o ícone do site (Rodapé e marca → Marca; ver campoDoIcone).
+let brandIconField = null;
 
 // Uploads de áudio/imagem confirmados (via "Salvar alterações" de um card),
 // aguardando o clique em "Salvar no GitHub" — só então são de fato
@@ -1703,6 +1706,7 @@ function collectAll() {
   collectVerbeteTermosRelacionados();
   document.querySelectorAll("[data-ia-bloco]").forEach(applyIaBlock);
   if (homeEventBannerField) homeEventBannerField.confirmFileUpload();
+  if (brandIconField) brandIconField.confirmFileUpload();
   document.querySelectorAll("[data-site]").forEach((input) => {
     setByPath(contentData.site, input.dataset.site, input.value);
   });
@@ -5189,6 +5193,38 @@ function handleSiteFieldChange(event) {
   if (event.target.dataset.siteEn !== undefined) markDirty("siteEn");
 }
 
+// Ícone do site (aba do navegador, favoritos e tela inicial do celular).
+// Um só para os dois idiomas. O site gera os tamanhos a partir da imagem
+// enviada (ver src/pages/icone-[tamanho].png.ts); vazio = ícone padrão.
+// O arquivo ganha um nome novo a cada troca (data e hora), para o navegador
+// não continuar mostrando o antigo guardado em cache.
+function campoDoIcone(fieldDef) {
+  const campo = buildFileUploadField(fieldDef.label, getByPath(contentData.site, fieldDef.key) || "", { site: fieldDef.key }, {
+    accept: "image/png,image/svg+xml,image/jpeg,image/webp",
+    buttonText: "Enviar ícone",
+    preview: true,
+    allowClear: true,
+    hint: "Aparece na aba do navegador e nos favoritos. Use uma imagem quadrada (PNG ou SVG, de preferência com 512×512 px ou mais). Sem ícone, o site usa o broto verde padrão.",
+    buildPath: (file) => {
+      const agora = new Date();
+      const p2 = (n) => String(n).padStart(2, "0");
+      const carimbo = `${agora.getFullYear()}${p2(agora.getMonth() + 1)}${p2(agora.getDate())}-${p2(agora.getHours())}${p2(agora.getMinutes())}${p2(agora.getSeconds())}`;
+      return `images/marca/icone-${carimbo}.${fileExtension(file.name, "png")}`;
+    },
+    buildMessage: (path) => `admin: envia ícone do site (${path})`,
+  });
+  campo.classList.add("full", "campo-icone");
+  // Escolher ou remover o arquivo não passa por um campo com data-site (ver
+  // handleSiteFieldChange): marca a seção aqui, senão "Publicar" não teria
+  // o que gravar.
+  campo.addEventListener("change", () => markDirty("site"));
+  campo.addEventListener("click", (e) => {
+    if (e.target.closest("button")) markDirty("site");
+  });
+  brandIconField = campo;
+  return campo;
+}
+
 function renderGeneralForm() {
   const container = document.getElementById("general-form");
   container.innerHTML = "";
@@ -5196,7 +5232,7 @@ function renderGeneralForm() {
     container.appendChild(el("h3", "section-heading", section.heading));
     const grid = el("div", "fields-grid");
     for (const fieldDef of section.fields) {
-      grid.appendChild(buildSiteField(fieldDef));
+      grid.appendChild(fieldDef.type === "icone" ? campoDoIcone(fieldDef) : buildSiteField(fieldDef));
     }
     container.appendChild(grid);
   }

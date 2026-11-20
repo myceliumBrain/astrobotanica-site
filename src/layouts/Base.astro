@@ -3,6 +3,7 @@
 // overlay do celular) e rodapé — mesma marcação e classes do HTML antigo,
 // para o css/style.css funcionar sem alteração, mas com os textos já
 // preenchidos no build (visíveis sem JavaScript).
+import { linksDoIcone } from "../lib/icone";
 import { t, valor, caminhoNoIdioma, type Lang } from "../lib/i18n";
 import { itensDoMenu, menuDoCabecalho } from "../lib/menu";
 import { NOME_SITE, OG_IMAGEM_PADRAO, jsonLdSeguro, organizacao } from "../lib/seo";
@@ -103,9 +104,7 @@ const licencaUrl =
     <link rel="preload" href="/fonts/barlow-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/barlow-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="/css/style.css" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {linksDoIcone().map((l) => <link rel={l.rel} href={l.href} type={l.type} sizes={l.sizes} />)}
     <link rel="alternate" type="application/rss+xml" title={lang === "en" ? "Astrobotânica — News" : "Astrobotânica — Notícias"} href={link("/rss.xml")} />
     <meta property="og:type" content={ogTipo} />
     <meta property="og:site_name" content={NOME_SITE} />

@@ -1148,3 +1148,6 @@ h3.section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none
 
 /* Imagem do texto marcada como gerada por I.A. */
 .rich-text-editor img[data-ia] { outline: 3px dashed var(--verde-medio); outline-offset: 3px; }
+
+/* Ícone do site (Rodapé e marca → Marca): prévia pequena e quadrada. */
+.campo-icone .file-upload-preview { width: 6rem; height: 6rem; max-width: 6rem; object-fit: contain; background: var(--painel); border-radius: var(--raio); }
