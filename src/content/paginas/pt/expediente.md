@@ -1,6 +1,6 @@
 ---
 title: "Expediente"
-description: "Astrobotânica — Divulgação científica em astrobotânica e agricultura espacial. Editor-chefe, Conselho Científico, colaboradores, vínculo institucional e licença."
+description: "Expediente do site astrobotanica.com.br"
 lang: "pt"
 updated: "2026-11-19"
 ---
@@ -12,7 +12,7 @@ updated: "2026-11-19"
 | Periodicidade do  podcast | Mensal |
 | Idioma | Português / Inglês |
 | Fundação | 2026 |
-| Contato | [e-mail institucional do site] |
+| Contato | **contato@astrobotanica.com.br** |
 | Licença | Creative Commons Atribuição 4.0 Internacional (CC BY 4.0) |
 |  |  |
 
@@ -20,9 +20,9 @@ updated: "2026-11-19"
 
 O revisores orientam a linha editorial e revisam tecnicamente os textos propostos para publicação.
 
-**Pedro Henrique Tenorio Alvarenga**, Biólogo - Universidade Federal do Estado do Rio de Janeiro. [Currículo Lattes](http://lattes.cnpq.br/3569412519597121)
+- **Pedro Henrique Tenorio Alvarenga**, Biólogo - Universidade Federal do Estado do Rio de Janeiro. [Currículo Lattes](http://lattes.cnpq.br/3569412519597121)
 
-**Eduardo Dreyer Simões Saraiva**, Graduando em Ciências Ambientais - Universidade Federal do Estado do Rio de Janeiro. [Currículo Lattes](http://lattes.cnpq.br/2847590238543532)
+- **Eduardo Dreyer Simões Saraiva**, Graduando em Ciências Ambientais - Universidade Federal do Estado do Rio de Janeiro. [Currículo Lattes](http://lattes.cnpq.br/2847590238543532)
 
 ### Podcast Jardim em Expansão
 
