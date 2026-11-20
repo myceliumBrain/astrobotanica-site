@@ -685,6 +685,10 @@ body.nav-open { overflow: hidden; }
 .article-body img { max-width: 100%; height: auto; display: block; border-radius: 4px; margin: var(--space-3) auto; }
 .article-body h2, .article-body h3 { font-size: 1.3rem; margin-top: var(--space-4); margin-bottom: var(--space-1); }
 .article-body > h2:first-child, .article-body > h3:first-child { margin-top: 0; }
+/* Tabelas inseridas pelo painel (notícias, verbetes e páginas de texto). */
+.article-body table { width: 100%; border-collapse: collapse; margin: var(--space-3) 0; font-size: 0.95rem; }
+.article-body th, .article-body td { text-align: left; vertical-align: top; padding: var(--space-1) var(--space-2) var(--space-1) 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.article-body th { font-weight: 600; }
 .article-subtitle {
   font-family: var(--font-heading);
   font-style: italic;
