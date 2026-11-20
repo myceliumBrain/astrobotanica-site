@@ -15,7 +15,7 @@ Pesquisadores, pós-graduandos, jornalistas e graduandos podem propor textos sob
 - Linguagem acessível para não especialistas; termos técnicos explicados na primeira ocorrência.
 - Referências ao final, com DOI quando houver; citações no texto por link.
 - Imagens próprias ou com licença que permita reprodução, com crédito e legenda.
-- Identificação do autor*: *Nome*, *Formação*, *Instituição, ORCID, currículo Lattes e apresentação. *(caso algum item não esteja disponível, envie uma mensagem para **contato@astrobotanica.com.br**).*
+- Identificação do autor: Nome, Formação, Instituição, ORCID, currículo Lattes e apresentação. (caso algum item não esteja disponível, envie uma mensagem para **contato@astrobotanica.com.br**).
 
 **Avaliação:** textos passam por revisão editorial e, quando necessário, revisão técnica (ver [Política Editorial)](/politica-editorial). O autor aprova a versão final antes da publicação.
 
