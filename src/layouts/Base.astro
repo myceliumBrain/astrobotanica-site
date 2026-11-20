@@ -4,6 +4,7 @@
 // para o css/style.css funcionar sem alteração, mas com os textos já
 // preenchidos no build (visíveis sem JavaScript).
 import { linksDoIcone } from "../lib/icone";
+import { idiomasDoSite } from "../lib/idiomas";
 import { t, valor, caminhoNoIdioma, type Lang } from "../lib/i18n";
 import { itensDoMenu, menuDoCabecalho } from "../lib/menu";
 import { NOME_SITE, OG_IMAGEM_PADRAO, jsonLdSeguro, organizacao } from "../lib/seo";
@@ -61,6 +62,12 @@ const secaoAtual = secao ?? "/" + (path.split("/")[1] ?? "");
 const navItens = itensDoMenu(lang);
 const { blocos, destaque } = menuDoCabecalho(lang);
 const ehAtual = (item: { secao?: string }) => item.secao === secaoAtual;
+// Seletor de idioma: bandeira escolhida no painel (ou o emoji de sempre).
+const idiomas = idiomasDoSite().map((i) => ({
+  ...i,
+  href: i.lang === lang ? caminhoNoIdioma(path, lang) : hrefOutro,
+  atual: i.lang === lang,
+}));
 // Rodapé: "Institucional" numa coluna própria; o resto em "Navegação".
 const institucionais = navItens.filter((item) => item.grupo === "institucional");
 const navRodape = navItens.filter((item) => item.grupo !== "institucional");
@@ -162,33 +169,67 @@ const licencaUrl =
             </a>
           ))}
           <div class="lang-switch" role="group" aria-label={t(lang, "common.language")}>
-            <a class="lang-btn" href={lang === "pt" ? caminhoNoIdioma(path, "pt") : hrefOutro} hreflang="pt-BR" lang="pt-BR" aria-label="Português" aria-current={lang === "pt" ? "true" : undefined}>🇧🇷</a>
-            <a class="lang-btn" href={lang === "en" ? caminhoNoIdioma(path, "en") : hrefOutro} hreflang="en" lang="en" aria-label="English" aria-current={lang === "en" ? "true" : undefined}>🇺🇸</a>
+            {idiomas.map((i) => (
+              <a class="lang-btn" href={i.href} hreflang={i.hreflang} lang={i.hreflang} aria-label={i.nome} title={i.nome} aria-current={i.atual ? "true" : undefined}>
+                {i.bandeira ? <img class="lang-bandeira" src={i.bandeira} alt="" width="24" height="16" /> : i.emoji}
+              </a>
+            ))}
           </div>
         </div>
       </nav>
     </header>
 
+    <!-- Menu do celular em camadas: a primeira tem só os grupos ("Conteúdo",
+         "Institucional") e os links soltos (Publique conosco, Contato); tocar
+         num grupo mostra os itens dele, com a seta ← para voltar. Ver
+         setupNavOverlay em src/scripts/cliente.ts. -->
     <div class="nav-overlay" id="nav-overlay">
       <nav class="nav-overlay-panel">
+        <button type="button" class="nav-overlay-voltar" aria-label={lang === "en" ? "Back" : "Voltar"} hidden>
+          <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6" /></svg>
+        </button>
         <button type="button" class="nav-overlay-close" aria-label={t(lang, "common.closeMenu")}>✕</button>
-        {
-          blocos.map((bloco) =>
-            bloco.tipo === "link" ? (
-              <a href={bloco.item.href}>{bloco.item.texto}</a>
-            ) : (
-              <div class="nav-overlay-grupo">
-                <span class="nav-overlay-grupo-titulo">{bloco.texto}</span>
-                {bloco.itens.map((item) => <a href={item.href}>{item.texto}</a>)}
-              </div>
+        <div class="nav-camada" data-camada="principal">
+          {
+            blocos.map((bloco) =>
+              bloco.tipo === "link" ? (
+                <a href={bloco.item.href} aria-current={ehAtual(bloco.item) ? "page" : undefined}>
+                  {bloco.item.texto}
+                </a>
+              ) : (
+                <button type="button" class="nav-camada-abrir" data-abre={bloco.grupo} aria-expanded="false">
+                  {bloco.texto}
+                </button>
+              )
             )
+          }
+          {destaque.map((item) => (
+            <a href={item.href} aria-current={ehAtual(item) ? "page" : undefined}>
+              {item.texto}
+            </a>
+          ))}
+          <div class="lang-switch" role="group" aria-label={t(lang, "common.language")}>
+            {idiomas.map((i) => (
+              <a class="lang-btn" href={i.href} hreflang={i.hreflang} lang={i.hreflang} aria-label={i.nome} title={i.nome} aria-current={i.atual ? "true" : undefined}>
+                {i.bandeira ? <img class="lang-bandeira" src={i.bandeira} alt="" width="24" height="16" /> : i.emoji}
+              </a>
+            ))}
+          </div>
+        </div>
+        {
+          blocos.map(
+            (bloco) =>
+              bloco.tipo === "grupo" && (
+                <div class="nav-camada" data-camada={bloco.grupo} aria-label={bloco.texto} hidden>
+                  {bloco.itens.map((item) => (
+                    <a href={item.href} aria-current={ehAtual(item) ? "page" : undefined}>
+                      {item.texto}
+                    </a>
+                  ))}
+                </div>
+              )
           )
         }
-        {destaque.map((item) => <a class="nav-destaque" href={item.href}>{item.texto}</a>)}
-        <div class="lang-switch" role="group" aria-label={t(lang, "common.language")}>
-          <a class="lang-btn" href={lang === "pt" ? caminhoNoIdioma(path, "pt") : hrefOutro} hreflang="pt-BR" lang="pt-BR" aria-label="Português" aria-current={lang === "pt" ? "true" : undefined}>🇧🇷</a>
-          <a class="lang-btn" href={lang === "en" ? caminhoNoIdioma(path, "en") : hrefOutro} hreflang="en" lang="en" aria-label="English" aria-current={lang === "en" ? "true" : undefined}>🇺🇸</a>
-        </div>
       </nav>
     </div>
 

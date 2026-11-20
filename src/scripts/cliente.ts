@@ -8,8 +8,36 @@ function setupNavOverlay(): void {
   if (!toggle || !overlay) return;
 
   const closeBtn = overlay.querySelector<HTMLButtonElement>(".nav-overlay-close");
+  const voltarBtn = overlay.querySelector<HTMLButtonElement>(".nav-overlay-voltar");
+  const camadas = Array.from(overlay.querySelectorAll<HTMLElement>(".nav-camada"));
+  const abridores = Array.from(overlay.querySelectorAll<HTMLButtonElement>(".nav-camada-abrir"));
+
+  // Camadas: "principal" (grupos e links soltos) ou a lista de um grupo
+  // ("conteudo", "institucional"), com a seta ← para voltar.
+  function mostrarCamada(nome: string): void {
+    camadas.forEach((c) => (c.hidden = c.dataset.camada !== nome));
+    const naPrincipal = nome === "principal";
+    if (voltarBtn) voltarBtn.hidden = naPrincipal;
+    abridores.forEach((b) => b.setAttribute("aria-expanded", String(b.dataset.abre === nome)));
+    const camada = camadas.find((c) => c.dataset.camada === nome);
+    camada?.classList.remove("nav-camada--entra");
+    void camada?.offsetWidth; // reinicia a animação de entrada
+    camada?.classList.add("nav-camada--entra");
+  }
+  abridores.forEach((b) =>
+    b.addEventListener("click", () => {
+      mostrarCamada(b.dataset.abre!);
+      voltarBtn?.focus();
+    })
+  );
+  voltarBtn?.addEventListener("click", () => {
+    const grupo = camadas.find((c) => !c.hidden)?.dataset.camada;
+    mostrarCamada("principal");
+    abridores.find((b) => b.dataset.abre === grupo)?.focus();
+  });
 
   function open(): void {
+    mostrarCamada("principal");
     overlay!.classList.add("is-open");
     toggle!.setAttribute("aria-expanded", "true");
     document.body.classList.add("nav-open");
@@ -33,8 +61,11 @@ function setupNavOverlay(): void {
     if (event.target === overlay) close();
   });
 
+  // Esc: numa lista, volta para a primeira camada; nela, fecha o menu.
   document.addEventListener("keydown", (event) => {
-    if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") close();
+    if (event.key !== "Escape" || toggle.getAttribute("aria-expanded") !== "true") return;
+    if (voltarBtn && !voltarBtn.hidden) voltarBtn.click();
+    else close();
   });
 }
 
