@@ -5,7 +5,7 @@ lang: "pt"
 updated: "2026-11-19"
 ---
 
-**Astrobotanica é um veículo brasileiro de divulgação científica dedicado à astrobotânica**: o estudo das plantas, agricultura espacial, astronomia, tecnologia, substratos, microrganismos e qualquer outro tema próximo à área, especialmente relacionado a ambientes espaciais e extremos.
+**Este site (www.astrobotanica.com.br) é um veículo brasileiro de divulgação científica dedicado à astrobotânica**: o estudo das plantas, agricultura espacial, tecnologia, substratos, microrganismos e outros temas próximo à área.
 
 O projeto foi inaugurado pelo biólogo Pedro Alvarenga, por iniciativa individual, após a entrada no Laboratório de Biologia Molecular de Plantas e Fungos (LBMPF), localizado na Universidade Federal do Estado do Rio de Janeiro (UNIRIO), sendo esse mantido pela Drª Camila Maistro Patreze.
 
