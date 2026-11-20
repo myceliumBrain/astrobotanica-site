@@ -5,7 +5,7 @@
 // preenchidos no build (visíveis sem JavaScript).
 import { linksDoIcone } from "../lib/icone";
 import { idiomasDoSite } from "../lib/idiomas";
-import { t, valor, caminhoNoIdioma, type Lang } from "../lib/i18n";
+import { t, valor, caminhoNoIdioma, LANGS, type Lang } from "../lib/i18n";
 import { itensDoMenu, menuDoCabecalho } from "../lib/menu";
 import { NOME_SITE, OG_IMAGEM_PADRAO, jsonLdSeguro, organizacao } from "../lib/seo";
 
@@ -68,6 +68,9 @@ const idiomas = idiomasDoSite().map((i) => ({
   href: i.lang === lang ? caminhoNoIdioma(path, lang) : hrefOutro,
   atual: i.lang === lang,
 }));
+// Menu do celular: os itens nos dois idiomas. As bandeiras de lá só trocam o
+// idioma dos itens (sem sair da página nem fechar o menu).
+const menusDoOverlay = LANGS.map((l) => ({ lang: l, hreflang: l === "pt" ? "pt-BR" : l, ...menuDoCabecalho(l) }));
 // Rodapé: "Institucional" numa coluna própria; o resto em "Navegação".
 const institucionais = navItens.filter((item) => item.grupo === "institucional");
 const navRodape = navItens.filter((item) => item.grupo !== "institucional");
@@ -189,46 +192,48 @@ const licencaUrl =
           <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6" /></svg>
         </button>
         <button type="button" class="nav-overlay-close" aria-label={t(lang, "common.closeMenu")}>✕</button>
-        <div class="nav-camada" data-camada="principal">
-          {
-            blocos.map((bloco) =>
-              bloco.tipo === "link" ? (
-                <a href={bloco.item.href} aria-current={ehAtual(bloco.item) ? "page" : undefined}>
-                  {bloco.item.texto}
-                </a>
-              ) : (
-                <button type="button" class="nav-camada-abrir" data-abre={bloco.grupo} aria-expanded="false">
-                  {bloco.texto}
-                </button>
-              )
-            )
-          }
-          {destaque.map((item) => (
-            <a href={item.href} aria-current={ehAtual(item) ? "page" : undefined}>
-              {item.texto}
-            </a>
-          ))}
-          <div class="lang-switch" role="group" aria-label={t(lang, "common.language")}>
-            {idiomas.map((i) => (
-              <a class="lang-btn" href={i.href} hreflang={i.hreflang} lang={i.hreflang} aria-label={i.nome} title={i.nome} aria-current={i.atual ? "true" : undefined}>
-                {i.bandeira ? <img class="lang-bandeira" src={i.bandeira} alt="" width="24" height="16" /> : i.emoji}
-              </a>
-            ))}
-          </div>
-        </div>
         {
-          blocos.map(
-            (bloco) =>
-              bloco.tipo === "grupo" && (
-                <div class="nav-camada" data-camada={bloco.grupo} aria-label={bloco.texto} hidden>
-                  {bloco.itens.map((item) => (
-                    <a href={item.href} aria-current={ehAtual(item) ? "page" : undefined}>
-                      {item.texto}
+          menusDoOverlay.map((m) => (
+            <div class="nav-overlay-idioma" data-idioma={m.lang} lang={m.hreflang} hidden={m.lang !== lang}>
+              <div class="nav-camada" data-camada="principal">
+                {m.blocos.map((bloco) =>
+                  bloco.tipo === "link" ? (
+                    <a href={bloco.item.href} aria-current={ehAtual(bloco.item) && m.lang === lang ? "page" : undefined}>
+                      {bloco.item.texto}
                     </a>
+                  ) : (
+                    <button type="button" class="nav-camada-abrir" data-abre={bloco.grupo} aria-expanded="false">
+                      {bloco.texto}
+                    </button>
+                  )
+                )}
+                {m.destaque.map((item) => (
+                  <a href={item.href} aria-current={ehAtual(item) && m.lang === lang ? "page" : undefined}>
+                    {item.texto}
+                  </a>
+                ))}
+                <div class="lang-switch" role="group" aria-label={t(m.lang, "common.language")}>
+                  {idiomas.map((i) => (
+                    <button type="button" class="lang-btn" data-troca-idioma={i.lang} lang={i.hreflang} aria-label={i.nome} title={i.nome} aria-pressed={i.lang === m.lang ? "true" : "false"} aria-current={i.lang === m.lang ? "true" : undefined}>
+                      {i.bandeira ? <img class="lang-bandeira" src={i.bandeira} alt="" width="24" height="16" /> : i.emoji}
+                    </button>
                   ))}
                 </div>
-              )
-          )
+              </div>
+              {m.blocos.map(
+                (bloco) =>
+                  bloco.tipo === "grupo" && (
+                    <div class="nav-camada" data-camada={bloco.grupo} aria-label={bloco.texto} hidden>
+                      {bloco.itens.map((item) => (
+                        <a href={item.href} aria-current={ehAtual(item) && m.lang === lang ? "page" : undefined}>
+                          {item.texto}
+                        </a>
+                      ))}
+                    </div>
+                  )
+              )}
+            </div>
+          ))
         }
       </nav>
     </div>
