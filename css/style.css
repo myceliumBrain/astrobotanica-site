@@ -925,19 +925,20 @@ body.nav-open { overflow: hidden; }
 }
 .article-sidebar-item:hover .article-sidebar-title { color: var(--accent-700); }
 
-/* ---- painel de destaque (home) ---- */
-.feature-panel {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+/* ---- bloco do podcast (home): um link só, para a página do podcast ---- */
+.bloco-podcast {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+  padding: var(--space-4) var(--space-4);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--ink); text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
-.feature-panel-copy { max-width: 40ch; }
-.feature-panel-copy h2 { font-size: 2rem; margin: 0; }
-.feature-panel-episode {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
+.bloco-podcast-titulo { font-size: 2rem; margin: 0; }
+.bloco-podcast-seta { font-size: 1.75rem; color: var(--accent-700); transition: transform 0.15s ease; }
+.bloco-podcast:hover,
+.bloco-podcast:focus-visible { border-color: var(--accent-700); background: color-mix(in srgb, var(--accent-700) 5%, transparent); }
+.bloco-podcast:hover .bloco-podcast-titulo { color: var(--accent-700); }
+.bloco-podcast:hover .bloco-podcast-seta { transform: translateX(4px); }
 
 /* ---- sobre: integrantes ---- */
 .members-grid {
@@ -1099,7 +1100,6 @@ body.nav-open { overflow: hidden; }
   /* Data/minutagem do painel de podcast da Home quebravam o layout do
      .episode-row numa tela estreita — só ali, escondidas (a lista completa
      em /podcast continua mostrando). */
-  .feature-panel-episode .episode-row-meta { display: none; }
   .member-card { flex-direction: column; align-items: stretch; }
   .article-author-card { flex-direction: column; align-items: flex-start; }
   .contact-grid { grid-template-columns: 1fr; }
@@ -1405,6 +1405,8 @@ a.selo-ia:hover {
 .filtro-categorias-lista button[aria-pressed='true'] { color: var(--accent-700); }
 .filtro-categorias-lista button[aria-pressed='true']::before { content: "✓ "; }
 .article-card[hidden] { display: none; }
+.article-grid[hidden],
+[data-filtro-todos][hidden] { display: none; }
 /* Até 860px o destaque já termina com uma linha: sem linha repetida. */
 @media (max-width: 860px) {
   .secao-noticias-cabecalho { border-top: none; padding-top: 0; margin-top: var(--space-4); }
