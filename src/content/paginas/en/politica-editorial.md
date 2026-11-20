@@ -1,6 +1,6 @@
 ---
 title: "Editorial Policy"
-description: "Astrobotanica publishes only content based on verifiable scientific sources, with a defined editorial process, public corrections, and declared conflicts of interest."
+description: "www.astrobotanica.com.br publishes only content based on verifiable scientific sources, with a defined editorial process, public corrections, and declared conflicts of interest."
 lang: "en"
 updated: "2026-11-20"
 ---

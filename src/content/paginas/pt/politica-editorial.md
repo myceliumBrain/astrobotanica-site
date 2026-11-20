@@ -1,6 +1,6 @@
 ---
 title: "Política Editorial"
-description: "O Astrobotanica publica apenas conteúdo baseado em fontes científicas verificáveis, com processo editorial definido, correções públicas e conflitos de interesse declarados."
+description: "O wwww.astrobotanica.com.br publica apenas conteúdo baseado em fontes científicas verificáveis, com processo editorial definido, correções públicas e conflitos de interesse declarados."
 lang: "pt"
 updated: "2026-11-20"
 ---
