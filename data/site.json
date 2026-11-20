@@ -67,13 +67,6 @@
       "grupo": "institucional"
     },
     {
-      "rotulo": "Publique conosco",
-      "rotuloEn": "Publish with us",
-      "link": "/normas-para-colaboradores",
-      "visivel": true,
-      "grupo": "institucional"
-    },
-    {
       "rotulo": "Privacidade",
       "rotuloEn": "Privacy",
       "link": "/privacidade",
@@ -86,6 +79,12 @@
       "link": "/politica-de-ia",
       "visivel": true,
       "grupo": "institucional"
+    },
+    {
+      "rotulo": "Publique conosco",
+      "rotuloEn": "Publish with us",
+      "link": "/normas-para-colaboradores",
+      "visivel": true
     },
     {
       "rotulo": "Contato",
