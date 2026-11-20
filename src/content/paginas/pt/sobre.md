@@ -1,21 +1,14 @@
 ---
 title: "Sobre"
-description: "Astrobotânica é um veículo brasileiro de divulgação científica dedicado à astrobotânica: o estudo das plantas e dos microrganismos associados a elas em ambientes espaciais e extremos."
+description: "Astrobotanica é um veículo brasileiro de divulgação científica dedicado à astrobotânica: o estudo das plantas, astronomia, substratos, microrganismos e qualquer outro tema que próximo a área, especialmente relacionado a ambientes espaciais e extremos."
 lang: "pt"
-updated: ""
+updated: "2026-11-19"
 ---
 
-Astrobotânica é um veículo brasileiro de divulgação científica dedicado à astrobotânica: o estudo das plantas e dos microrganismos associados a elas em ambientes espaciais e extremos, com foco na produção de alimentos para a exploração espacial (space farming).
+**Astrobotanica é um veículo brasileiro de divulgação científica dedicado à astrobotânica**: o estudo das plantas, agricultura espacial, astronomia, tecnologia, substratos, microrganismos e qualquer outro tema próximo à área, especialmente relacionado a ambientes espaciais e extremos.
 
-Publicamos, em português e em linguagem acessível, notícias sobre artigos científicos recentes, entrevistas com pesquisadores e conteúdos de apoio para professores e estudantes. Nosso compromisso é com a precisão: todo texto remete à fonte original e distingue claramente resultados revisados por pares de estudos preliminares.
+O projeto foi inaugurado pelo biólogo Pedro Alvarenga, por iniciativa individual, após a entrada no Laboratório de Biologia Molecular de Plantas e Fungos (LBMPF), localizado na Universidade Federal do Estado do Rio de Janeiro (UNIRIO), sendo esse mantido pela Drª Camila Maistro Patreze.
+
+As publicações são feitas em português e em inglês, com foco na linguagem acessível, mas com profundidade. Atualmente, o site conta com a** produção de notícias sobre artigos científicos recentes e relevantes da área**, além de um **podcast, denominado Jardim em Expansão**, que tem o objetivo de expandir o conteúdo da astrobotânica para uma abordagem voltada a discussão, reflexão e entreterimento.
 
 **Missão:** tornar a astrobotânica conhecida no Brasil, aproximando a pesquisa nacional e internacional do público, das escolas e da comunidade científica.
-
-**O que você encontra aqui:**
-
-- Notícias sobre estudos científicos em agricultura espacial, micologia, microbiologia e botânica aplicadas a ambientes extremos;
-- Entrevistas e o podcast Jardim em Expansão;
-- Material de apoio, como glossário e textos introdutórios;
-- [Boletim Astrobotânica], publicação periódica numerada [ISSN em solicitação].
-
-O Astrobotânica é [vinculado ao projeto de extensão "[nome do projeto]" do Laboratório de Biologia Molecular de Plantas e Fungos da Universidade Federal do Estado do Rio de Janeiro (UNIRIO)]. Conheça nossa [Política Editorial] e o [Expediente].
