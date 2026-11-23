@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-10"
-ordem: 5
+ordem: 6
 time: "00:34"
 category: "Micologia"
 readingTime: "6 min"

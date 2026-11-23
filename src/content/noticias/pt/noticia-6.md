@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-6"
-ordem: 9
+ordem: 10
 time: "23:00"
 category: "Hardwares e Softwares"
 subtitle: "O artigo denominado \"Educação em Ciência e Tecnologia para Avaliação da Terra e da Vida (STELLA): Democratizando a Ciência do Sensoriamento Remoto com Instrumentos de Baixo Custo e Código Aberto para Pesquisa e Educação\", da NASA, propôe a elaboração de equipamento de baixo custo para ser usado em laboratórios."

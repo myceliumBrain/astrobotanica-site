@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-12"
-ordem: 3
+ordem: 4
 time: "00:50"
 category: "Agricultura Espacial"
 subtitle: "Um estudo foi publicado na revista Nature, em 2026, por uma equipe internacional de pesquisadores das universidades de Aberdeen, Northumbria, Centro de Astrobiologia (CAB) de Madri e do Instituto Andaluz de Ciências de Terra, desafiando as fronteiras biológicas clássicas da vida na Terra e redefinindo os parâmetros para a busca de vida em Marte. "

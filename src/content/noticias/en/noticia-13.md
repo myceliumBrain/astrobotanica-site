@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-13"
-ordem: 2
+ordem: 3
 time: "12:39"
 category: "PGPR: Plant Growth-Promoting Rhizobacteria"
 subtitle: "Published in 2026 in npj Biofilms and Microbiomes (Nature Portfolio), a review led by Shaanxi University of Technology and Louisiana State University dissects PGPR mechanisms and proposes a biotechnological roadmap featuring synthetic consortia and protective carriers, laying the microbiological foundations to enable space agriculture and astrobotany on future planetary bases."

@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-5"
-ordem: 10
+ordem: 11
 time: "16:09"
 category: "Astropolitics"
 subtitle: "The public hearing held on June 17, 2026, by the Chamber of Deputies' Committee on Science, Technology, and Innovation establishes space agriculture as a strategic pillar for the space economy and food security."

@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-7"
-ordem: 8
+ordem: 9
 time: "23:22"
 category: "Agricultura Espacial"
 subtitle: "Um novo estudo publicado na Scientific Reports detalha como a colaboração entre plantas, fungos e resíduos orgânicos pode transformar o hostil regolito lunar em um meio de cultivo produtivo. Pela primeira vez, pesquisadores relataram o cultivo de grão-de-bico (Cicer arietinum) até a fase de produção de sementes em simulante de regolito lunar (LRS), utilizando estratégias de biorremediação terrestre."

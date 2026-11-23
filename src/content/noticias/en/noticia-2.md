@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-2"
-ordem: 13
+ordem: 14
 time: "14:00"
 category: "Space Agriculture"
 readingTime: "5 min"
