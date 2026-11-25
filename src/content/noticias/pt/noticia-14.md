@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-14"
-ordem: 2
+ordem: 1
 time: "21:29"
 category: "Agricultura Espacial"
 subtitle: "O artigo revisional \"Agricultural potential of lunar regolith – a review on cultivation methodologies\" (publicado em 2026 no The Journal of Agricultural Science por Jessica Dias, Réka Oszlányi e György Barkó) investiga a viabilidade técnica e agronômica de utilizar o regolito lunar como substrato de cultivo"

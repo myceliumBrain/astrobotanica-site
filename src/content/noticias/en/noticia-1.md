@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-1"
-ordem: 15
+ordem: 14
 time: "23:09"
 category: "Mycorrhizae"
 readingTime: "4 min"

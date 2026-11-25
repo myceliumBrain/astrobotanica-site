@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-5"
-ordem: 11
+ordem: 10
 time: "16:09"
 category: "Astropolítica"
 subtitle: "A Audiência Pública Realizada dia 17/06/2026 na Comissão de Ciência, Tecnologia e Inovação da Câmara dos Deputados, Consolida a Agricultura Espacial como Eixo Estratégico para a Economia do Espaço e Segurança Alimentar"

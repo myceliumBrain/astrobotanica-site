@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-7"
-ordem: 9
+ordem: 8
 time: "23:22"
 category: "Space Agriculture"
 subtitle: "A new study published in Scientific Reports details how the collaboration between plants, fungi, and organic waste can transform hostile lunar regolith into a productive growing medium. For the first time, researchers have reported cultivating chickpeas Cicer arietinum through to the seed-production stage in lunar regolith simulant (LRS) using terrestrial bioremediation strategies."

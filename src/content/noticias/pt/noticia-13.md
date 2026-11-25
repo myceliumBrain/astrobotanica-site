@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-13"
-ordem: 3
+ordem: 2
 time: "12:39"
 category: "Bactérias Promotoras de Crescimento Vegetal(PGPR)"
 subtitle: "Publicada em 2026 na npj Biofilms and Microbiomes (Grupo Nature), revisão liderada pela Shaanxi University of Technology e pela Louisiana State University disseca os mecanismos das PGPRs e propõe um roteiro biotecnológico com consórcios sintéticos e matrizes protetoras, fornecendo as bases microbiológicas para viabilizar a agricultura espacial e a astrobotânica em futuras bases planetárias."

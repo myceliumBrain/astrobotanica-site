@@ -20,7 +20,7 @@ boletim:
 erratas: []
 # --- campos do site atual, preservados como estão ---
 id: "noticia-6"
-ordem: 10
+ordem: 9
 time: "23:00"
 category: "Hardwares and Softwares"
 subtitle: "The NASA article titled \"Science and Technology Education for Land and Life Assessment (STELLA): Democratizing Remote Sensing Science with Low-Cost, Open-Source Instruments for Research and Education\" proposes the development of low-cost equipment for use in laboratories."
